@@ -1,0 +1,31 @@
+{
+  "buildCommand": "npx expo export -p web",
+  "outputDirectory": "dist",
+  "rewrites": [
+    {
+      "source": "/share/:token",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "(?i).*(whatsapp|facebookexternalhit|twitterbot|linkedinbot|telegrambot|slackbot|discordbot|googlebot).*"
+        }
+      ],
+      "destination": "/api/share/:token"
+    },
+    {
+      "source": "/api/public-files/(.*)",
+      "destination": "/api/public-files?path=$1"
+    },
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)\\.(png|jpg|jpeg|gif|webp|avif|svg|ico)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+    }
+  ]
+}

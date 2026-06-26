@@ -1,0 +1,124 @@
+import React, { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+
+import type { ReceivedListItem } from '../../services/supabase/received';
+import { ProductImage } from '../shared/ProductImage';
+import { colors, radius, shadows } from '../../theme/tokens';
+
+/** Currency code → symbol. Codes without a common glyph fall back to a prefix. */
+const CURRENCY_SYMBOL: Record<string, string> = {
+  USD: '$',
+  INR: '₹',
+  EUR: '€',
+  GBP: '£',
+  JPY: '¥',
+  CNY: '¥',
+};
+
+/** "$1,000,000/pcs" / "₹792,200/kg" / "N/A" when no display price. */
+function formatPrice(currency: string | null, price: number | null, unit: string): string {
+  if (price === null || price === undefined) return 'N/A';
+  const symbol = currency ? CURRENCY_SYMBOL[currency] ?? `${currency} ` : '';
+  return `${symbol}${price.toLocaleString()}/${unit}`;
+}
+
+/** Compact age, e.g. "15d", "6h", "3m", "now". */
+function compactTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  if (Number.isNaN(diff)) return '';
+  const day = Math.floor(diff / 86_400_000);
+  if (day >= 1) return `${day}d`;
+  const hr = Math.floor(diff / 3_600_000);
+  if (hr >= 1) return `${hr}h`;
+  const min = Math.floor(diff / 60_000);
+  if (min >= 1) return `${min}m`;
+  return 'now';
+}
+
+interface ReceivedCardProps {
+  item: ReceivedListItem;
+  onPress: () => void;
+}
+
+export function ReceivedCard({ item, onPress }: ReceivedCardProps): React.JSX.Element {
+  const [hovered, setHovered] = useState(false);
+
+  // "CODE | Category" when a product code exists, else just the category.
+  const category = item.category ?? '—';
+  const codeCategory = item.product_code ? `${item.product_code} | ${category}` : category;
+
+  return (
+    <Pressable
+      style={[styles.card, hovered ? styles.cardHover : null]}
+      onPress={onPress}
+      onHoverIn={() => setHovered(true)}
+      onHoverOut={() => setHovered(false)}
+      testID={`received-card-${item.share_id}`}
+    >
+      <ProductImage
+        uri={item.thumbUrl}
+        width={72}
+        height={72}
+        borderRadius={radius.md}
+        fallback={<Ionicons name="cube-outline" size={26} color={colors.textMuted} />}
+      />
+
+      <View style={styles.info}>
+        <Text style={styles.name} numberOfLines={1}>
+          {item.title}
+        </Text>
+        <Text style={styles.codeCategory} numberOfLines={1}>
+          {codeCategory}
+        </Text>
+        <Text style={styles.price} numberOfLines={1}>
+          {formatPrice(item.display_currency, item.display_price, item.unit)}
+        </Text>
+        <Text style={styles.qty} numberOfLines={1}>
+          {item.quantity_available.toLocaleString()}/{item.quantity.toLocaleString()} {item.unit}
+        </Text>
+        <Text style={styles.from} numberOfLines={1}>
+          From: {item.shared_by_company_name ?? 'a vendor'}
+        </Text>
+      </View>
+
+      <Text style={styles.time}>{compactTime(item.created_at)}</Text>
+    </Pressable>
+  );
+}
+
+const styles = StyleSheet.create({
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: colors.bgWhite,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg, // 16
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  cardHover: { borderColor: colors.borderDark, ...shadows.sm },
+
+  thumb: {
+    width: 72,
+    height: 72,
+    borderRadius: radius.md, // 10
+    backgroundColor: colors.bgChip, // #F1F5F9
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    flexShrink: 0,
+  },
+  thumbImg: { width: '100%', height: '100%' }, // object-fit: cover via resizeMode
+
+  info: { flex: 1, minWidth: 0 },
+  name: { fontSize: 14, fontWeight: '700', color: colors.textPrimary },
+  codeCategory: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
+  price: { fontSize: 13, fontWeight: '700', color: colors.accent, marginTop: 4 },
+  qty: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
+  from: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+
+  time: { fontSize: 11, color: colors.textMuted, flexShrink: 0, alignSelf: 'flex-start' },
+});

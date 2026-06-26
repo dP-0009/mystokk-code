@@ -1,0 +1,965 @@
+MYSTOKK
+Claude Code Technical Specification
+Production-Grade Code Generation Guide
+React Native + TypeScript + Supabase + Resend
+Version 1.0  |  June 2026
+ | 
+
+
+ℹ️  This document is written FOR Claude Code — structured as machine-readable instructions. Every section contains exact code, SQL schemas, and specifications to implement verbatim. Use mystokk-prototype.html alongside this document as your visual reference. This is a FRESH, INDEPENDENT rebuild — not connected to the live mystokk.com production system.
+ | 
+Section 1 — Project Setup and Tech Stack
+1.1  Technology Decisions
+Component
+ | Technology
+ | Notes
+ | 
+Mobile app
+ | React Native + TypeScript
+ | Strict mode, no any types
+ | 
+Backend + DB
+ | Supabase (PostgreSQL)
+ | Fresh project, independent of live MongoDB system
+ | 
+Auth
+ | Supabase Auth + custom OTP table
+ | Email/password, Google OAuth, custom 6-digit OTP UX
+ | 
+Email
+ | Resend via Supabase Edge Function
+ | OTP, share notifications, invites, reservation updates
+ | 
+State
+ | Zustand + React Query v5
+ | Matches the existing mobile app&apos;s chosen stack
+ | 
+Navigation
+ | React Navigation v6
+ | Bottom tabs + native stack
+ | 
+File storage
+ | Supabase Storage
+ | Private buckets + signed URLs for photos/docs
+ | 
+Push
+ | @notifee/react-native + Firebase Cloud Messaging
+ | 
+ | 
+
+1.2  Design Tokens — src/theme/tokens.ts
+Matches the documented MyStokk design system exactly: white background, slate-900 text, emerald-600 success, amber-500 reserved/pending, red-500 destructive, deep navy + emerald brand accent.
+export const colors = {
+  navy: &apos;#0F172A&apos;,        // Brand — headers, primary buttons
+  navyLight: &apos;#1E293B&apos;,
+  emerald: &apos;#059669&apos;,     // Success, confirmed, active status
+  emeraldLight: &apos;#10B981&apos;,
+  emeraldBg: &apos;#ECFDF5&apos;,
+  amber: &apos;#D97706&apos;,       // Pending, reserved, partial status
+  amberBg: &apos;#FFFBEB&apos;,
+  red: &apos;#DC2626&apos;,         // Rejected, destructive
+  redBg: &apos;#FEF2F2&apos;,
+  blue: &apos;#2563EB&apos;,        // Negotiating status
+  blueBg: &apos;#EFF6FF&apos;,
+  slate900: &apos;#0F172A&apos;,
+  slate700: &apos;#334155&apos;,
+  slate500: &apos;#64748B&apos;,
+  slate400: &apos;#94A3B8&apos;,
+  slate200: &apos;#E2E8F0&apos;,
+  slate100: &apos;#F1F5F9&apos;,
+  slate50: &apos;#F8FAFC&apos;,
+  white: &apos;#FFFFFF&apos;,
+};
+export const radius = { sm:10, md:16, lg:22, full:999 };
+export const shadow = {
+  sm: { shadowColor:&apos;#0F172A&apos;, shadowOffset:{width:0,height:1}, shadowOpacity:0.06, shadowRadius:3, elevation:2 },
+  md: { shadowColor:&apos;#0F172A&apos;, shadowOffset:{width:0,height:4}, shadowOpacity:0.1, shadowRadius:12, elevation:5 },
+};
+// Status badge colors — apply consistently everywhere:
+// amber=pending, emerald=confirmed/active, red=rejected,
+// slate=cancelled/archived/sold_out, blue=negotiating
+ | 
+
+1.3  Folder Structure
+src/
+├── screens/
+│   ├── LandingScreen.tsx, LoginScreen.tsx, SignupScreen.tsx
+│   ├── ForgotPasswordScreen.tsx, OtpScreen.tsx
+│   ├── OnboardingScreen.tsx
+│   ├── DashboardScreen.tsx
+│   ├── InventoryListScreen.tsx, InventoryDetailScreen.tsx
+│   ├── InventoryCreateScreen.tsx, InventoryEditScreen.tsx
+│   ├── NetworkScreen.tsx, AddVendorScreen.tsx, BulkUploadScreen.tsx
+│   ├── VendorDetailScreen.tsx, EditVendorScreen.tsx
+│   ├── ReceivedListScreen.tsx, ReceivedDetailScreen.tsx
+│   ├── ReservationsScreen.tsx
+│   ├── ProfileScreen.tsx, EditProfileScreen.tsx
+│   ├── SettingsScreen.tsx, NotificationsScreen.tsx
+├── components/
+│   ├── inventory/ (ItemCard, PhotoCarousel, SpecRow, StatBox)
+│   ├── share/ (ShareModal, PreShareDialog, ShareVendorRow)
+│   ├── reservation/ (ReservationCard, NegotiateSheet)
+│   └── shared/ (BottomSheet, ToggleSwitch, StatusChip, EmptyState)
+├── navigation/ (index.tsx, MainTabs.tsx)
+├── services/
+│   ├── supabase/ (client.ts, auth.ts, inventory.ts, shares.ts,
+│   │              reservations.ts, network.ts, storage.ts)
+│   └── email/ (types only — actual sending is server-side)
+├── stores/ (authStore.ts, inventoryStore.ts)
+├── hooks/ (useDashboardStats.ts, useUnreadCount.ts)
+├── types/ (vendor.ts, inventory.ts, share.ts, reservation.ts)
+└── theme/tokens.ts
+
+supabase/
+├── migrations/ (4 SQL files, Section 2 below)
+└── functions/send-email/ (Resend Edge Function)
+ | 
+
+1.4  Environment Variables
+# .env — never commit
+SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co
+SUPABASE_ANON_KEY=eyJ...
+SUPABASE_SERVICE_KEY=eyJ...
+GOOGLE_CLIENT_ID=xxxx.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=GOCSPX-...
+
+# Edge Function secrets (set via Supabase CLI, NOT in app .env)
+RESEND_API_KEY=re_...
+RESEND_FROM_EMAIL=noreply@yourdomain.com
+ | 
+Section 2 — Database Schema
+2.1  Migration 001 — Vendors and Inventory
+File: supabase/migrations/001_vendors_inventory.sql
+CREATE EXTENSION IF NOT EXISTS &quot;uuid-ossp&quot;;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+-- VENDORS — extends Supabase auth.users
+CREATE TABLE vendors (
+  id                  UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email               TEXT UNIQUE NOT NULL,
+  company_name        TEXT,
+  contact_person      TEXT,
+  industry            TEXT,
+  categories          TEXT[] DEFAULT &apos;{}&apos;,
+  country_code        TEXT,
+  mobile_number       TEXT,
+  tel_country_code    TEXT,
+  tel_number          TEXT,
+  address             TEXT,
+  city                TEXT,
+  country             TEXT,
+  logo_url            TEXT,
+  description         TEXT,
+  role                TEXT DEFAULT &apos;vendor&apos; CHECK (role IN (&apos;vendor&apos;,&apos;admin&apos;,&apos;team_member&apos;)),
+  status              TEXT DEFAULT &apos;active&apos; CHECK (status IN (&apos;active&apos;,&apos;suspended&apos;)),
+  onboarded           BOOLEAN DEFAULT false,
+  profile_complete    BOOLEAN DEFAULT false,
+  auth_provider       TEXT DEFAULT &apos;password&apos; CHECK (auth_provider IN (&apos;password&apos;,&apos;google&apos;)),
+  created_at          TIMESTAMPTZ DEFAULT NOW(),
+  updated_at          TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_vendors_email ON vendors(LOWER(email));
+
+-- OTP CODES — custom signup/reset verification (10-min expiry)
+CREATE TABLE otp_codes (
+  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  email       TEXT NOT NULL,
+  code        TEXT NOT NULL,
+  purpose     TEXT NOT NULL CHECK (purpose IN (&apos;signup&apos;,&apos;reset&apos;)),
+  expires_at  TIMESTAMPTZ NOT NULL,
+  used        BOOLEAN DEFAULT false,
+  created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_otp_email ON otp_codes(LOWER(email), purpose, used);
+
+-- INVENTORY
+CREATE TABLE inventory (
+  inventory_id        UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  vendor_id           UUID NOT NULL REFERENCES vendors(id) ON DELETE CASCADE,
+  title               TEXT NOT NULL,
+  product_code        TEXT,
+  category            TEXT,
+  description         TEXT,
+  quantity            NUMERIC NOT NULL DEFAULT 0,
+  quantity_available  NUMERIC NOT NULL DEFAULT 0,
+  unit                TEXT NOT NULL DEFAULT &apos;pcs&apos;,
+  currency             TEXT NOT NULL DEFAULT &apos;AED&apos;,
+  price               NUMERIC,
+  origin              TEXT,
+  stock_location       TEXT,
+  status              TEXT DEFAULT &apos;active&apos; CHECK (status IN
+                       (&apos;active&apos;,&apos;partially_allocated&apos;,&apos;partially_reserved&apos;,
+                        &apos;sold_out&apos;,&apos;archived&apos;)),
+  shared_count        INTEGER DEFAULT 0,
+  specs               JSONB DEFAULT &apos;{}&apos;,
+  created_at          TIMESTAMPTZ DEFAULT NOW(),
+  updated_at          TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_inventory_vendor ON inventory(vendor_id, status);
+CREATE INDEX idx_inventory_fts ON inventory USING GIN(
+  to_tsvector(&apos;simple&apos;, coalesce(title,&apos;&apos;) || &apos; &apos; || coalesce(product_code,&apos;&apos;) ||
+  &apos; &apos; || coalesce(category,&apos;&apos;)));
+
+CREATE TABLE inventory_photos (
+  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  inventory_id    UUID NOT NULL REFERENCES inventory(inventory_id) ON DELETE CASCADE,
+  storage_path    TEXT NOT NULL,
+  original_name   TEXT,
+  sort_order      INTEGER DEFAULT 0,
+  uploaded_at     TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE inventory_files (
+  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  inventory_id    UUID NOT NULL REFERENCES inventory(inventory_id) ON DELETE CASCADE,
+  storage_path    TEXT NOT NULL,
+  original_name   TEXT,
+  uploaded_at     TIMESTAMPTZ DEFAULT NOW()
+);
+ | 
+2.2  Migration 002 — Shares (The Privacy Chain) and Network
+File: supabase/migrations/002_shares_network.sql
+⚠️  This is the most important migration in the entire schema. Read every comment carefully before implementing.
+ | 
+-- SHARES — every hop of every share chain
+CREATE TABLE shares (
+  share_id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  token               TEXT UNIQUE NOT NULL DEFAULT encode(gen_random_bytes(16),&apos;hex&apos;),
+  inventory_id        UUID NOT NULL REFERENCES inventory(inventory_id) ON DELETE CASCADE,
+  original_owner_id   UUID NOT NULL REFERENCES vendors(id),
+  -- ^ The TRUE owner. Internal use only.
+  -- NEVER select this column in any query result returned to a
+  -- recipient client when chain_depth &gt; 0. Enforced via the
+  -- secure view below, not just application code.
+  source_vendor_id    UUID NOT NULL REFERENCES vendors(id),
+  -- ^ Who shared THIS specific hop. This is what recipients see
+  -- as &apos;Shared by&apos;.
+  recipient_id        UUID REFERENCES vendors(id),
+  -- ^ NULL means this is a public forward link (no specific recipient yet)
+  parent_share_id     UUID REFERENCES shares(share_id),
+  -- ^ Set when this row is a forward of another share
+  chain_depth         INTEGER NOT NULL DEFAULT 0,
+  -- ^ 0 = original owner&apos;s direct share. +1 each forward hop.
+  status              TEXT DEFAULT &apos;active&apos; CHECK (status IN (&apos;active&apos;,&apos;revoked&apos;)),
+  forward_price       NUMERIC,
+  forward_currency    TEXT,
+  forward_remark      TEXT,
+  -- ^ The forwarder&apos;s own override. If set, shown to the recipient
+  -- INSTEAD of the original inventory.price.
+  created_at          TIMESTAMPTZ DEFAULT NOW(),
+  updated_at          TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_shares_recipient ON shares(recipient_id, status);
+CREATE INDEX idx_shares_source ON shares(source_vendor_id);
+CREATE INDEX idx_shares_inventory ON shares(inventory_id);
+CREATE INDEX idx_shares_parent ON shares(parent_share_id);
+CREATE INDEX idx_shares_token ON shares(token);
+
+-- CONNECTIONS (Network)
+CREATE TABLE connections (
+  connection_id        UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  vendor_id            UUID NOT NULL REFERENCES vendors(id) ON DELETE CASCADE,
+  connected_vendor_id  UUID NOT NULL REFERENCES vendors(id) ON DELETE CASCADE,
+  status               TEXT DEFAULT &apos;pending&apos; CHECK (status IN (&apos;pending&apos;,&apos;connected&apos;,&apos;rejected&apos;)),
+  group_name           TEXT,
+  created_at           TIMESTAMPTZ DEFAULT NOW(),
+  updated_at           TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(vendor_id, connected_vendor_id)
+);
+CREATE INDEX idx_connections_vendor ON connections(vendor_id, status);
+
+-- MANUAL VENDORS — non-signup contacts
+CREATE TABLE manual_vendors (
+  id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  owner_vendor_id     UUID NOT NULL REFERENCES vendors(id) ON DELETE CASCADE,
+  company_name        TEXT NOT NULL,
+  contact_person      TEXT,
+  email               TEXT,
+  mobile_number       TEXT,
+  industry            TEXT,
+  country             TEXT,
+  city                TEXT,
+  group_name          TEXT,
+  is_registered       BOOLEAN DEFAULT false,
+  linked_vendor_id    UUID REFERENCES vendors(id),
+  created_at          TIMESTAMPTZ DEFAULT NOW(),
+  updated_at          TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_manual_vendors_owner ON manual_vendors(owner_vendor_id);
+CREATE INDEX idx_manual_vendors_email ON manual_vendors(LOWER(email));
+
+-- Trigger: when a vendor signs up, auto-link any matching manual_vendors row
+CREATE OR REPLACE FUNCTION link_manual_vendor_on_signup() RETURNS TRIGGER AS $$
+BEGIN
+  UPDATE manual_vendors
+  SET is_registered = true, linked_vendor_id = NEW.id, updated_at = NOW()
+  WHERE LOWER(email) = LOWER(NEW.email) AND linked_vendor_id IS NULL;
+  RETURN NEW;
+END; $$ LANGUAGE plpgsql;
+
+CREATE TRIGGER vendors_link_manual AFTER INSERT ON vendors
+FOR EACH ROW EXECUTE FUNCTION link_manual_vendor_on_signup();
+ | 
+
+2.3  Migration 003 — Reservations and Notifications
+File: supabase/migrations/003_reservations_notifications.sql
+-- RESERVATIONS
+CREATE TABLE reservations (
+  reservation_id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  inventory_id           UUID NOT NULL REFERENCES inventory(inventory_id),
+  share_id               UUID NOT NULL REFERENCES shares(share_id),
+  requester_id           UUID NOT NULL REFERENCES vendors(id),
+  responder_id           UUID NOT NULL REFERENCES vendors(id),
+  -- ^ The CURRENT chain seller — i.e. shares.source_vendor_id of
+  -- share_id, NOT necessarily the original inventory owner.
+  quantity               NUMERIC NOT NULL,
+  offered_price          NUMERIC,
+  message                TEXT,
+  status                 TEXT DEFAULT &apos;pending&apos; CHECK (status IN
+                         (&apos;pending&apos;,&apos;negotiating&apos;,&apos;confirmed&apos;,&apos;rejected&apos;,
+                          &apos;cancelled&apos;,&apos;passed&apos;)),
+  parent_reservation_id  UUID REFERENCES reservations(reservation_id),
+  -- ^ Set for pass-to-supplier chains
+  created_at             TIMESTAMPTZ DEFAULT NOW(),
+  updated_at             TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_reservations_requester ON reservations(requester_id, status);
+CREATE INDEX idx_reservations_responder ON reservations(responder_id, status);
+CREATE INDEX idx_reservations_inventory ON reservations(inventory_id);
+
+-- NEGOTIATION ROUNDS — separate table so the 3-round cap per side
+-- can be queried and enforced server-side, not buried in JSON
+CREATE TABLE negotiation_rounds (
+  id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  reservation_id    UUID NOT NULL REFERENCES reservations(reservation_id) ON DELETE CASCADE,
+  round_number      INTEGER NOT NULL,
+  proposed_by       UUID NOT NULL REFERENCES vendors(id),
+  counter_price     NUMERIC,
+  counter_quantity  NUMERIC,
+  message           TEXT,
+  created_at        TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_negotiation_reservation ON negotiation_rounds(reservation_id);
+
+-- Enforce max 3 rounds PER PROPOSING VENDOR at the database level
+CREATE OR REPLACE FUNCTION check_negotiation_cap() RETURNS TRIGGER AS $$
+DECLARE round_count INTEGER;
+BEGIN
+  SELECT COUNT(*) INTO round_count FROM negotiation_rounds
+  WHERE reservation_id = NEW.reservation_id AND proposed_by = NEW.proposed_by;
+  IF round_count &gt;= 3 THEN
+    RAISE EXCEPTION &apos;Negotiation round limit (3) reached for this vendor on this reservation&apos;;
+  END IF;
+  RETURN NEW;
+END; $$ LANGUAGE plpgsql;
+
+CREATE TRIGGER negotiation_rounds_cap BEFORE INSERT ON negotiation_rounds
+FOR EACH ROW EXECUTE FUNCTION check_negotiation_cap();
+
+-- NOTIFICATIONS
+CREATE TABLE notifications (
+  notification_id   UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  vendor_id         UUID NOT NULL REFERENCES vendors(id) ON DELETE CASCADE,
+  type              TEXT NOT NULL,
+  title             TEXT NOT NULL,
+  body              TEXT,
+  related_id        UUID,
+  read              BOOLEAN DEFAULT false,
+  created_at        TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_notifications_vendor ON notifications(vendor_id, read, created_at DESC);
+
+-- CONVERSATIONS &amp; MESSAGES
+CREATE TABLE conversations (
+  id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  vendor_a_id   UUID NOT NULL REFERENCES vendors(id),
+  vendor_b_id   UUID NOT NULL REFERENCES vendors(id),
+  status        TEXT DEFAULT &apos;active&apos; CHECK (status IN (&apos;active&apos;,&apos;archived&apos;)),
+  created_at    TIMESTAMPTZ DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(vendor_a_id, vendor_b_id)
+);
+
+CREATE TABLE messages (
+  id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  conversation_id   UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+  sender_id         UUID NOT NULL REFERENCES vendors(id),
+  body              TEXT NOT NULL,
+  created_at        TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_messages_conversation ON messages(conversation_id, created_at);
+ | 
+2.4  Migration 004 — Row Level Security and the Privacy-Safe View
+File: supabase/migrations/004_rls_privacy_view.sql
+⚠️  This migration is what actually enforces the privacy chain. The mobile app must query the safe_received_shares VIEW for any &apos;Received&apos; screen — never query the shares table directly for that purpose.
+ | 
+-- Standard RLS — vendors see only their own data
+ALTER TABLE vendors ENABLE ROW LEVEL SECURITY;
+ALTER TABLE inventory ENABLE ROW LEVEL SECURITY;
+ALTER TABLE inventory_photos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE inventory_files ENABLE ROW LEVEL SECURITY;
+ALTER TABLE connections ENABLE ROW LEVEL SECURITY;
+ALTER TABLE manual_vendors ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reservations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE negotiation_rounds ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE shares ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY vendors_self ON vendors FOR ALL USING (auth.uid() = id);
+CREATE POLICY inventory_own ON inventory FOR ALL USING (auth.uid() = vendor_id);
+CREATE POLICY photos_own ON inventory_photos FOR ALL USING (
+  EXISTS (SELECT 1 FROM inventory i WHERE i.inventory_id = inventory_photos.inventory_id
+  AND i.vendor_id = auth.uid()));
+CREATE POLICY files_own ON inventory_files FOR ALL USING (
+  EXISTS (SELECT 1 FROM inventory i WHERE i.inventory_id = inventory_files.inventory_id
+  AND i.vendor_id = auth.uid()));
+CREATE POLICY connections_own ON connections FOR ALL USING (
+  auth.uid() = vendor_id OR auth.uid() = connected_vendor_id);
+CREATE POLICY manual_vendors_own ON manual_vendors FOR ALL USING (auth.uid() = owner_vendor_id);
+CREATE POLICY reservations_own ON reservations FOR ALL USING (
+  auth.uid() = requester_id OR auth.uid() = responder_id);
+CREATE POLICY negotiation_own ON negotiation_rounds FOR ALL USING (
+  EXISTS (SELECT 1 FROM reservations r WHERE r.reservation_id = negotiation_rounds.reservation_id
+  AND (r.requester_id = auth.uid() OR r.responder_id = auth.uid())));
+CREATE POLICY notifications_own ON notifications FOR ALL USING (auth.uid() = vendor_id);
+CREATE POLICY conversations_own ON conversations FOR ALL USING (
+  auth.uid() = vendor_a_id OR auth.uid() = vendor_b_id);
+CREATE POLICY messages_own ON messages FOR ALL USING (
+  EXISTS (SELECT 1 FROM conversations c WHERE c.id = messages.conversation_id
+  AND (c.vendor_a_id = auth.uid() OR c.vendor_b_id = auth.uid())));
+
+-- SHARES table RLS — owner can manage all their shares (any depth
+-- where they are source_vendor_id), recipients can read shares
+-- addressed to them. This is INTENTIONALLY permissive at the row
+-- level — the privacy filtering of WHICH COLUMNS are visible
+-- happens in the secure view below, which the app actually queries.
+CREATE POLICY shares_manage_own ON shares FOR ALL USING (
+  auth.uid() = source_vendor_id OR auth.uid() = original_owner_id);
+CREATE POLICY shares_read_received ON shares FOR SELECT USING (
+  auth.uid() = recipient_id);
+
+-- ════════════════════════════════════════════════════
+-- THE PRIVACY-SAFE VIEW — query this for any &apos;Received&apos; screen
+-- ════════════════════════════════════════════════════
+-- This view deliberately OMITS original_owner_id from its output
+-- entirely. It joins source_vendor_id&apos;s public profile fields only.
+-- It computes the effective display price (forward_price if set,
+-- else the true inventory price) so the client never needs to
+-- reason about the override logic itself.
+
+CREATE VIEW safe_received_shares AS
+SELECT
+  s.share_id,
+  s.token,
+  s.inventory_id,
+  s.recipient_id,
+  s.chain_depth,
+  s.status,
+  s.created_at,
+  -- Source vendor&apos;s PUBLIC info only — never original_owner_id
+  sv.id              AS shared_by_vendor_id,
+  sv.company_name    AS shared_by_company_name,
+  sv.logo_url        AS shared_by_logo_url,
+  -- Effective price: forward override wins if present
+  COALESCE(s.forward_price, i.price)       AS display_price,
+  COALESCE(s.forward_currency, i.currency) AS display_currency,
+  s.forward_remark,
+  -- Inventory display fields (safe — these are meant to be seen)
+  i.title, i.description, i.category, i.quantity, i.unit,
+  i.origin, i.specs, i.status AS inventory_status
+FROM shares s
+JOIN vendors sv ON sv.id = s.source_vendor_id
+JOIN inventory i ON i.inventory_id = s.inventory_id
+WHERE s.status = &apos;active&apos;;
+
+-- Grant select to authenticated role; RLS on underlying tables
+-- still applies via the view&apos;s security_invoker behavior in PG15+.
+-- If using an older Postgres, mark the view security_barrier and
+-- add an explicit WHERE recipient_id = auth.uid() filter at query
+-- time from the client, OR wrap this in an RPC function instead
+-- of a plain view for guaranteed enforcement:
+
+CREATE OR REPLACE FUNCTION get_received_shares(p_vendor_id UUID)
+RETURNS SETOF safe_received_shares AS $$
+  SELECT * FROM safe_received_shares WHERE recipient_id = p_vendor_id;
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
+-- The mobile app calls supabase.rpc(&apos;get_received_shares&apos;, { p_vendor_id: ... })
+-- — NEVER selects from shares directly for the Received screen.
+ | 
+
+⚠️  Claude Code must implement the Received screens using this RPC function exclusively. Add an automated or manual test (described in Section 9 of the Build Guide) that signs in as vendor C, calls get_received_shares, and asserts original_owner_id and vendor A&apos;s company_name never appear anywhere in the response.
+ | 
+
+2.5  Completeness and Auto-Calculation Triggers
+-- profile_complete auto-calculation
+CREATE OR REPLACE FUNCTION calculate_profile_complete(v vendors) RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN v.company_name IS NOT NULL AND v.company_name != &apos;&apos; AND
+         v.contact_person IS NOT NULL AND v.contact_person != &apos;&apos; AND
+         v.industry IS NOT NULL AND
+         v.country IS NOT NULL AND v.city IS NOT NULL AND
+         v.mobile_number IS NOT NULL AND v.mobile_number != &apos;&apos;;
+END; $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION update_profile_complete() RETURNS TRIGGER AS $$
+BEGIN NEW.profile_complete := calculate_profile_complete(NEW); RETURN NEW; END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER vendors_profile_complete BEFORE INSERT OR UPDATE ON vendors
+FOR EACH ROW EXECUTE FUNCTION update_profile_complete();
+
+-- inventory.status auto-update based on quantity_available
+CREATE OR REPLACE FUNCTION update_inventory_status() RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.quantity_available &lt;= 0 THEN
+    NEW.status := &apos;sold_out&apos;;
+  ELSIF NEW.quantity_available &lt; NEW.quantity AND NEW.status != &apos;archived&apos; THEN
+    NEW.status := &apos;partially_reserved&apos;;
+  END IF;
+  RETURN NEW;
+END; $$ LANGUAGE plpgsql;
+
+CREATE TRIGGER inventory_status_update BEFORE UPDATE ON inventory
+FOR EACH ROW WHEN (NEW.quantity_available IS DISTINCT FROM OLD.quantity_available)
+EXECUTE FUNCTION update_inventory_status();
+ | 
+
+2.6  Supabase Storage Buckets
+Bucket
+ | Access
+ | Contents
+ | 
+inventory-photos
+ | Private, signed URLs only
+ | Product photos
+ | 
+inventory-documents
+ | Private, signed URLs only
+ | Spec sheets, certificates etc.
+ | 
+company-logos
+ | Public read
+ | Vendor logos shown on share cards
+ | 
+Section 3 — Authentication Flow
+3.1  Sign-Up Flow — Exact Sequence
+This matches the documented flow precisely (Section 7.1 of the original technical documentation).
+User enters email + password + confirm password on SignupScreen.
+Call supabase.auth.signUp({ email, password }) — this creates the auth.users row and triggers the vendors row insert (via a database trigger, see below).
+Generate a 6-digit OTP, insert into otp_codes (email, code, purpose=&apos;signup&apos;, expires_at = now + 10 minutes).
+Call the send-email Edge Function to deliver the OTP via Resend.
+Navigate to OtpScreen with the email and purpose=&apos;signup&apos; as params.
+User enters the 6-digit code. Call verifyOtp(email, code, &apos;signup&apos;).
+On success: mark the otp_codes row used=true. Check vendors.onboarded — if false, navigate to Onboarding. If true, navigate to Dashboard.
+
+-- Trigger: auto-create a vendors row when a new auth user signs up
+CREATE OR REPLACE FUNCTION handle_new_auth_user() RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO vendors (id, email) VALUES (NEW.id, LOWER(NEW.email));
+  RETURN NEW;
+END; $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_auth_user_created
+AFTER INSERT ON auth.users
+FOR EACH ROW EXECUTE FUNCTION handle_new_auth_user();
+ | 
+
+3.2  Google OAuth
+Use Supabase Auth&apos;s built-in Google provider — configure Client ID/Secret in Supabase Dashboard → Authentication → Providers.
+On successful Google sign-in, the trigger above still fires and creates the vendors row automatically.
+Always treat the email as verified for Google sign-ins (Google guarantees this) — skip the OTP screen entirely for this path, set auth_provider=&apos;google&apos;.
+If the email already has a password-based account, Supabase Auth&apos;s identity linking handles merging — surface a clear message if linking fails.
+
+3.3  Password Reset Flow
+User enters email on ForgotPasswordScreen.
+Generate OTP, insert into otp_codes with purpose=&apos;reset&apos;, send via Resend.
+Navigate to OtpScreen with purpose=&apos;reset&apos;.
+On verification success, navigate to a NewPasswordScreen, call supabase.auth.updateUser({ password }) using a temporary verified session.
+
+3.4  Route Gating
+Vendor State
+ | Allowed Routes
+ | 
+Not authenticated
+ | Landing, Login, Signup, ForgotPassword, OTP only
+ | 
+Authenticated, onboarded=false
+ | Onboarding wizard only — block all tab navigation
+ | 
+Authenticated, onboarded=true
+ | Full app — all 5 tabs
+ | 
+profile_complete=false
+ | Full app EXCEPT the Share action (gated at the button level, not the route level)
+ | 
+Section 4 — Navigation Structure
+4.1  Navigator Types
+// src/navigation/index.tsx
+export type RootStackParamList = {
+  Landing: undefined;
+  Login: undefined;
+  Signup: undefined;
+  ForgotPassword: undefined;
+  Otp: { email: string; purpose: &apos;signup&apos; | &apos;reset&apos; };
+  NewPassword: undefined;
+  Onboarding: undefined;
+  Main: undefined; // Bottom tabs
+  InventoryDetail: { inventoryId: string };
+  InventoryCreate: undefined;
+  InventoryEdit: { inventoryId: string };
+  VendorDetail: { vendorId?: string; manualVendorId?: string };
+  EditVendor: { vendorId?: string; manualVendorId?: string };
+  AddVendor: undefined;
+  BulkUpload: undefined;
+  ReceivedDetail: { shareId: string };
+  EditProfile: undefined;
+  Settings: undefined;
+  Notifications: undefined;
+};
+
+export type MainTabParamList = {
+  Dashboard: undefined;
+  Inventory: undefined;
+  Network: undefined;
+  Received: undefined;
+  Reservations: undefined;
+};
+
+// Deep links
+const linking = {
+  prefixes: [&apos;mystokk://&apos;, &apos;https://app.mystokk.com&apos;],
+  config: {
+    screens: {
+      Otp: &apos;verify&apos;,
+      Main: {
+        screens: {
+          Received: &apos;share/:token&apos;, // public share link entry point
+        }
+      },
+      InventoryDetail: &apos;inventory/:inventoryId&apos;,
+    }
+  }
+};
+ | 
+
+4.2  Public Share Link Handling
+When mystokk://share/{token} is opened (cold or warm start):
+Resolve the token via the shares table (public-readable by token only, via a dedicated RPC — never expose the full shares table to unauthenticated requests).
+If not authenticated: show a lightweight preview (title, photo, source company name only) with Sign In / Sign Up prompts.
+If authenticated: check if current vendor&apos;s id matches original_owner_id or source_vendor_id of that share — if so, redirect to their own InventoryDetail (self-share protection, Section 3.6 of the Build Guide).
+Otherwise, claim the share (create/confirm a shares row with recipient_id = current vendor if it was a public-forward link) and navigate to ReceivedDetail.
+Section 5 — Screen Specifications
+5.1  Dashboard Screen
+Element
+ | Specification
+ | 
+Hero header
+ | Navy background, greeting + company name, avatar (tap → Profile)
+ | 
+Stat cards
+ | 4 cards overlapping hero bottom edge: My Inventory, Received, Reservations, Network — each a real count() query scoped to current vendor, each taps to its tab
+ | 
+Quick actions
+ | Add Item / Add Vendor / Profile — 3 equal cards
+ | 
+Pending reservations
+ | Up to 3 incoming reservations (status=pending), inline Accept/Negotiate/Reject
+ | 
+Recently received
+ | Up to 3 most recent active shares from safe_received_shares
+ | 
+
+5.2  Inventory Detail Screen (Owner View)
+Element
+ | Specification
+ | 
+Photo carousel
+ | Swipeable, dot indicators, pulls from inventory_photos
+ | 
+4-stat row
+ | Total (quantity) / Reserved (quantity - quantity_available) / Available (quantity_available) / Shared (shared_count)
+ | 
+Status chip
+ | Colored by status enum — active=emerald, partially_reserved=amber, sold_out=slate, archived=slate
+ | 
+Share Activity
+ | List of DIRECT shares (chain_depth=0) for this item — vendor name + relative time
+ | 
+Reservations section
+ | Any pending/negotiating reservations against this inventory_id
+ | 
+Actions
+ | Edit button, Share button (bottom bar) + ⋯ menu (Generate Link / Manage Shares / Archive / Delete)
+ | 
+
+5.3  Received Detail Screen
+⚠️  Must be built from the safe_received_shares RPC result only. Never join or display original_owner_id.
+ | 
+Element
+ | Specification
+ | 
+Banner
+ | &apos;Shared by [shared_by_company_name] · [relative time]&apos;
+ | 
+Price
+ | display_price / display_currency from the RPC result — already resolves the forward override correctly
+ | 
+Stats
+ | &apos;Reserved by Me&apos; (sum of this vendor&apos;s confirmed reservations against this share_id) instead of global figures
+ | 
+Actions
+ | Forward (opens Pre-Share Dialog) + Reserve (opens Reserve sheet)
+ | 
+
+5.4  Share Modal (Bottom Sheet Component)
+Tab
+ | Behavior
+ | 
+My Network
+ | Search + Industry/Country/Group filters, multi-select checkbox list (unified connections + manual_vendors), &apos;Share with N vendors&apos; button
+ | 
+Email
+ | Single email field — creates a share addressed to that email, sends notification regardless of registration status
+ | 
+Link
+ | Generates a recipient_id=null share row, returns public URL, Copy + native Share Sheet buttons
+ | 
+
+5.5  Pre-Share Dialog (Forward Mode Only)
+Shown only when forwarding a RECEIVED item. Fields: Your Price (optional, becomes the new share&apos;s forward_price), Remark (optional). Explicit copy: &quot;The original supplier&apos;s identity and price are never shown to whoever you forward this to.&quot; Continue button opens the Share Modal in forward mode.
+
+5.6  Negotiate Sheet
+Header shows &apos;Round N of 3&apos;. Fields: Counter Quantity, Counter Price, Message. On submit, call the negotiation service function (Section 6.3) which inserts into negotiation_rounds — the database trigger from Section 2.3 blocks a 4th round per vendor automatically; surface its error message directly in the UI.
+Section 6 — Service Layer
+6.1  Shares Service
+// src/services/supabase/shares.ts
+import { supabase } from &apos;./client&apos;;
+
+// Direct share — owner shares their own item
+export async function createDirectShares(
+  inventoryId: string, recipientIds: string[]
+): Promise&lt;void&gt; {
+  const { data: { user } } = await supabase.auth.getUser();
+  const rows = recipientIds.map(rid =&gt; ({
+    inventory_id: inventoryId,
+    original_owner_id: user!.id,
+    source_vendor_id: user!.id,
+    recipient_id: rid,
+    parent_share_id: null,
+    chain_depth: 0,
+  }));
+  const { error } = await supabase.from(&apos;shares&apos;).insert(rows);
+  if (error) throw error;
+
+  await supabase.rpc(&apos;increment_shared_count&apos;, {
+    p_inventory_id: inventoryId, p_count: recipientIds.length
+  });
+
+  // Trigger notification + email Edge Function for each recipient
+  await Promise.all(recipientIds.map(rid =&gt;
+    supabase.functions.invoke(&apos;send-email&apos;, {
+      body: { type: &apos;share_received&apos;, recipientVendorId: rid, inventoryId }
+    })
+  ));
+}
+
+// Forward — recipient forwards a received share downstream
+export async function forwardShare(
+  parentShareId: string,
+  recipientIds: string[],
+  forwardPrice: number | null,
+  forwardCurrency: string | null,
+  forwardRemark: string | null
+): Promise&lt;void&gt; {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: parent, error: pErr } = await supabase
+    .from(&apos;shares&apos;).select(&apos;inventory_id, original_owner_id, chain_depth&apos;)
+    .eq(&apos;share_id&apos;, parentShareId).single();
+  if (pErr || !parent) throw pErr || new Error(&apos;Parent share not found&apos;);
+
+  const rows = recipientIds.map(rid =&gt; ({
+    inventory_id: parent.inventory_id,
+    original_owner_id: parent.original_owner_id, // NEVER changes down the chain
+    source_vendor_id: user!.id,                  // THIS vendor is now the visible sharer
+    recipient_id: rid,
+    parent_share_id: parentShareId,
+    chain_depth: parent.chain_depth + 1,
+    forward_price: forwardPrice,
+    forward_currency: forwardCurrency,
+    forward_remark: forwardRemark,
+  }));
+  const { error } = await supabase.from(&apos;shares&apos;).insert(rows);
+  if (error) throw error;
+  // Do NOT increment shared_count — forwards never count toward it
+}
+
+// Received list — ALWAYS use the RPC, never query shares directly
+export async function getReceivedShares() {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data, error } = await supabase
+    .rpc(&apos;get_received_shares&apos;, { p_vendor_id: user!.id });
+  if (error) throw error;
+  return data;
+}
+
+// Owner self-share check
+export async function resolveShareToken(token: string) {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: share, error } = await supabase
+    .from(&apos;shares&apos;)
+    .select(&apos;share_id, inventory_id, original_owner_id, source_vendor_id, recipient_id&apos;)
+    .eq(&apos;token&apos;, token).single();
+  if (error || !share) throw error || new Error(&apos;Share not found&apos;);
+
+  const isOwner = user &amp;&amp; (user.id === share.original_owner_id ||
+                            user.id === share.source_vendor_id);
+  if (isOwner) {
+    return { isOwner: true, inventoryId: share.inventory_id };
+  }
+  // Claim a public-forward link (recipient_id was null)
+  if (share.recipient_id === null &amp;&amp; user) {
+    await supabase.from(&apos;shares&apos;).update({ recipient_id: user.id })
+      .eq(&apos;share_id&apos;, share.share_id);
+  }
+  return { isOwner: false, shareId: share.share_id };
+}
+ | 
+
+6.2  Reservations Service
+// src/services/supabase/reservations.ts
+
+export async function createReservation(
+  inventoryId: string, shareId: string, quantity: number,
+  offeredPrice: number | null, message: string | null
+): Promise&lt;void&gt; {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: share } = await supabase.from(&apos;shares&apos;)
+    .select(&apos;source_vendor_id&apos;).eq(&apos;share_id&apos;, shareId).single();
+  const { error } = await supabase.from(&apos;reservations&apos;).insert({
+    inventory_id: inventoryId, share_id: shareId,
+    requester_id: user!.id, responder_id: share!.source_vendor_id,
+    quantity, offered_price: offeredPrice, message, status: &apos;pending&apos;,
+  });
+  if (error) throw error;
+}
+
+export async function acceptReservation(reservationId: string): Promise&lt;void&gt; {
+  const { data: res } = await supabase.from(&apos;reservations&apos;)
+    .select(&apos;inventory_id, quantity&apos;).eq(&apos;reservation_id&apos;, reservationId).single();
+  await supabase.from(&apos;reservations&apos;)
+    .update({ status: &apos;confirmed&apos; }).eq(&apos;reservation_id&apos;, reservationId);
+  // Decrement available quantity — use an RPC for atomic safety
+  // against race conditions (two buyers reserving simultaneously)
+  await supabase.rpc(&apos;decrement_inventory_quantity&apos;, {
+    p_inventory_id: res!.inventory_id, p_amount: res!.quantity
+  });
+}
+
+export async function submitNegotiationRound(
+  reservationId: string, counterPrice: number, counterQuantity: number,
+  message: string
+): Promise&lt;void&gt; {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { count } = await supabase.from(&apos;negotiation_rounds&apos;)
+    .select(&apos;*&apos;, { count: &apos;exact&apos;, head: true })
+    .eq(&apos;reservation_id&apos;, reservationId).eq(&apos;proposed_by&apos;, user!.id);
+  const { error } = await supabase.from(&apos;negotiation_rounds&apos;).insert({
+    reservation_id: reservationId, round_number: (count || 0) + 1,
+    proposed_by: user!.id, counter_price: counterPrice,
+    counter_quantity: counterQuantity, message,
+  });
+  // The database trigger blocks a 4th round — surface error.message directly
+  if (error) throw error;
+  await supabase.from(&apos;reservations&apos;)
+    .update({ status: &apos;negotiating&apos; }).eq(&apos;reservation_id&apos;, reservationId);
+}
+
+export async function passToSupplier(reservationId: string): Promise&lt;void&gt; {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: original } = await supabase.from(&apos;reservations&apos;)
+    .select(&apos;inventory_id, share_id, quantity, offered_price&apos;)
+    .eq(&apos;reservation_id&apos;, reservationId).single();
+  const { data: myShare } = await supabase.from(&apos;shares&apos;)
+    .select(&apos;parent_share_id&apos;).eq(&apos;share_id&apos;, original!.share_id).single();
+  const { data: parentShare } = await supabase.from(&apos;shares&apos;)
+    .select(&apos;share_id, source_vendor_id&apos;).eq(&apos;share_id&apos;, myShare!.parent_share_id).single();
+
+  await supabase.from(&apos;reservations&apos;).insert({
+    inventory_id: original!.inventory_id, share_id: parentShare!.share_id,
+    requester_id: user!.id, responder_id: parentShare!.source_vendor_id,
+    quantity: original!.quantity, offered_price: original!.offered_price,
+    message: &apos;Passed through from a downstream buyer&apos;,
+    parent_reservation_id: reservationId, status: &apos;pending&apos;,
+  });
+  await supabase.from(&apos;reservations&apos;)
+    .update({ status: &apos;passed&apos; }).eq(&apos;reservation_id&apos;, reservationId);
+}
+ | 
+Section 7 — Security Requirements
+7.1  Security Checklist
+Session tokens in Keychain (iOS) / Keystore (Android) via react-native-keychain — never AsyncStorage
+RLS enforced on every table — verified by attempting cross-vendor queries
+PRIVACY CHAIN — Received screens query get_received_shares RPC exclusively, never the shares table directly from the client
+Negotiation cap enforced via database trigger, not just UI validation
+Inventory quantity decrements use an atomic RPC to prevent overselling race conditions
+Resend API key and Google OAuth secret live only in Supabase Edge Function secrets
+Email comparisons lowercase everywhere, matching case-insensitive uniqueness
+File access via signed URLs with short expiry — inventory-photos and inventory-documents buckets are private
+Rate limit OTP requests (e.g. 3 per email per 10 minutes) to prevent abuse
+
+7.2  The Privacy Chain Test
+⚠️  Run this exact test before considering Phase 3 of the build complete. Create 3 test accounts A, B, C. A shares an item to B. B forwards to C with a custom price. Sign in as C. Call get_received_shares. Inspect the raw JSON response. Confirm: no field anywhere contains A&apos;s vendor id, email, or company_name. Confirm the displayed price is B&apos;s forward_price, not A&apos;s original price.
+ | 
+Section 8 — Dependencies
+npm install react-native@0.81 typescript@5.9
+npm install @react-navigation/native @react-navigation/native-stack
+npm install @react-navigation/bottom-tabs react-native-screens
+npm install react-native-safe-area-context
+npm install @supabase/supabase-js zustand @tanstack/react-query
+npm install react-native-reanimated react-native-gesture-handler
+npm install @gorhom/bottom-sheet react-native-svg
+npm install expo-image-picker expo-document-picker expo-file-system
+npm install expo-sharing expo-clipboard expo-linking
+npm install @react-native-community/netinfo
+npm install @notifee/react-native @react-native-firebase/messaging
+npm install react-native-keychain
+npm install @sentry/react-native
+ | 
+Section 9 — Claude Code Prompt Reference
+Full step-by-step prompts are in MyStokk_Step_by_Step_Build_Guide.docx. This section is a fast lookup.
+
+Task
+ | Section to Reference
+ | 
+Project setup
+ | Section 1 of this document
+ | 
+Database migrations (4 files)
+ | Section 2 — copy SQL verbatim
+ | 
+Auth flow
+ | Section 3
+ | 
+Navigation
+ | Section 4
+ | 
+Any individual screen
+ | Section 5 — match mystokk-prototype.html visually
+ | 
+Shares / privacy chain logic
+ | Section 6.1 — copy service code verbatim
+ | 
+Reservations / negotiation logic
+ | Section 6.2 — copy service code verbatim
+ | 
+Security review
+ | Section 7 — run the privacy chain test
+ | 
+
+MYSTOKK
+Claude Code Technical Specification v1.0
+Companion to MyStokk_Product_Specification.docx and mystokk-prototype.html
+ | 

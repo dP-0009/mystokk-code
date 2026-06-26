@@ -1,0 +1,13 @@
+-- ============================================================
+-- 011_fix_profile_complete_trigger.sql
+-- Regression fix for migration 006: revoking EXECUTE on
+-- calculate_profile_complete from authenticated broke the
+-- update_profile_complete trigger on vendor UPDATE (onboarding),
+-- since that trigger (running as the authenticated user) calls the helper
+-- → "permission denied for function calculate_profile_complete".
+--
+-- Make the trigger function SECURITY DEFINER so it executes as its owner
+-- (which retains EXECUTE on the helper). The helper stays un-callable as an
+-- RPC. search_path was already pinned in migration 005.
+-- ============================================================
+ALTER FUNCTION public.update_profile_complete() SECURITY DEFINER;

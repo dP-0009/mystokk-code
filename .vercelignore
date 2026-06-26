@@ -1,0 +1,11 @@
+.vs
+.expo
+.git
+node_modules
+/supabase
+*.docx
+*.log
+mystokk-prototype.html
+spec_text.txt
+~$*
+client_secret*.json

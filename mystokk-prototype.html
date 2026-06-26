@@ -1,0 +1,1820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>MyStokk</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;1,14..32,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #0F172A;
+    --navy-light: #1E293B;
+    --emerald: #059669;
+    --emerald-light: #10B981;
+    --emerald-bg: #ECFDF5;
+    --amber: #D97706;
+    --amber-bg: #FFFBEB;
+    --red: #DC2626;
+    --red-bg: #FEF2F2;
+    --blue: #2563EB;
+    --blue-bg: #EFF6FF;
+    --slate-900: #0F172A;
+    --slate-700: #334155;
+    --slate-500: #64748B;
+    --slate-400: #94A3B8;
+    --slate-200: #E2E8F0;
+    --slate-100: #F1F5F9;
+    --slate-50: #F8FAFC;
+    --white: #FFFFFF;
+    --radius: 16px;
+    --radius-sm: 10px;
+    --radius-lg: 22px;
+    --shadow: 0 1px 3px rgba(15,23,42,0.06), 0 1px 2px rgba(15,23,42,0.04);
+    --shadow-md: 0 4px 16px rgba(15,23,42,0.08);
+    --shadow-lg: 0 12px 32px rgba(15,23,42,0.14);
+    --font: 'Inter', sans-serif;
+    --font-mono: 'DM Mono', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; background: #1a1a2e; display: flex; align-items: center; justify-content: center; font-family: var(--font); }
+
+  #app-shell {
+    width: 390px; height: 844px;
+    background: var(--slate-50);
+    border-radius: 44px; overflow: hidden; position: relative;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.1), inset 0 0 0 1px rgba(255,255,255,0.05);
+  }
+
+  .screen { position: absolute; inset: 0; display: none; flex-direction: column; overflow: hidden; }
+  .screen.active { display: flex; }
+
+  @keyframes slideUp { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+  .animate-in { animation: slideUp 0.32s cubic-bezier(0.22,1,0.36,1) both; }
+
+  .status-bar { height: 44px; background: var(--navy); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; flex-shrink: 0; }
+  .status-bar .time { font-size: 15px; font-weight: 600; color: white; font-family: var(--font-mono); }
+  .status-bar .icons { display: flex; gap: 6px; }
+  .status-bar .icons span { color: white; font-size: 13px; }
+
+  ::-webkit-scrollbar { width: 0; }
+
+  /* ============ SHARED HEADER ============ */
+  .app-header { background: var(--navy); padding: 14px 18px; flex-shrink: 0; }
+  .app-header-row { display: flex; align-items: center; justify-content: space-between; }
+  .header-back { width: 34px; height: 34px; background: rgba(255,255,255,0.1); border-radius: 50%; border: none; color: white; font-size: 17px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .header-title { font-size: 16px; font-weight: 700; color: white; }
+  .header-action { width: 34px; height: 34px; background: rgba(255,255,255,0.1); border-radius: 50%; border: none; color: white; font-size: 15px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .logo-wordmark { font-size: 20px; font-weight: 800; color: white; letter-spacing: -0.5px; }
+  .logo-wordmark span { color: var(--emerald-light); }
+
+  /* ============ BOTTOM TAB BAR ============ */
+  .tab-bar { display: flex; background: white; border-top: 1px solid var(--slate-200); padding: 8px 4px 22px; flex-shrink: 0; }
+  .tab-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; padding: 4px 0; position: relative; }
+  .tab-icon { font-size: 20px; color: var(--slate-400); transition: color 0.2s; }
+  .tab-label { font-size: 9.5px; font-weight: 600; color: var(--slate-400); }
+  .tab-item.active .tab-icon, .tab-item.active .tab-label { color: var(--emerald); }
+  .tab-badge { position: absolute; top: -2px; right: 22%; background: var(--red); color: white; font-size: 9px; font-weight: 700; min-width: 16px; height: 16px; border-radius: 8px; display: flex; align-items: center; justify-content: center; padding: 0 4px; }
+
+  /* ============ CARDS / BUTTONS ============ */
+  .stat-card { background: white; border-radius: var(--radius-sm); padding: 14px; box-shadow: var(--shadow); }
+  .btn { font-family: var(--font); border: none; border-radius: var(--radius-sm); font-weight: 700; cursor: pointer; transition: all 0.15s; }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary { background: var(--navy); color: white; }
+  .btn-emerald { background: var(--emerald); color: white; }
+  .btn-outline { background: white; color: var(--navy); border: 1.5px solid var(--slate-200); }
+  .btn-ghost { background: var(--slate-100); color: var(--slate-700); }
+  .btn-danger { background: var(--red-bg); color: var(--red); border: 1.5px solid #FECACA; }
+
+  .chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+  .chip-active { background: var(--emerald-bg); color: var(--emerald); }
+  .chip-pending { background: var(--amber-bg); color: var(--amber); }
+  .chip-rejected { background: var(--red-bg); color: var(--red); }
+  .chip-negotiating { background: var(--blue-bg); color: var(--blue); }
+  .chip-cancelled { background: var(--slate-100); color: var(--slate-500); }
+  .chip-sold { background: var(--slate-100); color: var(--slate-500); }
+  .chip-partial { background: var(--amber-bg); color: var(--amber); }
+
+  .empty-state { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding: 50px 36px; text-align:center; }
+  .empty-icon { font-size: 44px; margin-bottom: 14px; opacity: 0.4; }
+  .empty-title { font-size: 16px; font-weight: 700; color: var(--slate-900); margin-bottom: 6px; }
+  .empty-sub { font-size: 13px; color: var(--slate-500); line-height: 1.5; }
+
+  .field-group { margin-bottom: 14px; }
+  .field-label { font-size: 12px; font-weight: 700; color: var(--slate-700); margin-bottom: 6px; display: flex; align-items: center; gap: 4px; }
+  .field-required { color: var(--red); }
+  .field-input { width: 100%; border: 1.5px solid var(--slate-200); border-radius: var(--radius-sm); padding: 12px 14px; font-size: 14px; font-family: var(--font); color: var(--slate-900); outline: none; background: white; transition: border-color 0.15s; }
+  .field-input:focus { border-color: var(--emerald); }
+  .field-input::placeholder { color: var(--slate-400); }
+  .field-hint { font-size: 11px; color: var(--slate-400); margin-top: 4px; }
+  .field-error { font-size: 11px; color: var(--red); margin-top: 4px; font-weight: 600; }
+
+  /* PROCESSING / TOAST */
+  #processing { position: absolute; inset: 0; background: rgba(15,23,42,0.88); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 500; backdrop-filter: blur(3px); }
+  #processing.show { display: flex; }
+  .spinner { width: 46px; height: 46px; border: 3px solid rgba(255,255,255,0.2); border-top-color: var(--emerald-light); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 16px; }
+  .processing-text { color: white; font-size: 15px; font-weight: 600; }
+
+  #toast { position: absolute; bottom: 100px; left: 20px; right: 20px; background: var(--navy); color: white; padding: 13px 16px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; text-align: center; display: none; z-index: 600; box-shadow: var(--shadow-lg); }
+  #toast.show { display: block; animation: slideUp 0.3s ease; }
+  #toast.error { background: var(--red); }
+  #toast.success { background: var(--emerald); }
+
+  .bottom-sheet-overlay { position: absolute; inset: 0; background: rgba(15,23,42,0.5); z-index: 300; display: none; align-items: flex-end; backdrop-filter: blur(2px); }
+  .bottom-sheet-overlay.open { display: flex; animation: fadeIn 0.2s ease; }
+  .bottom-sheet { background: white; width: 100%; border-radius: 22px 22px 0 0; padding: 0 0 24px; max-height: 88%; overflow-y: auto; animation: slideUp 0.3s cubic-bezier(0.22,1,0.36,1); }
+  .bs-handle { width: 36px; height: 4px; background: var(--slate-200); border-radius: 2px; margin: 10px auto 6px; }
+  .bs-title { font-size: 15px; font-weight: 700; color: var(--slate-900); text-align: center; padding: 6px 20px 14px; border-bottom: 1px solid var(--slate-100); }
+
+  /* ============ LANDING / AUTH ============ */
+  #landing { background: linear-gradient(165deg, var(--navy) 0%, #16213E 55%, var(--navy) 100%); }
+  .landing-content { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 0 32px; }
+  .landing-logo { font-size: 38px; font-weight: 800; color: white; letter-spacing: -1px; margin-bottom: 4px; }
+  .landing-logo span { color: var(--emerald-light); }
+  .landing-tag { font-size: 14px; color: rgba(255,255,255,0.6); margin-bottom: 36px; line-height: 1.5; }
+  .landing-feature { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 18px; }
+  .landing-feature-icon { width: 34px; height: 34px; background: rgba(16,185,129,0.15); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+  .landing-feature-text { font-size: 13px; color: rgba(255,255,255,0.85); line-height: 1.4; padding-top: 6px; }
+  .landing-feature-text b { color: white; }
+  .landing-actions { padding: 24px 32px 40px; display: flex; flex-direction: column; gap: 10px; }
+  .landing-btn { padding: 15px; border-radius: var(--radius-sm); font-size: 15px; font-weight: 700; text-align: center; cursor: pointer; font-family: var(--font); border: none; }
+
+  #auth-screen { background: white; }
+  .auth-body { flex: 1; padding: 28px 24px; overflow-y: auto; }
+  .auth-logo-row { display: flex; align-items: center; gap: 10px; margin-bottom: 28px; }
+  .auth-title { font-size: 24px; font-weight: 800; color: var(--slate-900); margin-bottom: 6px; }
+  .auth-sub { font-size: 13px; color: var(--slate-500); margin-bottom: 28px; }
+  .password-toggle { position: absolute; right: 14px; top: 38px; cursor: pointer; color: var(--slate-400); font-size: 16px; background: none; border: none; }
+  .field-wrapper { position: relative; }
+  .auth-link { font-size: 13px; color: var(--emerald); font-weight: 600; cursor: pointer; text-align: center; }
+  .auth-divider { display: flex; align-items: center; gap: 12px; margin: 20px 0; }
+  .auth-divider-line { flex: 1; height: 1px; background: var(--slate-200); }
+  .auth-divider-text { font-size: 11px; color: var(--slate-400); font-weight: 600; }
+  .google-btn { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 13px; border: 1.5px solid var(--slate-200); border-radius: var(--radius-sm); background: white; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--slate-700); }
+
+  #otp-screen { background: white; }
+  .otp-inputs { display: flex; gap: 8px; justify-content: center; margin: 24px 0 16px; }
+  .otp-box { width: 44px; height: 52px; border: 1.5px solid var(--slate-200); border-radius: 10px; text-align: center; font-size: 20px; font-weight: 700; font-family: var(--font-mono); color: var(--slate-900); }
+  .otp-box:focus { border-color: var(--emerald); outline: none; }
+
+  /* ============ ONBOARDING ============ */
+  #onboarding { background: var(--slate-50); }
+  .ob-progress { display: flex; gap: 6px; padding: 16px 24px 0; }
+  .ob-progress-seg { flex: 1; height: 4px; border-radius: 2px; background: var(--slate-200); }
+  .ob-progress-seg.done { background: var(--emerald); }
+  .ob-body { flex: 1; overflow-y: auto; padding: 20px 24px; }
+  .ob-step-title { font-size: 19px; font-weight: 800; color: var(--slate-900); margin-bottom: 4px; }
+  .ob-step-sub { font-size: 13px; color: var(--slate-500); margin-bottom: 22px; }
+  .ob-footer { padding: 14px 24px 20px; display: flex; gap: 10px; background: white; border-top: 1px solid var(--slate-200); flex-shrink: 0; }
+  .logo-upload-box { width: 84px; height: 84px; border-radius: 18px; border: 2px dashed var(--slate-300); background: var(--slate-100); display: flex; align-items: center; justify-content: center; font-size: 26px; color: var(--slate-400); cursor: pointer; margin: 0 auto 18px; }
+  .category-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .category-pill { padding: 9px 14px; border-radius: 20px; border: 1.5px solid var(--slate-200); background: white; font-size: 12.5px; font-weight: 600; color: var(--slate-700); cursor: pointer; }
+  .category-pill.selected { background: var(--navy); border-color: var(--navy); color: white; }
+
+  /* ============ DASHBOARD ============ */
+  #dashboard { background: var(--slate-50); }
+  .dash-body { flex: 1; overflow-y: auto; }
+  .dash-hero { background: var(--navy); padding: 18px 18px 28px; }
+  .dash-hero-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+  .dash-greeting { font-size: 13px; color: rgba(255,255,255,0.6); }
+  .dash-company { font-size: 17px; font-weight: 700; color: white; }
+  .dash-avatar { width: 38px; height: 38px; border-radius: 50%; background: var(--emerald); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 14px; cursor: pointer; }
+  .dash-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: -38px; padding: 0 18px; }
+  .dash-stat { background: white; border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow-md); cursor: pointer; }
+  .dash-stat-val { font-size: 24px; font-weight: 800; color: var(--slate-900); }
+  .dash-stat-label { font-size: 11px; color: var(--slate-500); font-weight: 600; margin-top: 2px; }
+  .dash-stat-icon { font-size: 18px; margin-bottom: 6px; }
+  .dash-section { padding: 22px 18px 4px; }
+  .dash-section-title { font-size: 14px; font-weight: 800; color: var(--slate-900); margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
+  .dash-section-link { font-size: 12px; color: var(--emerald); font-weight: 600; cursor: pointer; }
+  .quick-actions-row { display: flex; gap: 10px; }
+  .quick-action { flex: 1; background: white; border-radius: var(--radius-sm); padding: 14px 10px; text-align: center; box-shadow: var(--shadow); cursor: pointer; }
+  .quick-action-icon { font-size: 22px; margin-bottom: 6px; }
+  .quick-action-label { font-size: 11px; font-weight: 700; color: var(--slate-700); }
+
+  .item-card { background: white; border-radius: var(--radius-sm); padding: 12px; display: flex; gap: 12px; margin-bottom: 10px; box-shadow: var(--shadow); cursor: pointer; align-items: center; }
+  .item-thumb { width: 56px; height: 56px; border-radius: 10px; object-fit: cover; flex-shrink: 0; background: var(--slate-100); display: flex; align-items: center; justify-content: center; font-size: 22px; }
+  .item-info { flex: 1; min-width: 0; }
+  .item-title { font-size: 13.5px; font-weight: 700; color: var(--slate-900); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item-meta { font-size: 11.5px; color: var(--slate-500); margin-top: 2px; }
+  .item-price { font-size: 13px; font-weight: 800; color: var(--emerald); margin-top: 3px; }
+
+  .reservation-card { background: white; border-radius: var(--radius-sm); padding: 12px; margin-bottom: 10px; box-shadow: var(--shadow); }
+  .res-top { display: flex; gap: 10px; align-items: center; }
+  .res-info { flex: 1; min-width: 0; }
+  .res-name { font-size: 13px; font-weight: 700; color: var(--slate-900); }
+  .res-detail { font-size: 11.5px; color: var(--slate-500); margin-top: 2px; }
+  .res-actions { display: flex; gap: 6px; margin-top: 10px; }
+  .res-btn { flex: 1; padding: 8px; border-radius: 8px; font-size: 11.5px; font-weight: 700; text-align: center; cursor: pointer; border: none; }
+
+  /* ============ INVENTORY LIST ============ */
+  #inventory-list { background: var(--slate-50); }
+  .search-bar { background: white; border: 1.5px solid var(--slate-200); border-radius: 12px; padding: 10px 14px; display: flex; align-items: center; gap: 8px; margin: 12px 18px; }
+  .search-bar input { flex: 1; border: none; outline: none; font-size: 13.5px; font-family: var(--font); color: var(--slate-900); background: none; }
+  .filter-chips-row { display: flex; gap: 8px; padding: 0 18px 12px; overflow-x: auto; scrollbar-width: none; }
+  .filter-chips-row::-webkit-scrollbar { display: none; }
+  .filter-pill { padding: 7px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; white-space: nowrap; cursor: pointer; border: 1.5px solid var(--slate-200); background: white; color: var(--slate-600); }
+  .filter-pill.active { background: var(--navy); border-color: var(--navy); color: white; }
+  .list-body { flex: 1; overflow-y: auto; padding: 0 18px 16px; }
+  .fab { position: absolute; bottom: 96px; right: 18px; width: 54px; height: 54px; border-radius: 50%; background: var(--emerald); color: white; font-size: 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px rgba(5,150,105,0.4); cursor: pointer; z-index: 50; border: none; }
+
+  /* ============ INVENTORY DETAIL ============ */
+  #inventory-detail { background: var(--slate-50); }
+  .detail-body { flex: 1; overflow-y: auto; }
+  .photo-carousel { width: 100%; height: 240px; background: var(--slate-200); display: flex; align-items: center; justify-content: center; font-size: 48px; position: relative; }
+  .carousel-dots { position: absolute; bottom: 12px; left: 0; right: 0; display: flex; justify-content: center; gap: 5px; }
+  .carousel-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.5); }
+  .carousel-dot.active { background: white; width: 16px; border-radius: 3px; }
+  .detail-content { padding: 18px; }
+  .detail-title-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+  .detail-title { font-size: 19px; font-weight: 800; color: var(--slate-900); flex: 1; }
+  .detail-price { font-size: 22px; font-weight: 800; color: var(--emerald); margin: 6px 0 14px; }
+  .stat-row-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 16px; }
+  .stat-box { background: white; border-radius: 10px; padding: 10px 6px; text-align: center; box-shadow: var(--shadow); }
+  .stat-box-val { font-size: 15px; font-weight: 800; color: var(--slate-900); }
+  .stat-box-label { font-size: 9px; color: var(--slate-500); font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; margin-top: 2px; }
+  .detail-section { background: white; border-radius: var(--radius); padding: 14px 16px; margin-bottom: 12px; box-shadow: var(--shadow); }
+  .detail-section-title { font-size: 11px; font-weight: 800; color: var(--slate-400); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px; }
+  .detail-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--slate-100); font-size: 13px; }
+  .detail-row:last-child { border-bottom: none; }
+  .detail-row-label { color: var(--slate-500); }
+  .detail-row-val { color: var(--slate-900); font-weight: 600; }
+  .detail-actions { display: flex; gap: 10px; padding: 12px 18px 20px; background: white; border-top: 1px solid var(--slate-200); flex-shrink: 0; }
+  .detail-actions .btn { flex: 1; padding: 13px; font-size: 14px; }
+
+  /* ============ NETWORK ============ */
+  #network { background: var(--slate-50); }
+  .vendor-card { background: white; border-radius: var(--radius-sm); padding: 12px; display: flex; align-items: center; gap: 12px; margin-bottom: 9px; box-shadow: var(--shadow); cursor: pointer; }
+  .vendor-avatar { width: 44px; height: 44px; border-radius: 12px; background: var(--navy); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px; flex-shrink: 0; }
+  .vendor-info { flex: 1; min-width: 0; }
+  .vendor-name { font-size: 13.5px; font-weight: 700; color: var(--slate-900); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .vendor-meta { font-size: 11.5px; color: var(--slate-500); margin-top: 1px; }
+  .vendor-actions { display: flex; gap: 4px; }
+  .vendor-action-btn { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; border: none; cursor: pointer; }
+
+  /* ============ SHARE MODAL ============ */
+  .share-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--slate-100); margin-top: 8px; }
+  .share-tab { flex: 1; text-align: center; padding: 10px; font-size: 12.5px; font-weight: 700; color: var(--slate-400); cursor: pointer; border-bottom: 2px solid transparent; }
+  .share-tab.active { color: var(--emerald); border-bottom-color: var(--emerald); }
+  .share-vendor-row { display: flex; align-items: center; gap: 10px; padding: 10px 18px; border-bottom: 1px solid var(--slate-100); cursor: pointer; }
+  .share-checkbox { width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid var(--slate-300); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .share-checkbox.checked { background: var(--emerald); border-color: var(--emerald); color: white; font-size: 12px; }
+
+  /* GENERIC LIST ITEM */
+  .simple-list-item { padding: 13px 16px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--slate-100); cursor: pointer; }
+  .simple-list-icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0; }
+  .simple-list-info { flex: 1; }
+  .simple-list-label { font-size: 13.5px; font-weight: 700; color: var(--slate-900); }
+  .simple-list-sub { font-size: 11.5px; color: var(--slate-500); margin-top: 1px; }
+
+  /* Settings toggle */
+  .toggle-switch { width: 44px; height: 24px; border-radius: 12px; position: relative; cursor: pointer; flex-shrink: 0; transition: background 0.2s; }
+  .toggle-knob { width: 20px; height: 20px; border-radius: 50%; background: white; position: absolute; top: 2px; transition: left 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+</style>
+</head>
+<body>
+<div id="app-shell">
+
+  <div class="status-bar" id="statusBar">
+    <span class="time" id="clock">9:41</span>
+    <div class="icons"><span>📶</span><span>🔋</span></div>
+  </div>
+
+  <!-- ============================================================
+       SCREEN: LANDING
+  ============================================================ -->
+  <div class="screen active" id="landing">
+    <div class="landing-content">
+      <div class="landing-logo">My<span>Stokk</span></div>
+      <div class="landing-tag">Private B2B inventory sharing.<br>Your stock. Your trusted network. Your terms.</div>
+      <div class="landing-feature">
+        <div class="landing-feature-icon">🔒</div>
+        <div class="landing-feature-text"><b>Private by design</b> — share live stock only with vendors you choose, never a public marketplace</div>
+      </div>
+      <div class="landing-feature">
+        <div class="landing-feature-icon">🔗</div>
+        <div class="landing-feature-text"><b>Chained sharing</b> — forward offers downstream without ever exposing the original supplier or price</div>
+      </div>
+      <div class="landing-feature">
+        <div class="landing-feature-icon">🤝</div>
+        <div class="landing-feature-text"><b>Built-in negotiation</b> — up to 3 rounds of counter-offers before confirming a reservation</div>
+      </div>
+    </div>
+    <div class="landing-actions">
+      <button class="landing-btn" style="background:var(--emerald);color:white;" onclick="goTo('auth-signup')">Create Account</button>
+      <button class="landing-btn" style="background:rgba(255,255,255,0.1);color:white;" onclick="goTo('auth-login')">Log In</button>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SCREEN: LOGIN
+  ============================================================ -->
+  <div class="screen" id="auth-login">
+    <div class="app-header">
+      <div class="app-header-row">
+        <button class="header-back" onclick="goTo('landing')">←</button>
+        <div class="header-title">Log In</div>
+        <div style="width:34px"></div>
+      </div>
+    </div>
+    <div class="auth-body">
+      <div class="auth-title">Welcome back</div>
+      <div class="auth-sub">Log in to access your private inventory network</div>
+
+      <div class="field-group">
+        <div class="field-label">Email</div>
+        <input class="field-input" type="email" placeholder="you@company.com" value="priya@novaelectronics.ae">
+      </div>
+      <div class="field-group field-wrapper">
+        <div class="field-label">Password</div>
+        <input class="field-input" type="password" id="loginPw" placeholder="Enter your password" value="••••••••">
+        <button class="password-toggle" onclick="togglePw('loginPw')">👁</button>
+      </div>
+      <div style="text-align:right;margin-bottom:18px;">
+        <span class="auth-link" onclick="goTo('forgot-password')">Forgot password?</span>
+      </div>
+      <button class="btn btn-emerald" style="width:100%;padding:14px;font-size:14px;margin-bottom:14px;" onclick="doLogin()">Log In</button>
+
+      <div class="auth-divider"><div class="auth-divider-line"></div><div class="auth-divider-text">OR</div><div class="auth-divider-line"></div></div>
+
+      <button class="google-btn" onclick="showToast('Redirecting to Google OAuth…')">
+        <span style="font-size:16px;">🔵</span> Continue with Google
+      </button>
+
+      <div style="text-align:center;margin-top:24px;font-size:13px;color:var(--slate-500);">
+        Don't have an account? <span class="auth-link" onclick="goTo('auth-signup')">Sign up</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SCREEN: SIGNUP
+  ============================================================ -->
+  <div class="screen" id="auth-signup">
+    <div class="app-header">
+      <div class="app-header-row">
+        <button class="header-back" onclick="goTo('landing')">←</button>
+        <div class="header-title">Create Account</div>
+        <div style="width:34px"></div>
+      </div>
+    </div>
+    <div class="auth-body">
+      <div class="auth-title">Get started</div>
+      <div class="auth-sub">Just your email and password — we'll get your company profile next</div>
+
+      <div class="field-group">
+        <div class="field-label">Email</div>
+        <input class="field-input" type="email" placeholder="you@company.com" id="signupEmail">
+      </div>
+      <div class="field-group field-wrapper">
+        <div class="field-label">Password</div>
+        <input class="field-input" type="password" id="signupPw" placeholder="Minimum 8 characters">
+        <button class="password-toggle" onclick="togglePw('signupPw')">👁</button>
+      </div>
+      <div class="field-group field-wrapper">
+        <div class="field-label">Confirm Password</div>
+        <input class="field-input" type="password" id="signupPw2" placeholder="Re-enter your password">
+        <button class="password-toggle" onclick="togglePw('signupPw2')">👁</button>
+      </div>
+
+      <div class="field-hint" style="margin-bottom:18px;">By signing up you agree to our <span style="color:var(--emerald);font-weight:600;">Terms</span> and <span style="color:var(--emerald);font-weight:600;">Privacy Policy</span></div>
+
+      <button class="btn btn-emerald" style="width:100%;padding:14px;font-size:14px;margin-bottom:14px;" onclick="doSignup()">Create Account</button>
+
+      <div class="auth-divider"><div class="auth-divider-line"></div><div class="auth-divider-text">OR</div><div class="auth-divider-line"></div></div>
+
+      <button class="google-btn" onclick="showToast('Redirecting to Google OAuth…')">
+        <span style="font-size:16px;">🔵</span> Sign up with Google
+      </button>
+
+      <div style="text-align:center;margin-top:24px;font-size:13px;color:var(--slate-500);">
+        Already have an account? <span class="auth-link" onclick="goTo('auth-login')">Log in</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SCREEN: FORGOT PASSWORD
+  ============================================================ -->
+  <div class="screen" id="forgot-password">
+    <div class="app-header">
+      <div class="app-header-row">
+        <button class="header-back" onclick="goTo('auth-login')">←</button>
+        <div class="header-title">Reset Password</div>
+        <div style="width:34px"></div>
+      </div>
+    </div>
+    <div class="auth-body">
+      <div class="auth-title">Forgot your password?</div>
+      <div class="auth-sub">Enter your email and we'll send a 6-digit reset code</div>
+      <div class="field-group">
+        <div class="field-label">Email</div>
+        <input class="field-input" type="email" placeholder="you@company.com" value="priya@novaelectronics.ae">
+      </div>
+      <button class="btn btn-emerald" style="width:100%;padding:14px;font-size:14px;" onclick="showToast('Reset code sent to your email');goTo('otp-screen')">Send Reset Code</button>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SCREEN: OTP VERIFY
+  ============================================================ -->
+  <div class="screen" id="otp-screen">
+    <div class="app-header">
+      <div class="app-header-row">
+        <button class="header-back" onclick="goTo('auth-signup')">←</button>
+        <div class="header-title">Verify Email</div>
+        <div style="width:34px"></div>
+      </div>
+    </div>
+    <div class="auth-body" style="text-align:center;">
+      <div style="font-size:40px;margin:10px 0 16px;">📧</div>
+      <div class="auth-title" style="text-align:center;">Check your inbox</div>
+      <div class="auth-sub" style="text-align:center;">We sent a 6-digit code to<br><b style="color:var(--slate-700)">priya@novaelectronics.ae</b></div>
+      <div class="otp-inputs">
+        <input class="otp-box" maxlength="1" value="4">
+        <input class="otp-box" maxlength="1" value="2">
+        <input class="otp-box" maxlength="1" value="8">
+        <input class="otp-box" maxlength="1">
+        <input class="otp-box" maxlength="1">
+        <input class="otp-box" maxlength="1">
+      </div>
+      <div style="font-size:12px;color:var(--slate-400);margin-bottom:24px;">Code expires in <span id="otpTimer" style="font-weight:700;color:var(--slate-600)">09:47</span></div>
+      <button class="btn btn-emerald" style="width:100%;padding:14px;font-size:14px;margin-bottom:14px;" onclick="verifyOtp()">Verify &amp; Continue</button>
+      <div style="font-size:13px;color:var(--slate-500);">Didn't get it? <span class="auth-link" onclick="showToast('Code resent')">Resend code</span></div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SCREEN: ONBOARDING
+  ============================================================ -->
+  <div class="screen" id="onboarding">
+    <div class="app-header">
+      <div class="app-header-row">
+        <div style="width:34px"></div>
+        <div class="header-title">Set Up Your Company</div>
+        <div style="width:34px"></div>
+      </div>
+    </div>
+    <div class="ob-progress">
+      <div class="ob-progress-seg done" id="obSeg1"></div>
+      <div class="ob-progress-seg" id="obSeg2"></div>
+      <div class="ob-progress-seg" id="obSeg3"></div>
+    </div>
+
+    <!-- Step 1 -->
+    <div class="ob-body" id="obStep1">
+      <div class="ob-step-title">Tell us about your company</div>
+      <div class="ob-step-sub">This appears on every share you send to your network</div>
+      <div class="field-group">
+        <div class="field-label">Company Name <span class="field-required">*</span></div>
+        <input class="field-input" placeholder="e.g. Nova Electronics Trading LLC" value="Nova Electronics Trading LLC">
+      </div>
+      <div class="field-group">
+        <div class="field-label">Contact Person <span class="field-required">*</span></div>
+        <input class="field-input" placeholder="Your full name" value="Priya Nair">
+      </div>
+      <div class="field-group">
+        <div class="field-label">Industry <span class="field-required">*</span></div>
+        <input class="field-input" placeholder="Select industry" value="Consumer Electronics" readonly onclick="showToast('Opens industry picker — 20 options')">
+      </div>
+      <div class="field-group">
+        <div class="field-label">Categories</div>
+        <div class="category-grid">
+          <div class="category-pill selected">Audio</div>
+          <div class="category-pill selected">Mobile Accessories</div>
+          <div class="category-pill">Smart Home</div>
+          <div class="category-pill">Wearables</div>
+          <div class="category-pill">+ More</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="ob-body" id="obStep2" style="display:none;">
+      <div class="ob-step-title">Where are you based?</div>
+      <div class="ob-step-sub">Helps vendors filter their network by location</div>
+      <div class="field-group">
+        <div class="field-label">Country <span class="field-required">*</span></div>
+        <input class="field-input" placeholder="Select country" value="United Arab Emirates">
+      </div>
+      <div class="field-group">
+        <div class="field-label">City <span class="field-required">*</span></div>
+        <input class="field-input" placeholder="Select city" value="Dubai">
+      </div>
+      <div class="field-group">
+        <div class="field-label">Address</div>
+        <input class="field-input" placeholder="Street address, building, area" value="Deira, Dubai">
+      </div>
+      <div class="field-group">
+        <div class="field-label">Mobile Number</div>
+        <input class="field-input" placeholder="+971 50 000 0000" value="+971 52 345 6789">
+      </div>
+      <div class="field-group">
+        <div class="field-label">Telephone (optional)</div>
+        <input class="field-input" placeholder="+971 4 000 0000">
+      </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="ob-body" id="obStep3" style="display:none;">
+      <div class="ob-step-title">Add your company logo</div>
+      <div class="ob-step-sub">Shown on share cards and your public profile</div>
+      <div class="logo-upload-box" onclick="showToast('Opens camera / gallery picker')">📷</div>
+      <div class="field-group">
+        <div class="field-label">Company Description</div>
+        <textarea class="field-input" rows="4" placeholder="A short description of what you trade...">Trading consumer electronics across the GCC — audio, mobile accessories and smart home devices. MOQ-friendly, fast turnaround.</textarea>
+      </div>
+    </div>
+
+    <div class="ob-footer">
+      <button class="btn btn-outline" style="flex:1;padding:13px;" id="obBackBtn" onclick="obBack()" style="display:none">Back</button>
+      <button class="btn btn-emerald" style="flex:2;padding:13px;font-size:14px;" id="obNextBtn" onclick="obNext()">Continue</button>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SCREEN: DASHBOARD (Home Tab)
+  ============================================================ -->
+  <div class="screen" id="dashboard">
+    <div class="dash-body" id="dashScroll">
+      <div class="dash-hero">
+        <div class="dash-hero-top">
+          <div>
+            <div class="dash-greeting">Good morning</div>
+            <div class="dash-company">Nova Electronics Trading</div>
+          </div>
+          <div class="dash-avatar" onclick="goTo('profile')">NE</div>
+        </div>
+      </div>
+
+      <div class="dash-stats-grid">
+        <div class="dash-stat" onclick="goTo('inventory-list')">
+          <div class="dash-stat-icon">📦</div>
+          <div class="dash-stat-val">34</div>
+          <div class="dash-stat-label">My Inventory</div>
+        </div>
+        <div class="dash-stat" onclick="goTo('received-list')">
+          <div class="dash-stat-icon">📥</div>
+          <div class="dash-stat-val">18</div>
+          <div class="dash-stat-label">Received</div>
+        </div>
+        <div class="dash-stat" onclick="goTo('reservations')">
+          <div class="dash-stat-icon">🤝</div>
+          <div class="dash-stat-val">7</div>
+          <div class="dash-stat-label">Reservations</div>
+        </div>
+        <div class="dash-stat" onclick="goTo('network')">
+          <div class="dash-stat-icon">👥</div>
+          <div class="dash-stat-val">52</div>
+          <div class="dash-stat-label">Network</div>
+        </div>
+      </div>
+
+      <div class="dash-section">
+        <div class="dash-section-title">Quick Actions</div>
+        <div class="quick-actions-row">
+          <div class="quick-action" onclick="goTo('inventory-create')">
+            <div class="quick-action-icon">➕</div>
+            <div class="quick-action-label">Add Item</div>
+          </div>
+          <div class="quick-action" onclick="goTo('add-vendor')">
+            <div class="quick-action-icon">🤝</div>
+            <div class="quick-action-label">Add Vendor</div>
+          </div>
+          <div class="quick-action" onclick="goTo('profile')">
+            <div class="quick-action-icon">🏢</div>
+            <div class="quick-action-label">Profile</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dash-section">
+        <div class="dash-section-title">
+          Pending Reservations
+          <span class="dash-section-link" onclick="goTo('reservations')">View all →</span>
+        </div>
+        <div class="reservation-card">
+          <div class="res-top">
+            <div class="item-thumb">🎧</div>
+            <div class="res-info">
+              <div class="res-name">Khalid Al Suwaidi — Gulf Star Trading</div>
+              <div class="res-detail">Wireless Earbuds Pro · Qty 500 · AED 42/unit</div>
+            </div>
+          </div>
+          <div class="res-actions">
+            <button class="res-btn" style="background:var(--emerald-bg);color:var(--emerald);" onclick="event.stopPropagation();showToast('Reservation accepted')">Accept</button>
+            <button class="res-btn" style="background:var(--blue-bg);color:var(--blue);" onclick="event.stopPropagation();openNegotiateSheet()">Negotiate</button>
+            <button class="res-btn" style="background:var(--red-bg);color:var(--red);" onclick="event.stopPropagation();showToast('Reservation rejected')">Reject</button>
+          </div>
+        </div>
+        <div class="reservation-card">
+          <div class="res-top">
+            <div class="item-thumb">🔌</div>
+            <div class="res-info">
+              <div class="res-name">Fatima Aziz — Aziz Textile Exports</div>
+              <div class="res-detail">USB-C Fast Chargers · Qty 1200 · AED 11/unit</div>
+            </div>
+          </div>
+          <div class="res-actions">
+            <button class="res-btn" style="background:var(--emerald-bg);color:var(--emerald);" onclick="event.stopPropagation();showToast('Reservation accepted')">Accept</button>
+            <button class="res-btn" style="background:var(--blue-bg);color:var(--blue);" onclick="event.stopPropagation();openNegotiateSheet()">Negotiate</button>
+            <button class="res-btn" style="background:var(--red-bg);color:var(--red);" onclick="event.stopPropagation();showToast('Reservation rejected')">Reject</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="dash-section" style="padding-bottom:20px;">
+        <div class="dash-section-title">
+          Recently Received
+          <span class="dash-section-link" onclick="goTo('received-list')">View all →</span>
+        </div>
+        <div class="item-card" onclick="goTo('received-detail')">
+          <div class="item-thumb">📻</div>
+          <div class="item-info">
+            <div class="item-title">Bluetooth Speaker — Outdoor IP67</div>
+            <div class="item-meta">From Gulf Star Trading · Dubai, UAE</div>
+            <div class="item-price">AED 38 / unit</div>
+          </div>
+        </div>
+        <div class="item-card" onclick="goTo('received-detail')">
+          <div class="item-thumb">🔋</div>
+          <div class="item-info">
+            <div class="item-title">Power Bank 20,000mAh PD 65W</div>
+            <div class="item-meta">From Pacific Facades HK · Hong Kong</div>
+            <div class="item-price">USD 9.50 / unit</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-bar">
+      <div class="tab-item active" onclick="switchTab('dashboard', this)"><span class="tab-icon">🏠</span><span class="tab-label">Home</span></div>
+      <div class="tab-item" onclick="switchTab('inventory-list', this)"><span class="tab-icon">📦</span><span class="tab-label">Inventory</span></div>
+      <div class="tab-item" onclick="switchTab('network', this)"><span class="tab-icon">👥</span><span class="tab-label">Network</span></div>
+      <div class="tab-item" onclick="switchTab('received-list', this)" style="position:relative;"><span class="tab-icon">📥</span><span class="tab-label">Received</span><span class="tab-badge">5</span></div>
+      <div class="tab-item" onclick="switchTab('reservations', this)"><span class="tab-icon">🤝</span><span class="tab-label">Reserved</span></div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SCREEN: INVENTORY LIST
+  ============================================================ -->
+  <div class="screen" id="inventory-list">
+    <div class="app-header">
+      <div class="app-header-row">
+        <div class="header-title">My Inventory</div>
+        <button class="header-action" onclick="goTo('inventory-create')">➕</button>
+      </div>
+    </div>
+    <div class="search-bar">
+      <span style="color:var(--slate-400)">🔍</span>
+      <input placeholder="Search your inventory..." oninput="filterInventory(this.value)">
+    </div>
+    <div class="filter-chips-row">
+      <div class="filter-pill active" onclick="setInvFilter('all',this)">All (34)</div>
+      <div class="filter-pill" onclick="setInvFilter('active',this)">Active</div>
+      <div class="filter-pill" onclick="setInvFilter('partial',this)">Partially Reserved</div>
+      <div class="filter-pill" onclick="setInvFilter('sold',this)">Sold Out</div>
+      <div class="filter-pill" onclick="setInvFilter('archived',this)">Archived</div>
+    </div>
+    <div class="list-body" id="invListBody"></div>
+    <button class="fab" onclick="goTo('inventory-create')">+</button>
+    <div class="tab-bar">
+      <div class="tab-item" onclick="switchTab('dashboard', this)"><span class="tab-icon">🏠</span><span class="tab-label">Home</span></div>
+      <div class="tab-item active" onclick="switchTab('inventory-list', this)"><span class="tab-icon">📦</span><span class="tab-label">Inventory</span></div>
+      <div class="tab-item" onclick="switchTab('network', this)"><span class="tab-icon">👥</span><span class="tab-label">Network</span></div>
+      <div class="tab-item" onclick="switchTab('received-list', this)" style="position:relative;"><span class="tab-icon">📥</span><span class="tab-label">Received</span><span class="tab-badge">5</span></div>
+      <div class="tab-item" onclick="switchTab('reservations', this)"><span class="tab-icon">🤝</span><span class="tab-label">Reserved</span></div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SCREEN: INVENTORY DETAIL (owner view)
+  ============================================================ -->
+  <div class="screen" id="inventory-detail">
+    <div class="app-header">
+      <div class="app-header-row">
+        <button class="header-back" onclick="goTo('inventory-list')">←</button>
+        <div class="header-title">Item Details</div>
+        <button class="header-action" onclick="openItemMenu()">⋯</button>
+      </div>
+    </div>
+    <div class="detail-body">
+      <div class="photo-carousel">
+        🎧
+        <div class="carousel-dots">
+          <div class="carousel-dot active"></div><div class="carousel-dot"></div><div class="carousel-dot"></div>
+        </div>
+      </div>
+      <div class="detail-content">
+        <div class="detail-title-row">
+          <div class="detail-title">Wireless Earbuds Pro — ANC</div>
+          <span class="chip chip-active">Active</span>
+        </div>
+        <div style="font-size:12px;color:var(--slate-500);">SKU: WEP-2026-BLK · Audio</div>
+        <div class="detail-price">AED 42.00 <span style="font-size:13px;color:var(--slate-400);font-weight:600;">/ unit</span></div>
+
+        <div class="stat-row-4">
+          <div class="stat-box"><div class="stat-box-val">2,000</div><div class="stat-box-label">Total</div></div>
+          <div class="stat-box"><div class="stat-box-val">650</div><div class="stat-box-label">Reserved</div></div>
+          <div class="stat-box"><div class="stat-box-val">1,350</div><div class="stat-box-label">Available</div></div>
+          <div class="stat-box"><div class="stat-box-val">14</div><div class="stat-box-label">Shared</div></div>
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-section-title">Details</div>
+          <div class="detail-row"><span class="detail-row-label">Origin</span><span class="detail-row-val">Shenzhen, China</span></div>
+          <div class="detail-row"><span class="detail-row-label">Stock Location</span><span class="detail-row-val">Dubai, JAFZA Warehouse 4</span></div>
+          <div class="detail-row"><span class="detail-row-label">Unit</span><span class="detail-row-val">pcs</span></div>
+          <div class="detail-row"><span class="detail-row-label">Currency</span><span class="detail-row-val">AED</span></div>
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-section-title">Description</div>
+          <div style="font-size:13px;color:var(--slate-700);line-height:1.6;">Active noise cancelling wireless earbuds, Bluetooth 5.3, 32hr total battery with case, IPX5 water resistance. Retail packaging included. MOQ 100 units.</div>
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-section-title">Specifications</div>
+          <div class="detail-row"><span class="detail-row-label">Battery</span><span class="detail-row-val">32hr (case)</span></div>
+          <div class="detail-row"><span class="detail-row-label">Bluetooth</span><span class="detail-row-val">5.3</span></div>
+          <div class="detail-row"><span class="detail-row-label">Water Rating</span><span class="detail-row-val">IPX5</span></div>
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-section-title">Share Activity</div>
+          <div class="detail-row"><span class="detail-row-label">🟢 Gulf Star Trading</span><span class="detail-row-val" style="font-weight:400;color:var(--slate-400)">2 days ago</span></div>
+          <div class="detail-row"><span class="detail-row-label">🟢 Pacific Facades HK</span><span class="detail-row-val" style="font-weight:400;color:var(--slate-400)">5 days ago</span></div>
+          <div class="detail-row"><span class="detail-row-label">🟢 Aziz Textile Exports</span><span class="detail-row-val" style="font-weight:400;color:var(--slate-400)">1 week ago</span></div>
+          <div onclick="showToast('Opens full Manage Shares dialog')" style="text-align:center;padding-top:8px;font-size:12px;color:var(--emerald);font-weight:700;cursor:pointer;">Manage all 14 shares →</div>
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-section-title">Reservations on this item</div>
+          <div class="reservation-card" style="box-shadow:none;border:1px solid var(--slate-100);margin-bottom:0;">
+            <div class="res-top">
+              <div class="item-thumb" style="width:40px;height:40px;font-size:16px;">🎧</div>
+              <div class="res-info">
+                <div class="res-name">Khalid Al Suwaidi</div>
+                <div class="res-detail">Qty 500 · Offered AED 39/unit</div>
+              </div>
+              <span class="chip chip-pending">Pending</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="detail-actions">
+      <button class="btn btn-outline" onclick="goTo('inventory-edit')">Edit</button>
+      <button class="btn btn-emerald" onclick="openShareSheet('My Network')">Share</button>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SCREEN: INVENTORY CREATE / EDIT
+  ============================================================ -->
+  <div class="screen" id="inventory-create">
+    <div class="app-header">
+      <div class="app-header-row">
+        <button class="header-back" onclick="goTo('inventory-list')">←</button>
+        <div class="header-title" id="invFormTitle">Add Inventory Item</div>
+        <div style="width:34px"></div>
+      </div>
+    </div>
+    <div class="auth-body" style="padding-top:18px;">
+      <div class="field-group">
+        <div class="field-label">Product Title <span class="field-required">*</span></div>
+        <input class="field-input" placeholder="e.g. Wireless Earbuds Pro — ANC">
+      </div>
+      <div class="field-group">
+        <div class="field-label">Product Code / SKU</div>
+        <input class="field-input" placeholder="WEP-2026-BLK">
+      </div>
+      <div class="field-group">
+        <div class="field-label">Category <span class="field-required">*</span></div>
+        <input class="field-input" placeholder="Select category" value="Audio" readonly>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <div class="field-group" style="flex:1;">
+          <div class="field-label">Quantity <span class="field-required">*</span></div>
+          <input class="field-input" type="number" placeholder="0">
+        </div>
+        <div class="field-group" style="flex:1;">
+          <div class="field-label">Unit <span class="field-required">*</span></div>
+          <input class="field-input" placeholder="pcs" readonly onclick="showToast('Opens unit picker — 40+ options')">
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <div class="field-group" style="flex:1;">
+          <div class="field-label">Price per Unit</div>
+          <input class="field-input" type="number" placeholder="0.00">
+        </div>
+        <div class="field-group" style="flex:1;">
+          <div class="field-label">Currency</div>
+          <input class="field-input" placeholder="AED" readonly onclick="showToast('Opens currency picker')">
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Origin</div>
+        <input class="field-input" placeholder="e.g. Shenzhen, China">
+      </div>
+      <div class="field-group">
+        <div class="field-label">Stock Location</div>
+        <input class="field-input" placeholder="e.g. Dubai, JAFZA Warehouse 4">
+      </div>
+      <div class="field-group">
+        <div class="field-label">Description</div>
+        <textarea class="field-input" rows="4" placeholder="Describe the product, MOQ, packaging..."></textarea>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Photos &amp; Documents</div>
+        <div style="display:flex;gap:8px;">
+          <div class="logo-upload-box" style="margin:0;width:70px;height:70px;border-radius:12px;" onclick="showToast('Opens camera/gallery — multi-select')">📷</div>
+          <div class="logo-upload-box" style="margin:0;width:70px;height:70px;border-radius:12px;" onclick="showToast('Opens document picker')">📄</div>
+        </div>
+        <div class="field-hint">Each file uploads individually after the item is created</div>
+      </div>
+      <button class="btn btn-emerald" style="width:100%;padding:14px;font-size:14px;margin-top:8px;" onclick="showToast('✓ Item saved');goTo('inventory-list')">Save Item</button>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SCREEN: NETWORK
+  ============================================================ -->
+  <div class="screen" id="network">
+    <div class="app-header">
+      <div class="app-header-row">
+        <div class="header-title">My Network</div>
+        <button class="header-action" onclick="openNetworkMenu()">➕</button>
+      </div>
+    </div>
+    <div class="search-bar">
+      <span style="color:var(--slate-400)">🔍</span>
+      <input placeholder="Search vendors...">
+    </div>
+    <div class="filter-chips-row">
+      <div class="filter-pill active" onclick="setNetTab('all',this)">All (52)</div>
+      <div class="filter-pill" onclick="setNetTab('pending',this)">Pending (3)</div>
+      <div class="filter-pill" onclick="setNetTab('manual',this)">Manual (19)</div>
+      <div class="filter-pill" onclick="showToast('Filter by Industry')">Industry ▾</div>
+      <div class="filter-pill" onclick="showToast('Filter by Group')">Group ▾</div>
+    </div>
+    <div class="list-body" id="networkListBody">
+      <div class="vendor-card" onclick="goTo('vendor-detail')">
+        <div class="vendor-avatar">GS</div>
+        <div class="vendor-info">
+          <div class="vendor-name">Gulf Star Trading LLC</div>
+          <div class="vendor-meta">Mohammed Al Farsi · Dubai, UAE · Trading</div>
+        </div>
+        <div class="vendor-actions">
+          <button class="vendor-action-btn" style="background:var(--emerald-bg);" onclick="event.stopPropagation();showToast('Opening WhatsApp')">💬</button>
+          <button class="vendor-action-btn" style="background:var(--blue-bg);" onclick="event.stopPropagation();showToast('Calling...')">📞</button>
+        </div>
+      </div>
+      <div class="vendor-card" onclick="goTo('vendor-detail')">
+        <div class="vendor-avatar" style="background:var(--emerald);">PF</div>
+        <div class="vendor-info">
+          <div class="vendor-name">Pacific Facades HK</div>
+          <div class="vendor-meta">Sarah Chen · Hong Kong · Construction</div>
+        </div>
+        <div class="vendor-actions">
+          <button class="vendor-action-btn" style="background:var(--emerald-bg);" onclick="event.stopPropagation();showToast('Opening WhatsApp')">💬</button>
+          <button class="vendor-action-btn" style="background:var(--blue-bg);" onclick="event.stopPropagation();showToast('Calling...')">📞</button>
+        </div>
+      </div>
+      <div class="vendor-card" onclick="goTo('vendor-detail')">
+        <div class="vendor-avatar" style="background:#8E44AD;">AT</div>
+        <div class="vendor-info">
+          <div class="vendor-name">Aziz Textile Exports</div>
+          <div class="vendor-meta">Fatima Aziz · Lahore, Pakistan · Textiles</div>
+        </div>
+        <div class="vendor-actions">
+          <button class="vendor-action-btn" style="background:var(--emerald-bg);" onclick="event.stopPropagation();showToast('Opening WhatsApp')">💬</button>
+          <button class="vendor-action-btn" style="background:var(--blue-bg);" onclick="event.stopPropagation();showToast('Calling...')">📞</button>
+        </div>
+      </div>
+      <div class="vendor-card" onclick="goTo('vendor-detail')">
+        <div class="vendor-avatar" style="background:#D35400;">SP</div>
+        <div class="vendor-info">
+          <div class="vendor-name">Spinneys Distribution <span style="font-size:9px;background:var(--slate-100);color:var(--slate-500);padding:1px 6px;border-radius:8px;font-weight:700;">MANUAL</span></div>
+          <div class="vendor-meta">Rajesh Kumar · Dubai, UAE · Retail</div>
+        </div>
+        <div class="vendor-actions">
+          <button class="vendor-action-btn" style="background:var(--emerald-bg);" onclick="event.stopPropagation();showToast('Opening WhatsApp')">💬</button>
+          <button class="vendor-action-btn" style="background:var(--blue-bg);" onclick="event.stopPropagation();showToast('Calling...')">📞</button>
+        </div>
+      </div>
+    </div>
+    <button class="fab" onclick="openNetworkMenu()">+</button>
+    <div class="tab-bar">
+      <div class="tab-item" onclick="switchTab('dashboard', this)"><span class="tab-icon">🏠</span><span class="tab-label">Home</span></div>
+      <div class="tab-item" onclick="switchTab('inventory-list', this)"><span class="tab-icon">📦</span><span class="tab-label">Inventory</span></div>
+      <div class="tab-item active" onclick="switchTab('network', this)"><span class="tab-icon">👥</span><span class="tab-label">Network</span></div>
+      <div class="tab-item" onclick="switchTab('received-list', this)" style="position:relative;"><span class="tab-icon">📥</span><span class="tab-label">Received</span><span class="tab-badge">5</span></div>
+      <div class="tab-item" onclick="switchTab('reservations', this)"><span class="tab-icon">🤝</span><span class="tab-label">Reserved</span></div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SCREEN: ADD VENDOR (manual)
+  ============================================================ -->
+  <div class="screen" id="add-vendor">
+    <div class="app-header">
+      <div class="app-header-row">
+        <button class="header-back" onclick="goTo('network')">←</button>
+        <div class="header-title">Add Vendor Manually</div>
+        <div style="width:34px"></div>
+      </div>
+    </div>
+    <div class="auth-body" style="padding-top:18px;">
+      <div class="field-hint" style="background:var(--blue-bg);color:var(--blue);padding:10px 12px;border-radius:10px;margin-bottom:18px;font-size:12px;">If this email already has a MyStokk account, they'll connect automatically. Otherwise they're saved as a manual contact you can still share with via email.</div>
+      <div class="field-group">
+        <div class="field-label">Company Name <span class="field-required">*</span></div>
+        <input class="field-input" placeholder="e.g. Spinneys Distribution">
+      </div>
+      <div class="field-group">
+        <div class="field-label">Contact Person</div>
+        <input class="field-input" placeholder="Full name">
+      </div>
+      <div class="field-group">
+        <div class="field-label">Email <span class="field-required">*</span></div>
+        <input class="field-input" type="email" placeholder="contact@company.com">
+      </div>
+      <div class="field-group">
+        <div class="field-label">Mobile Number</div>
+        <input class="field-input" placeholder="+971 50 000 0000">
+      </div>
+      <div class="field-group">
+        <div class="field-label">Industry</div>
+        <input class="field-input" placeholder="Select industry" readonly>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Country / City</div>
+        <input class="field-input" placeholder="Select location" readonly>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Group (optional)</div>
+        <input class="field-input" placeholder="e.g. Suppliers UAE, VIP Buyers">
+      </div>
+      <button class="btn btn-emerald" style="width:100%;padding:14px;font-size:14px;" onclick="showToast('✓ Vendor added to network');goTo('network')">Add Vendor</button>
+      <button class="btn btn-outline" style="width:100%;padding:14px;font-size:14px;margin-top:10px;" onclick="goTo('bulk-upload')">Or bulk import via CSV →</button>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SCREEN: BULK UPLOAD CSV
+  ============================================================ -->
+  <div class="screen" id="bulk-upload">
+    <div class="app-header">
+      <div class="app-header-row">
+        <button class="header-back" onclick="goTo('network')">←</button>
+        <div class="header-title">Bulk Import Vendors</div>
+        <div style="width:34px"></div>
+      </div>
+    </div>
+    <div class="auth-body" style="padding-top:18px;">
+      <div class="field-group">
+        <div class="field-label">Step 1 — Download Template</div>
+        <div class="field-hint" style="margin-bottom:10px;">12-column CSV template with all vendor fields pre-formatted</div>
+        <button class="btn btn-outline" style="width:100%;padding:13px;" onclick="showToast('Template downloaded')">📄 Download CSV Template</button>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Step 2 — Upload Your File</div>
+        <div class="field-hint" style="margin-bottom:10px;">Duplicates are automatically removed by email address</div>
+        <div class="logo-upload-box" style="width:100%;height:100px;border-radius:14px;" onclick="showToast('Opens file picker')">📤<br></div>
+      </div>
+      <div style="background:var(--amber-bg);border-radius:10px;padding:12px;font-size:12px;color:var(--amber);margin-top:8px;">⚠️ Vendors whose email matches an existing MyStokk account will auto-connect. Others are saved as manual contacts.</div>
+      <button class="btn btn-emerald" style="width:100%;padding:14px;font-size:14px;margin-top:18px;" onclick="showToast('✓ 24 vendors imported, 2 duplicates skipped');goTo('network')">Import Vendors</button>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SCREEN: VENDOR DETAIL
+  ============================================================ -->
+  <div class="screen" id="vendor-detail">
+    <div class="app-header">
+      <div class="app-header-row">
+        <button class="header-back" onclick="goTo('network')">←</button>
+        <div class="header-title">Vendor Profile</div>
+        <button class="header-action" onclick="goTo('edit-vendor')">✏️</button>
+      </div>
+    </div>
+    <div class="detail-body">
+      <div style="background:white;padding:24px 18px;text-align:center;border-bottom:1px solid var(--slate-100);">
+        <div class="vendor-avatar" style="width:64px;height:64px;border-radius:18px;font-size:22px;margin:0 auto 12px;">GS</div>
+        <div style="font-size:17px;font-weight:800;color:var(--slate-900);">Gulf Star Trading LLC</div>
+        <div style="font-size:12.5px;color:var(--slate-500);margin-top:2px;">Mohammed Al Farsi · General Manager</div>
+        <div style="display:flex;justify-content:center;gap:6px;margin-top:10px;">
+          <span class="chip chip-active">Connected</span>
+          <span class="chip" style="background:var(--slate-100);color:var(--slate-600);">Trading</span>
+        </div>
+      </div>
+      <div class="detail-content">
+        <div style="display:flex;gap:10px;margin-bottom:14px;">
+          <button class="btn btn-emerald" style="flex:1;padding:11px;font-size:13px;" onclick="showToast('Opening WhatsApp')">💬 WhatsApp</button>
+          <button class="btn btn-outline" style="flex:1;padding:11px;font-size:13px;" onclick="showToast('Calling...')">📞 Call</button>
+          <button class="btn btn-outline" style="flex:1;padding:11px;font-size:13px;" onclick="showToast('Opening email')">✉️ Email</button>
+        </div>
+        <div class="detail-section">
+          <div class="detail-section-title">Contact Information</div>
+          <div class="detail-row"><span class="detail-row-label">Email</span><span class="detail-row-val">m.alfarsi@gulfstartrading.ae</span></div>
+          <div class="detail-row"><span class="detail-row-label">Mobile</span><span class="detail-row-val">+971 50 234 5678</span></div>
+          <div class="detail-row"><span class="detail-row-label">Location</span><span class="detail-row-val">Dubai, UAE</span></div>
+          <div class="detail-row"><span class="detail-row-label">Group</span><span class="detail-row-val">Suppliers UAE</span></div>
+        </div>
+        <div class="detail-section">
+          <div class="detail-section-title">Activity</div>
+          <div class="detail-row"><span class="detail-row-label">Items shared with them</span><span class="detail-row-val">14</span></div>
+          <div class="detail-row"><span class="detail-row-label">Items received from them</span><span class="detail-row-val">6</span></div>
+          <div class="detail-row"><span class="detail-row-label">Connected since</span><span class="detail-row-val">Mar 2026</span></div>
+        </div>
+        <button class="btn btn-danger" style="width:100%;padding:12px;margin-top:6px;" onclick="showToast('Connection removed');goTo('network')">Remove Connection</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SCREEN: RECEIVED ITEMS LIST
+  ============================================================ -->
+  <div class="screen" id="received-list">
+    <div class="app-header">
+      <div class="app-header-row">
+        <div class="header-title">Received Inventory</div>
+        <div style="width:34px"></div>
+      </div>
+    </div>
+    <div class="search-bar">
+      <span style="color:var(--slate-400)">🔍</span>
+      <input placeholder="Search received items...">
+    </div>
+    <div class="list-body">
+      <div class="item-card" onclick="goTo('received-detail')">
+        <div class="item-thumb">📻</div>
+        <div class="item-info">
+          <div class="item-title">Bluetooth Speaker — Outdoor IP67</div>
+          <div class="item-meta">From Gulf Star Trading · 2 days ago</div>
+          <div class="item-price">AED 38 / unit</div>
+        </div>
+      </div>
+      <div class="item-card" onclick="goTo('received-detail')">
+        <div class="item-thumb">🔋</div>
+        <div class="item-info">
+          <div class="item-title">Power Bank 20,000mAh PD 65W</div>
+          <div class="item-meta">From Pacific Facades HK · 4 days ago</div>
+          <div class="item-price">USD 9.50 / unit</div>
+        </div>
+      </div>
+      <div class="item-card" onclick="goTo('received-detail')">
+        <div class="item-thumb">⌚</div>
+        <div class="item-info">
+          <div class="item-title">Smartwatch — Fitness Tracker Pro</div>
+          <div class="item-meta">From Aziz Textile Exports · 1 week ago</div>
+          <div class="item-price">AED 65 / unit</div>
+        </div>
+      </div>
+    </div>
+    <div class="tab-bar">
+      <div class="tab-item" onclick="switchTab('dashboard', this)"><span class="tab-icon">🏠</span><span class="tab-label">Home</span></div>
+      <div class="tab-item" onclick="switchTab('inventory-list', this)"><span class="tab-icon">📦</span><span class="tab-label">Inventory</span></div>
+      <div class="tab-item" onclick="switchTab('network', this)"><span class="tab-icon">👥</span><span class="tab-label">Network</span></div>
+      <div class="tab-item active" onclick="switchTab('received-list', this)" style="position:relative;"><span class="tab-icon">📥</span><span class="tab-label">Received</span></div>
+      <div class="tab-item" onclick="switchTab('reservations', this)"><span class="tab-icon">🤝</span><span class="tab-label">Reserved</span></div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SCREEN: RECEIVED ITEM DETAIL
+  ============================================================ -->
+  <div class="screen" id="received-detail">
+    <div class="app-header">
+      <div class="app-header-row">
+        <button class="header-back" onclick="goTo('received-list')">←</button>
+        <div class="header-title">Shared Item</div>
+        <div style="width:34px"></div>
+      </div>
+    </div>
+    <div class="detail-body">
+      <div class="photo-carousel">📻</div>
+      <div class="detail-content">
+        <div class="field-hint" style="background:var(--blue-bg);color:var(--blue);padding:8px 12px;border-radius:10px;margin-bottom:12px;font-size:12px;">Shared by <b>Gulf Star Trading LLC</b> · 2 days ago</div>
+        <div class="detail-title-row">
+          <div class="detail-title">Bluetooth Speaker — Outdoor IP67</div>
+        </div>
+        <div class="detail-price">AED 38.00 <span style="font-size:13px;color:var(--slate-400);font-weight:600;">/ unit</span></div>
+
+        <div class="stat-row-4">
+          <div class="stat-box"><div class="stat-box-val">3,000</div><div class="stat-box-label">Total</div></div>
+          <div class="stat-box"><div class="stat-box-val">200</div><div class="stat-box-label">Reserved by Me</div></div>
+          <div class="stat-box"><div class="stat-box-val">2,400</div><div class="stat-box-label">Available</div></div>
+          <div class="stat-box"><div class="stat-box-val">—</div><div class="stat-box-label">—</div></div>
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-section-title">Details</div>
+          <div class="detail-row"><span class="detail-row-label">Origin</span><span class="detail-row-val">Guangzhou, China</span></div>
+          <div class="detail-row"><span class="detail-row-label">Unit</span><span class="detail-row-val">pcs</span></div>
+        </div>
+        <div class="detail-section">
+          <div class="detail-section-title">Description</div>
+          <div style="font-size:13px;color:var(--slate-700);line-height:1.6;">Rugged outdoor Bluetooth speaker, IP67 waterproof, 24hr battery, TWS pairing support. Bulk packaging available.</div>
+        </div>
+      </div>
+    </div>
+    <div class="detail-actions">
+      <button class="btn btn-outline" onclick="openShareSheet('My Network', true)">Forward</button>
+      <button class="btn btn-emerald" onclick="openReserveSheet()">Reserve</button>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SCREEN: RESERVATIONS
+  ============================================================ -->
+  <div class="screen" id="reservations">
+    <div class="app-header">
+      <div class="app-header-row">
+        <div class="header-title">Reservations</div>
+        <div style="width:34px"></div>
+      </div>
+    </div>
+    <div class="filter-chips-row" style="padding-top:14px;">
+      <div class="filter-pill active" style="flex:1;text-align:center;" onclick="setResTab('incoming',this)">Incoming (3)</div>
+      <div class="filter-pill" style="flex:1;text-align:center;" onclick="setResTab('outgoing',this)">My Reservations (4)</div>
+    </div>
+    <div class="list-body" id="resListBody">
+      <div class="reservation-card">
+        <div class="res-top">
+          <div class="item-thumb">🎧</div>
+          <div class="res-info">
+            <div class="res-name">Khalid Al Suwaidi</div>
+            <div class="res-detail">Wireless Earbuds Pro · Qty 500</div>
+            <div class="res-detail" style="color:var(--emerald);font-weight:700;">Offered AED 39/unit</div>
+          </div>
+          <span class="chip chip-pending">Pending</span>
+        </div>
+        <div class="res-actions">
+          <button class="res-btn" style="background:var(--emerald-bg);color:var(--emerald);" onclick="showToast('Accepted')">Accept</button>
+          <button class="res-btn" style="background:var(--blue-bg);color:var(--blue);" onclick="openNegotiateSheet()">Negotiate</button>
+          <button class="res-btn" style="background:var(--red-bg);color:var(--red);" onclick="showToast('Rejected')">Reject</button>
+        </div>
+      </div>
+      <div class="reservation-card">
+        <div class="res-top">
+          <div class="item-thumb">🔌</div>
+          <div class="res-info">
+            <div class="res-name">Fatima Aziz</div>
+            <div class="res-detail">USB-C Chargers · Qty 1200</div>
+            <div class="res-detail" style="color:var(--blue);font-weight:700;">Round 2 — Counter AED 10.50</div>
+          </div>
+          <span class="chip chip-negotiating">Negotiating</span>
+        </div>
+        <div class="res-actions">
+          <button class="res-btn" style="background:var(--emerald-bg);color:var(--emerald);" onclick="showToast('Accepted counter offer')">Accept</button>
+          <button class="res-btn" style="background:var(--blue-bg);color:var(--blue);" onclick="openNegotiateSheet()">Counter</button>
+        </div>
+      </div>
+      <div class="reservation-card">
+        <div class="res-top">
+          <div class="item-thumb">📻</div>
+          <div class="res-info">
+            <div class="res-name">Sarah Chen</div>
+            <div class="res-detail">Outdoor Speakers · Qty 300</div>
+          </div>
+          <span class="chip chip-pending">Pending</span>
+        </div>
+        <div class="res-actions">
+          <button class="res-btn" style="background:var(--slate-100);color:var(--slate-600);" onclick="showToast('Passed to your supplier')">Pass to Supplier</button>
+          <button class="res-btn" style="background:var(--emerald-bg);color:var(--emerald);" onclick="showToast('Accepted')">Accept</button>
+        </div>
+      </div>
+    </div>
+    <div class="tab-bar">
+      <div class="tab-item" onclick="switchTab('dashboard', this)"><span class="tab-icon">🏠</span><span class="tab-label">Home</span></div>
+      <div class="tab-item" onclick="switchTab('inventory-list', this)"><span class="tab-icon">📦</span><span class="tab-label">Inventory</span></div>
+      <div class="tab-item" onclick="switchTab('network', this)"><span class="tab-icon">👥</span><span class="tab-label">Network</span></div>
+      <div class="tab-item" onclick="switchTab('received-list', this)" style="position:relative;"><span class="tab-icon">📥</span><span class="tab-label">Received</span><span class="tab-badge">5</span></div>
+      <div class="tab-item active" onclick="switchTab('reservations', this)"><span class="tab-icon">🤝</span><span class="tab-label">Reserved</span></div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SCREEN: PROFILE
+  ============================================================ -->
+  <div class="screen" id="profile">
+    <div class="app-header">
+      <div class="app-header-row">
+        <button class="header-back" onclick="goTo('dashboard')">←</button>
+        <div class="header-title">My Profile</div>
+        <button class="header-action" onclick="goTo('edit-profile')">✏️</button>
+      </div>
+    </div>
+    <div class="detail-body">
+      <div style="background:white;padding:28px 18px;text-align:center;border-bottom:1px solid var(--slate-100);">
+        <div class="vendor-avatar" style="width:72px;height:72px;border-radius:20px;font-size:26px;margin:0 auto 12px;background:var(--emerald);">NE</div>
+        <div style="font-size:18px;font-weight:800;color:var(--slate-900);">Nova Electronics Trading LLC</div>
+        <div style="font-size:13px;color:var(--slate-500);margin-top:2px;">Priya Nair · Import Manager</div>
+        <div style="font-size:12px;color:var(--slate-400);margin-top:6px;">Dubai, UAE · Consumer Electronics</div>
+      </div>
+      <div class="detail-content">
+        <div class="dash-stats-grid" style="margin-top:0;margin-bottom:16px;">
+          <div class="dash-stat"><div class="dash-stat-val">34</div><div class="dash-stat-label">Inventory Items</div></div>
+          <div class="dash-stat"><div class="dash-stat-val">52</div><div class="dash-stat-label">Network</div></div>
+        </div>
+        <div class="detail-section" style="padding:0;overflow:hidden;">
+          <div class="simple-list-item" onclick="goTo('edit-profile')">
+            <div class="simple-list-icon" style="background:var(--emerald-bg);">🏢</div>
+            <div class="simple-list-info"><div class="simple-list-label">Company Profile</div><div class="simple-list-sub">Edit name, industry, location, logo</div></div>
+            <span style="color:var(--slate-300);">›</span>
+          </div>
+          <div class="simple-list-item" onclick="goTo('notifications')">
+            <div class="simple-list-icon" style="background:var(--blue-bg);">🔔</div>
+            <div class="simple-list-info"><div class="simple-list-label">Notifications</div><div class="simple-list-sub">3 unread</div></div>
+            <span style="color:var(--slate-300);">›</span>
+          </div>
+          <div class="simple-list-item" onclick="goTo('settings')">
+            <div class="simple-list-icon" style="background:var(--slate-100);">⚙️</div>
+            <div class="simple-list-info"><div class="simple-list-label">Settings</div><div class="simple-list-sub">Password, account preferences</div></div>
+            <span style="color:var(--slate-300);">›</span>
+          </div>
+          <div class="simple-list-item" onclick="showToast('Opens FAQ')">
+            <div class="simple-list-icon" style="background:var(--amber-bg);">❓</div>
+            <div class="simple-list-info"><div class="simple-list-label">Help &amp; FAQ</div></div>
+            <span style="color:var(--slate-300);">›</span>
+          </div>
+          <div class="simple-list-item" onclick="showToast('Opens Privacy Policy')">
+            <div class="simple-list-icon" style="background:var(--slate-100);">🔒</div>
+            <div class="simple-list-info"><div class="simple-list-label">Privacy Policy</div></div>
+            <span style="color:var(--slate-300);">›</span>
+          </div>
+          <div class="simple-list-item" style="border-bottom:none;" onclick="showToast('Signed out');goTo('landing')">
+            <div class="simple-list-icon" style="background:var(--red-bg);">🚪</div>
+            <div class="simple-list-info"><div class="simple-list-label" style="color:var(--red);">Sign Out</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SCREEN: EDIT PROFILE
+  ============================================================ -->
+  <div class="screen" id="edit-profile">
+    <div class="app-header">
+      <div class="app-header-row">
+        <button class="header-back" onclick="goTo('profile')">←</button>
+        <div class="header-title">Edit Profile</div>
+        <div style="width:34px"></div>
+      </div>
+    </div>
+    <div class="auth-body" style="padding-top:18px;">
+      <div class="logo-upload-box" style="background-image:linear-gradient(135deg,var(--emerald),var(--navy));color:white;font-size:22px;font-weight:800;">NE</div>
+      <div class="field-group"><div class="field-label">Company Name</div><input class="field-input" value="Nova Electronics Trading LLC"></div>
+      <div class="field-group"><div class="field-label">Contact Person</div><input class="field-input" value="Priya Nair"></div>
+      <div class="field-group"><div class="field-label">Industry</div><input class="field-input" value="Consumer Electronics" readonly></div>
+      <div class="field-group"><div class="field-label">Country</div><input class="field-input" value="United Arab Emirates"></div>
+      <div class="field-group"><div class="field-label">City</div><input class="field-input" value="Dubai"></div>
+      <div class="field-group"><div class="field-label">Address</div><input class="field-input" value="Deira, Dubai"></div>
+      <div style="display:flex;gap:10px;">
+        <div class="field-group" style="flex:1;"><div class="field-label">Mobile</div><input class="field-input" value="+971 52 345 6789"></div>
+        <div class="field-group" style="flex:1;"><div class="field-label">Telephone</div><input class="field-input" placeholder="Optional"></div>
+      </div>
+      <div class="field-group"><div class="field-label">Description</div><textarea class="field-input" rows="3">Trading consumer electronics across the GCC.</textarea></div>
+      <button class="btn btn-emerald" style="width:100%;padding:14px;font-size:14px;" onclick="showToast('✓ Profile updated');goTo('profile')">Save Changes</button>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SCREEN: SETTINGS
+  ============================================================ -->
+  <div class="screen" id="settings">
+    <div class="app-header">
+      <div class="app-header-row">
+        <button class="header-back" onclick="goTo('profile')">←</button>
+        <div class="header-title">Settings</div>
+        <div style="width:34px"></div>
+      </div>
+    </div>
+    <div class="detail-body">
+      <div class="detail-content" style="padding-top:14px;">
+        <div class="detail-section-title">Account</div>
+        <div class="detail-section" style="padding:0;overflow:hidden;margin-bottom:16px;">
+          <div class="simple-list-item" onclick="showToast('Opens change password flow')">
+            <div class="simple-list-icon" style="background:var(--slate-100);">🔑</div>
+            <div class="simple-list-info"><div class="simple-list-label">Change Password</div></div>
+            <span style="color:var(--slate-300);">›</span>
+          </div>
+          <div class="simple-list-item" style="border-bottom:none;">
+            <div class="simple-list-icon" style="background:var(--blue-bg);">✉️</div>
+            <div class="simple-list-info"><div class="simple-list-label">Email</div><div class="simple-list-sub">priya@novaelectronics.ae · Verified ✓</div></div>
+          </div>
+        </div>
+        <div class="detail-section-title">Notifications</div>
+        <div class="detail-section" style="padding:0;overflow:hidden;margin-bottom:16px;">
+          <div class="simple-list-item">
+            <div class="simple-list-info"><div class="simple-list-label">New shares received</div></div>
+            <div class="toggle-switch" style="background:var(--emerald);" onclick="this.classList.toggle('off');this.style.background=this.classList.contains('off')?'#CBD5E1':'#059669';this.querySelector('.toggle-knob').style.left=this.classList.contains('off')?'2px':'22px';"><div class="toggle-knob" style="left:22px;"></div></div>
+          </div>
+          <div class="simple-list-item">
+            <div class="simple-list-info"><div class="simple-list-label">Reservation updates</div></div>
+            <div class="toggle-switch" style="background:var(--emerald);" onclick="this.classList.toggle('off');this.style.background=this.classList.contains('off')?'#CBD5E1':'#059669';this.querySelector('.toggle-knob').style.left=this.classList.contains('off')?'2px':'22px';"><div class="toggle-knob" style="left:22px;"></div></div>
+          </div>
+          <div class="simple-list-item" style="border-bottom:none;">
+            <div class="simple-list-info"><div class="simple-list-label">Network invites</div></div>
+            <div class="toggle-switch" style="background:#CBD5E1;" onclick="this.classList.toggle('off');this.style.background=this.classList.contains('off')?'#CBD5E1':'#059669';this.querySelector('.toggle-knob').style.left=this.classList.contains('off')?'2px':'22px';"><div class="toggle-knob" style="left:2px;"></div></div>
+          </div>
+        </div>
+        <button class="btn btn-danger" style="width:100%;padding:13px;">Delete Account</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SCREEN: NOTIFICATIONS
+  ============================================================ -->
+  <div class="screen" id="notifications">
+    <div class="app-header">
+      <div class="app-header-row">
+        <button class="header-back" onclick="goTo('profile')">←</button>
+        <div class="header-title">Notifications</div>
+        <button class="header-action" style="width:auto;padding:0 10px;font-size:11px;" onclick="showToast('All marked as read')">Mark all read</button>
+      </div>
+    </div>
+    <div class="list-body" style="padding-top:14px;">
+      <div class="simple-list-item" style="background:white;border-radius:12px;margin-bottom:8px;border:none;box-shadow:var(--shadow);">
+        <div class="simple-list-icon" style="background:var(--emerald-bg);">📥</div>
+        <div class="simple-list-info"><div class="simple-list-label">Gulf Star Trading shared an item</div><div class="simple-list-sub">Bluetooth Speaker — Outdoor IP67 · 2h ago</div></div>
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--emerald);"></div>
+      </div>
+      <div class="simple-list-item" style="background:white;border-radius:12px;margin-bottom:8px;border:none;box-shadow:var(--shadow);">
+        <div class="simple-list-icon" style="background:var(--blue-bg);">🤝</div>
+        <div class="simple-list-info"><div class="simple-list-label">New reservation request</div><div class="simple-list-sub">Khalid Al Suwaidi · Wireless Earbuds Pro · 5h ago</div></div>
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--emerald);"></div>
+      </div>
+      <div class="simple-list-item" style="background:white;border-radius:12px;margin-bottom:8px;border:none;box-shadow:var(--shadow);">
+        <div class="simple-list-icon" style="background:var(--amber-bg);">💬</div>
+        <div class="simple-list-info"><div class="simple-list-label">Counter offer received</div><div class="simple-list-sub">Fatima Aziz countered AED 10.50/unit · 1d ago</div></div>
+      </div>
+      <div class="simple-list-item" style="background:white;border-radius:12px;margin-bottom:8px;border:none;box-shadow:var(--shadow);">
+        <div class="simple-list-icon" style="background:var(--slate-100);">👥</div>
+        <div class="simple-list-info"><div class="simple-list-label">Spinneys Distribution connected</div><div class="simple-list-sub">Now part of your network · 2d ago</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SCREEN: EDIT VENDOR
+  ============================================================ -->
+  <div class="screen" id="edit-vendor">
+    <div class="app-header">
+      <div class="app-header-row">
+        <button class="header-back" onclick="goTo('vendor-detail')">←</button>
+        <div class="header-title">Edit Vendor</div>
+        <div style="width:34px"></div>
+      </div>
+    </div>
+    <div class="auth-body" style="padding-top:18px;">
+      <div class="field-group"><div class="field-label">Company Name</div><input class="field-input" value="Gulf Star Trading LLC"></div>
+      <div class="field-group"><div class="field-label">Contact Person</div><input class="field-input" value="Mohammed Al Farsi"></div>
+      <div class="field-group"><div class="field-label">Email</div><input class="field-input" value="m.alfarsi@gulfstartrading.ae"></div>
+      <div class="field-group"><div class="field-label">Mobile Number</div><input class="field-input" value="+971 50 234 5678"></div>
+      <div class="field-group"><div class="field-label">Group</div><input class="field-input" value="Suppliers UAE"></div>
+      <button class="btn btn-emerald" style="width:100%;padding:14px;font-size:14px;" onclick="showToast('✓ Vendor updated');goTo('vendor-detail')">Save Changes</button>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SCREEN: EDIT INVENTORY (reuses create form layout)
+  ============================================================ -->
+  <div class="screen" id="inventory-edit">
+    <div class="app-header">
+      <div class="app-header-row">
+        <button class="header-back" onclick="goTo('inventory-detail')">←</button>
+        <div class="header-title">Edit Inventory Item</div>
+        <div style="width:34px"></div>
+      </div>
+    </div>
+    <div class="auth-body" style="padding-top:18px;">
+      <div class="field-group"><div class="field-label">Product Title</div><input class="field-input" value="Wireless Earbuds Pro — ANC"></div>
+      <div class="field-group"><div class="field-label">Product Code / SKU</div><input class="field-input" value="WEP-2026-BLK"></div>
+      <div class="field-group"><div class="field-label">Category</div><input class="field-input" value="Audio" readonly></div>
+      <div style="display:flex;gap:10px;">
+        <div class="field-group" style="flex:1;"><div class="field-label">Quantity</div><input class="field-input" type="number" value="2000"></div>
+        <div class="field-group" style="flex:1;"><div class="field-label">Unit</div><input class="field-input" value="pcs" readonly></div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <div class="field-group" style="flex:1;"><div class="field-label">Price per Unit</div><input class="field-input" type="number" value="42.00"></div>
+        <div class="field-group" style="flex:1;"><div class="field-label">Currency</div><input class="field-input" value="AED" readonly></div>
+      </div>
+      <div class="field-group"><div class="field-label">Origin</div><input class="field-input" value="Shenzhen, China"></div>
+      <div class="field-group"><div class="field-label">Stock Location</div><input class="field-input" value="Dubai, JAFZA Warehouse 4"></div>
+      <div class="field-group"><div class="field-label">Description</div><textarea class="field-input" rows="4">Active noise cancelling wireless earbuds, Bluetooth 5.3, 32hr total battery with case, IPX5 water resistance.</textarea></div>
+      <button class="btn btn-emerald" style="width:100%;padding:14px;font-size:14px;margin-top:8px;" onclick="showToast('✓ Item updated');goTo('inventory-detail')">Save Changes</button>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       BOTTOM SHEET: SHARE MODAL
+  ============================================================ -->
+  <div class="bottom-sheet-overlay" id="shareSheet" onclick="closeSheet('shareSheet')">
+    <div class="bottom-sheet" onclick="event.stopPropagation()" style="max-height:80%;">
+      <div class="bs-handle"></div>
+      <div class="bs-title" id="shareSheetTitle">Share Item</div>
+      <div class="share-tabs">
+        <div class="share-tab active" onclick="setShareTab('network',this)">My Network</div>
+        <div class="share-tab" onclick="setShareTab('email',this)">Email</div>
+        <div class="share-tab" onclick="setShareTab('link',this)">Link</div>
+      </div>
+      <div id="shareTabNetwork">
+        <div style="padding:10px 18px;">
+          <input class="field-input" placeholder="Search vendors..." style="font-size:13px;">
+        </div>
+        <div class="filter-chips-row" style="padding:0 18px 10px;">
+          <div class="filter-pill active">All</div>
+          <div class="filter-pill">Industry ▾</div>
+          <div class="filter-pill">Country ▾</div>
+          <div class="filter-pill">Group ▾</div>
+        </div>
+        <div class="share-vendor-row" onclick="toggleShareCheck(this)">
+          <div class="share-checkbox checked">✓</div>
+          <div class="vendor-avatar" style="width:36px;height:36px;font-size:12px;">GS</div>
+          <div class="vendor-info"><div class="vendor-name">Gulf Star Trading LLC</div><div class="vendor-meta">Dubai, UAE</div></div>
+        </div>
+        <div class="share-vendor-row" onclick="toggleShareCheck(this)">
+          <div class="share-checkbox"></div>
+          <div class="vendor-avatar" style="width:36px;height:36px;font-size:12px;background:var(--emerald);">PF</div>
+          <div class="vendor-info"><div class="vendor-name">Pacific Facades HK</div><div class="vendor-meta">Hong Kong</div></div>
+        </div>
+        <div class="share-vendor-row" onclick="toggleShareCheck(this)">
+          <div class="share-checkbox checked">✓</div>
+          <div class="vendor-avatar" style="width:36px;height:36px;font-size:12px;background:#8E44AD;">AT</div>
+          <div class="vendor-info"><div class="vendor-name">Aziz Textile Exports</div><div class="vendor-meta">Lahore, Pakistan</div></div>
+        </div>
+        <div class="share-vendor-row" onclick="toggleShareCheck(this)" style="border-bottom:none;">
+          <div class="share-checkbox"></div>
+          <div class="vendor-avatar" style="width:36px;height:36px;font-size:12px;background:#D35400;">SP</div>
+          <div class="vendor-info"><div class="vendor-name">Spinneys Distribution</div><div class="vendor-meta">Dubai, UAE · Manual</div></div>
+        </div>
+        <div style="padding:14px 18px;">
+          <button class="btn btn-emerald" style="width:100%;padding:13px;" onclick="closeSheet('shareSheet');showToast('✓ Shared with 2 vendors')">Share with 2 vendors</button>
+        </div>
+      </div>
+      <div id="shareTabEmail" style="display:none;padding:18px;">
+        <div class="field-group"><div class="field-label">Recipient Email</div><input class="field-input" placeholder="vendor@company.com"></div>
+        <button class="btn btn-emerald" style="width:100%;padding:13px;" onclick="closeSheet('shareSheet');showToast('✓ Email sent')">Send Share Email</button>
+      </div>
+      <div id="shareTabLink" style="display:none;padding:18px;">
+        <div class="field-hint" style="margin-bottom:10px;">Anyone with this link can view the item. They'll need to sign up to reserve it.</div>
+        <div style="background:var(--slate-100);border-radius:10px;padding:12px;font-size:11px;font-family:var(--font-mono);color:var(--slate-600);word-break:break-all;margin-bottom:12px;">https://mystokk.com/share/a8f3k2x9...</div>
+        <button class="btn btn-emerald" style="width:100%;padding:13px;" onclick="showToast('Link copied to clipboard')">📋 Copy Link</button>
+        <button class="btn btn-outline" style="width:100%;padding:13px;margin-top:8px;" onclick="showToast('Opening native share sheet')">📤 Share via...</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       BOTTOM SHEET: PRE-SHARE (forward with price/remark)
+  ============================================================ -->
+  <div class="bottom-sheet-overlay" id="preShareSheet" onclick="closeSheet('preShareSheet')">
+    <div class="bottom-sheet" onclick="event.stopPropagation()">
+      <div class="bs-handle"></div>
+      <div class="bs-title">Set Your Price Before Forwarding</div>
+      <div style="padding:16px 18px;">
+        <div class="field-hint" style="background:var(--blue-bg);color:var(--blue);padding:10px 12px;border-radius:10px;margin-bottom:16px;">The original supplier's identity and price are never shown to whoever you forward this to.</div>
+        <div class="field-group"><div class="field-label">Your Price (optional)</div><input class="field-input" type="number" placeholder="Leave blank to hide price"></div>
+        <div class="field-group"><div class="field-label">Remark (optional)</div><textarea class="field-input" rows="2" placeholder="e.g. Limited stock, fast delivery"></textarea></div>
+        <button class="btn btn-emerald" style="width:100%;padding:13px;" onclick="closeSheet('preShareSheet');openShareSheet('Forward Item', true)">Continue to Share →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       BOTTOM SHEET: RESERVE
+  ============================================================ -->
+  <div class="bottom-sheet-overlay" id="reserveSheet" onclick="closeSheet('reserveSheet')">
+    <div class="bottom-sheet" onclick="event.stopPropagation()">
+      <div class="bs-handle"></div>
+      <div class="bs-title">Reserve This Item</div>
+      <div style="padding:16px 18px;">
+        <div class="field-group"><div class="field-label">Quantity <span class="field-required">*</span></div><input class="field-input" type="number" placeholder="e.g. 500"></div>
+        <div class="field-group"><div class="field-label">Your Offer Price (optional)</div><input class="field-input" type="number" placeholder="Leave blank to accept listed price"></div>
+        <div class="field-group"><div class="field-label">Message (optional)</div><textarea class="field-input" rows="2" placeholder="Any notes for the supplier..."></textarea></div>
+        <button class="btn btn-emerald" style="width:100%;padding:13px;" onclick="closeSheet('reserveSheet');showToast('✓ Reservation request sent')">Send Reservation Request</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       BOTTOM SHEET: NEGOTIATE
+  ============================================================ -->
+  <div class="bottom-sheet-overlay" id="negotiateSheet" onclick="closeSheet('negotiateSheet')">
+    <div class="bottom-sheet" onclick="event.stopPropagation()">
+      <div class="bs-handle"></div>
+      <div class="bs-title">Counter Offer</div>
+      <div style="padding:16px 18px;">
+        <div class="field-hint" style="background:var(--amber-bg);color:var(--amber);padding:10px 12px;border-radius:10px;margin-bottom:16px;">Round 2 of 3 — one more round available after this</div>
+        <div class="field-group"><div class="field-label">Counter Quantity</div><input class="field-input" type="number" placeholder="500"></div>
+        <div class="field-group"><div class="field-label">Counter Price</div><input class="field-input" type="number" placeholder="40.50"></div>
+        <div class="field-group"><div class="field-label">Message</div><textarea class="field-input" rows="2" placeholder="Explain your counter..."></textarea></div>
+        <button class="btn btn-emerald" style="width:100%;padding:13px;" onclick="closeSheet('negotiateSheet');showToast('✓ Counter offer sent')">Send Counter Offer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       BOTTOM SHEET: ITEM MENU (more options)
+  ============================================================ -->
+  <div class="bottom-sheet-overlay" id="itemMenuSheet" onclick="closeSheet('itemMenuSheet')">
+    <div class="bottom-sheet" onclick="event.stopPropagation()">
+      <div class="bs-handle"></div>
+      <div class="simple-list-item" onclick="closeSheet('itemMenuSheet');showToast('Public link generated')">
+        <div class="simple-list-icon" style="background:var(--blue-bg);">🔗</div>
+        <div class="simple-list-info"><div class="simple-list-label">Generate Public Link</div></div>
+      </div>
+      <div class="simple-list-item" onclick="closeSheet('itemMenuSheet');showToast('Manage shares')">
+        <div class="simple-list-icon" style="background:var(--emerald-bg);">👁</div>
+        <div class="simple-list-info"><div class="simple-list-label">Manage Shares</div></div>
+      </div>
+      <div class="simple-list-item" style="border-bottom:none;" onclick="closeSheet('itemMenuSheet');showToast('Item archived')">
+        <div class="simple-list-icon" style="background:var(--slate-100);">📦</div>
+        <div class="simple-list-info"><div class="simple-list-label">Archive Item</div></div>
+      </div>
+      <div class="simple-list-item" style="border-bottom:none;" onclick="closeSheet('itemMenuSheet');showToast('Item deleted')">
+        <div class="simple-list-icon" style="background:var(--red-bg);">🗑</div>
+        <div class="simple-list-info"><div class="simple-list-label" style="color:var(--red)">Delete Item</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       BOTTOM SHEET: NETWORK ADD MENU
+  ============================================================ -->
+  <div class="bottom-sheet-overlay" id="networkMenuSheet" onclick="closeSheet('networkMenuSheet')">
+    <div class="bottom-sheet" onclick="event.stopPropagation()">
+      <div class="bs-handle"></div>
+      <div class="bs-title">Add to Network</div>
+      <div class="simple-list-item" onclick="closeSheet('networkMenuSheet');goTo('add-vendor')">
+        <div class="simple-list-icon" style="background:var(--emerald-bg);">➕</div>
+        <div class="simple-list-info"><div class="simple-list-label">Add Vendor Manually</div></div>
+      </div>
+      <div class="simple-list-item" style="border-bottom:none;" onclick="closeSheet('networkMenuSheet');goTo('bulk-upload')">
+        <div class="simple-list-icon" style="background:var(--blue-bg);">📤</div>
+        <div class="simple-list-info"><div class="simple-list-label">Bulk Upload via CSV</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROCESSING + TOAST -->
+  <div id="processing"><div class="spinner"></div><div class="processing-text" id="procText">Loading...</div></div>
+  <div id="toast"></div>
+
+</div>
+
+<script>
+// ============================================================
+// MYSTOKK PROTOTYPE — STATE & NAV
+// ============================================================
+let screenHistory = ['landing'];
+let obStepIndex = 1;
+
+const INVENTORY_DATA = [
+  { icon:'🎧', title:'Wireless Earbuds Pro — ANC', meta:'2,000 pcs · Audio', price:'AED 42.00', status:'active' },
+  { icon:'📻', title:'Bluetooth Speaker — Outdoor IP67', meta:'1,200 pcs · Audio', price:'AED 38.00', status:'partial' },
+  { icon:'🔋', title:'Power Bank 20,000mAh PD 65W', meta:'5,000 pcs · Mobile Accessories', price:'USD 9.50', status:'active' },
+  { icon:'⌚', title:'Smartwatch — Fitness Tracker Pro', meta:'800 pcs · Wearables', price:'AED 65.00', status:'active' },
+  { icon:'🔌', title:'USB-C Fast Chargers 65W', meta:'3,000 pcs · Mobile Accessories', price:'AED 11.00', status:'partial' },
+  { icon:'📱', title:'Phone Cases — Clear TPU (Mixed)', meta:'10,000 pcs · Mobile Accessories', price:'AED 3.20', status:'sold' },
+  { icon:'🎤', title:'Wireless Lapel Mic Kit', meta:'450 pcs · Audio', price:'AED 58.00', status:'archived' },
+];
+
+function clockTick() {
+  const now = new Date();
+  const el = document.getElementById('clock');
+  if (el) el.textContent = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+}
+setInterval(clockTick, 1000); clockTick();
+
+function goTo(screenId) {
+  const current = screenHistory[screenHistory.length - 1];
+  if (current !== screenId) screenHistory.push(screenId);
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const target = document.getElementById(screenId);
+  if (target) target.classList.add('active');
+  if (screenId === 'inventory-list') renderInventoryList('all');
+  window.scrollTo(0,0);
+}
+
+function switchTab(screenId, el) {
+  goTo(screenId);
+  const bar = el.closest('.tab-bar');
+  if (bar) {
+    bar.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+  }
+}
+
+function togglePw(id) {
+  const input = document.getElementById(id);
+  input.type = input.type === 'password' ? 'text' : 'password';
+}
+
+// ============================================================
+// AUTH FLOWS
+// ============================================================
+function doLogin() {
+  showProcessing('Logging in...');
+  setTimeout(() => {
+    hideProcessing();
+    goTo('dashboard');
+    showToast('Welcome back, Priya', 'success');
+  }, 1200);
+}
+
+function doSignup() {
+  showProcessing('Creating your account...');
+  setTimeout(() => {
+    hideProcessing();
+    goTo('otp-screen');
+  }, 1200);
+}
+
+function verifyOtp() {
+  showProcessing('Verifying...');
+  setTimeout(() => {
+    hideProcessing();
+    showToast('✓ Email verified', 'success');
+    goTo('onboarding');
+    resetOnboarding();
+  }, 1000);
+}
+
+// ============================================================
+// ONBOARDING WIZARD
+// ============================================================
+function resetOnboarding() {
+  obStepIndex = 1;
+  ['obStep1','obStep2','obStep3'].forEach((id,i) => {
+    document.getElementById(id).style.display = i===0 ? 'block' : 'none';
+  });
+  document.getElementById('obSeg1').classList.add('done');
+  document.getElementById('obSeg2').classList.remove('done');
+  document.getElementById('obSeg3').classList.remove('done');
+  document.getElementById('obNextBtn').textContent = 'Continue';
+}
+
+function obNext() {
+  if (obStepIndex < 3) {
+    document.getElementById('obStep'+obStepIndex).style.display = 'none';
+    obStepIndex++;
+    document.getElementById('obStep'+obStepIndex).style.display = 'block';
+    document.getElementById('obSeg'+obStepIndex).classList.add('done');
+    if (obStepIndex === 3) document.getElementById('obNextBtn').textContent = 'Finish Setup';
+  } else {
+    showProcessing('Setting up your dashboard...');
+    setTimeout(() => {
+      hideProcessing();
+      goTo('dashboard');
+      showToast('✓ Welcome to MyStokk!', 'success');
+    }, 1400);
+  }
+}
+function obBack() {
+  if (obStepIndex > 1) {
+    document.getElementById('obStep'+obStepIndex).style.display = 'none';
+    obStepIndex--;
+    document.getElementById('obStep'+obStepIndex).style.display = 'block';
+  }
+}
+
+// ============================================================
+// INVENTORY LIST RENDERING
+// ============================================================
+function renderInventoryList(filter) {
+  const body = document.getElementById('invListBody');
+  if (!body) return;
+  let items = INVENTORY_DATA;
+  if (filter && filter !== 'all') items = items.filter(i => i.status === filter);
+
+  if (items.length === 0) {
+    body.innerHTML = '<div class="empty-state"><div class="empty-icon">📦</div><div class="empty-title">No items here</div><div class="empty-sub">Try a different filter or add a new item.</div></div>';
+    return;
+  }
+
+  const statusChip = { active:'<span class="chip chip-active">Active</span>', partial:'<span class="chip chip-partial">Partial</span>', sold:'<span class="chip chip-sold">Sold Out</span>', archived:'<span class="chip" style="background:var(--slate-100);color:var(--slate-400);">Archived</span>' };
+
+  body.innerHTML = items.map((it,i) => `
+    <div class="item-card animate-in" style="animation-delay:${i*0.04}s" onclick="goTo('inventory-detail')">
+      <div class="item-thumb">${it.icon}</div>
+      <div class="item-info">
+        <div class="item-title">${it.title}</div>
+        <div class="item-meta">${it.meta}</div>
+        <div class="item-price">${it.price} <span style="font-weight:500;color:var(--slate-400);">/ unit</span></div>
+      </div>
+      ${statusChip[it.status]}
+    </div>
+  `).join('');
+}
+
+function setInvFilter(filter, el) {
+  document.querySelectorAll('#inventory-list .filter-pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  renderInventoryList(filter);
+}
+
+function filterInventory(query) {
+  const body = document.getElementById('invListBody');
+  if (!query) { renderInventoryList('all'); return; }
+  const filtered = INVENTORY_DATA.filter(i => i.title.toLowerCase().includes(query.toLowerCase()));
+  if (filtered.length === 0) {
+    body.innerHTML = '<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">No matches</div><div class="empty-sub">Try a different search term.</div></div>';
+    return;
+  }
+  body.innerHTML = filtered.map(it => `
+    <div class="item-card" onclick="goTo('inventory-detail')">
+      <div class="item-thumb">${it.icon}</div>
+      <div class="item-info"><div class="item-title">${it.title}</div><div class="item-meta">${it.meta}</div><div class="item-price">${it.price} / unit</div></div>
+    </div>
+  `).join('');
+}
+
+// ============================================================
+// NETWORK TAB
+// ============================================================
+function setNetTab(tab, el) {
+  document.querySelectorAll('#network .filter-pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  showToast(tab === 'all' ? 'Showing all vendors' : tab === 'pending' ? 'Showing pending invites' : 'Showing manual vendors');
+}
+
+function openNetworkMenu() { openSheet('networkMenuSheet'); }
+
+// ============================================================
+// RESERVATIONS TAB
+// ============================================================
+function setResTab(tab, el) {
+  document.querySelectorAll('#reservations .filter-pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  showToast(tab === 'incoming' ? 'Showing incoming requests' : 'Showing my reservations');
+}
+
+// ============================================================
+// SHARE / RESERVE / NEGOTIATE SHEETS
+// ============================================================
+function openShareSheet(title, isForward) {
+  document.getElementById('shareSheetTitle').textContent = title || 'Share Item';
+  if (isForward) {
+    openSheet('preShareSheet');
+  } else {
+    openSheet('shareSheet');
+  }
+}
+
+function setShareTab(tab, el) {
+  document.querySelectorAll('.share-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('shareTabNetwork').style.display = tab === 'network' ? 'block' : 'none';
+  document.getElementById('shareTabEmail').style.display = tab === 'email' ? 'block' : 'none';
+  document.getElementById('shareTabLink').style.display = tab === 'link' ? 'block' : 'none';
+}
+
+function toggleShareCheck(row) {
+  const box = row.querySelector('.share-checkbox');
+  box.classList.toggle('checked');
+  box.textContent = box.classList.contains('checked') ? '✓' : '';
+}
+
+function openReserveSheet() { openSheet('reserveSheet'); }
+function openNegotiateSheet() { openSheet('negotiateSheet'); }
+function openItemMenu() { openSheet('itemMenuSheet'); }
+
+// ============================================================
+// SHEET HELPERS
+// ============================================================
+function openSheet(id) { document.getElementById(id).classList.add('open'); }
+function closeSheet(id) { document.getElementById(id).classList.remove('open'); }
+
+// ============================================================
+// PROCESSING / TOAST
+// ============================================================
+function showProcessing(text) {
+  document.getElementById('procText').textContent = text;
+  document.getElementById('processing').classList.add('show');
+}
+function hideProcessing() { document.getElementById('processing').classList.remove('show'); }
+
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = type ? type : '';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+// ============================================================
+// INIT
+// ============================================================
+renderInventoryList('all');
+
+</script>
+</body>
+</html>
