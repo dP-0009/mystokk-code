@@ -1,5 +1,5 @@
 -- ============================================================
--- 031_received_card_thumbnail.sql
+-- 033_received_card_thumbnail.sql
 -- Surfaces the item's FIRST product photo on the Received Inventory card
 -- (the /received grid), so each card shows a real thumbnail instead of the
 -- grey cube placeholder.
