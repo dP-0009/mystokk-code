@@ -32,24 +32,6 @@ function money(currency: string | null, price: number | null): string {
   return `${currency ?? ''} ${price}`.trim();
 }
 
-/** First alphanumeric character of a name, uppercased (avatar initial). */
-function initial(name: string): string {
-  return (name.trim().match(/[a-z0-9]/i)?.[0] ?? '?').toUpperCase();
-}
-
-/** "Sent 5 minutes ago" / "Sent 3 hours ago" / "Sent 2 days ago". */
-function sentAgo(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  if (Number.isNaN(diff)) return '';
-  const min = Math.round(diff / 60_000);
-  if (min < 1) return 'Sent just now';
-  if (min < 60) return `Sent ${min} minute${min === 1 ? '' : 's'} ago`;
-  const hr = Math.round(min / 60);
-  if (hr < 24) return `Sent ${hr} hour${hr === 1 ? '' : 's'} ago`;
-  const day = Math.round(hr / 24);
-  return `Sent ${day} day${day === 1 ? '' : 's'} ago`;
-}
-
 export function DashboardScreen({ navigation }: Props): React.JSX.Element {
   const queryClient = useQueryClient();
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -160,10 +142,9 @@ export function DashboardScreen({ navigation }: Props): React.JSX.Element {
               />
             </View>
 
-            {/* Pending Requests — only when there are incoming requests */}
+            {/* Team Invitation cards — one per incoming connection request */}
             {pending.length > 0 ? (
               <View style={styles.pendingSection}>
-                <Text style={styles.pendingHeader}>Pending Requests</Text>
                 {pending.map((p) => (
                   <PendingRequestCard
                     key={p.connection_id}
@@ -210,7 +191,11 @@ export function DashboardScreen({ navigation }: Props): React.JSX.Element {
   );
 }
 
-/** An incoming connection request card with Accept / Decline actions. */
+/**
+ * "Team Invitation" card for an incoming connection request: a blue-tinted
+ * panel with a person-add icon + heading, and an inner white row showing the
+ * inviting company, its role, and Decline / Accept actions.
+ */
 function PendingRequestCard({
   item,
   busy,
@@ -224,33 +209,46 @@ function PendingRequestCard({
 }): React.JSX.Element {
   const name = item.company_name ?? item.contact_person ?? 'A vendor';
   return (
-    <View style={styles.pendingCard}>
-      <View style={styles.pendingAvatar}>
-        <Text style={styles.pendingAvatarText}>{initial(name)}</Text>
+    <View style={styles.inviteCard}>
+      {/* Header — icon + title/subtitle */}
+      <View style={styles.inviteHeader}>
+        <View style={styles.inviteIcon}>
+          <Ionicons name="person-add" size={20} color={colors.accent} />
+        </View>
+        <View style={styles.inviteHeaderText}>
+          <Text style={styles.inviteTitle}>Team Invitation</Text>
+          <Text style={styles.inviteSubtitle}>You&apos;ve been invited to join a team</Text>
+        </View>
       </View>
-      <View style={styles.pendingInfo}>
-        <Text style={styles.pendingTitle} numberOfLines={2}>
-          {name} wants to connect with you
-        </Text>
-        <Text style={styles.pendingSub}>{sentAgo(item.created_at)}</Text>
-      </View>
-      <View style={styles.pendingActions}>
-        <Pressable
-          style={[styles.acceptBtn, busy ? styles.btnDisabled : null]}
-          onPress={onAccept}
-          disabled={busy}
-          testID={`pending-accept-${item.connection_id}`}
-        >
-          <Text style={styles.acceptBtnText}>Accept</Text>
-        </Pressable>
-        <Pressable
-          style={[styles.declineBtn, busy ? styles.btnDisabled : null]}
-          onPress={onDecline}
-          disabled={busy}
-          testID={`pending-decline-${item.connection_id}`}
-        >
-          <Text style={styles.declineBtnText}>Decline</Text>
-        </Pressable>
+
+      {/* Inner white row — company + role, Decline / Accept */}
+      <View style={styles.inviteRow}>
+        <View style={styles.inviteRowInfo}>
+          <Text style={styles.inviteCompany} numberOfLines={1}>
+            {name}
+          </Text>
+          <Text style={styles.inviteRole}>Role: Full Access</Text>
+        </View>
+        <View style={styles.inviteActions}>
+          <Pressable
+            style={[styles.declineBtn, busy ? styles.btnDisabled : null]}
+            onPress={onDecline}
+            disabled={busy}
+            testID={`pending-decline-${item.connection_id}`}
+          >
+            <Ionicons name="close" size={15} color={colors.red} />
+            <Text style={styles.declineBtnText}>Decline</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.acceptBtn, busy ? styles.btnDisabled : null]}
+            onPress={onAccept}
+            disabled={busy}
+            testID={`pending-accept-${item.connection_id}`}
+          >
+            <Ionicons name="checkmark" size={15} color={colors.bgWhite} />
+            <Text style={styles.acceptBtnText}>Accept</Text>
+          </Pressable>
+        </View>
       </View>
     </View>
   );
@@ -311,53 +309,69 @@ const styles = StyleSheet.create({
   // `.stat-grid`
   statGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginBottom: 28 },
 
-  // Pending Requests section
-  pendingSection: { marginBottom: 18 },
-  pendingHeader: { fontSize: 15, fontWeight: '700', color: '#0F172A', marginBottom: 10 },
-  pendingCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#2563EB',
+  // Team Invitation section
+  pendingSection: { marginBottom: 18, gap: 16 },
+  // Blue-tinted outer panel.
+  inviteCard: {
+    backgroundColor: colors.accentLight, // #EFF6FF
+    borderWidth: 1,
+    borderColor: colors.accentMid, // #DBEAFE
     borderRadius: 16,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    marginBottom: 10,
+    padding: 20,
   },
-  pendingAvatar: {
+  inviteHeader: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 16 },
+  // Rounded-square icon tile.
+  inviteIcon: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: '#DBEAFE',
+    borderRadius: 10,
+    backgroundColor: colors.accentMid, // #DBEAFE
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
-  pendingAvatarText: { color: '#1D4ED8', fontSize: 16, fontWeight: '700' },
-  pendingInfo: { flex: 1, minWidth: 0 },
-  pendingTitle: { fontSize: 14, fontWeight: '700', color: '#0F172A' },
-  pendingSub: { fontSize: 12, color: '#94A3B8', marginTop: 2 },
-  pendingActions: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 },
+  inviteHeaderText: { flex: 1, minWidth: 0 },
+  inviteTitle: { fontSize: 15, fontWeight: '700', color: '#0F172A' },
+  inviteSubtitle: { fontSize: 13, color: colors.accent, marginTop: 2 },
+  // Inner white row.
+  inviteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    backgroundColor: colors.bgWhite,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+  },
+  inviteRowInfo: { flex: 1, minWidth: 0 },
+  inviteCompany: { fontSize: 14, fontWeight: '700', color: '#0F172A' },
+  inviteRole: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+  inviteActions: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 },
   acceptBtn: {
-    backgroundColor: '#16A34A',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#0F172A',
     borderRadius: 8,
-    paddingVertical: 7,
+    paddingVertical: 8,
     paddingHorizontal: 16,
     ...webOnly({ cursor: 'pointer' }),
   },
-  acceptBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '600' },
+  acceptBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '600' },
   declineBtn: {
-    backgroundColor: '#FEF2F2',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.bgWhite,
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: colors.border, // #E2E8F0
     borderRadius: 8,
-    paddingVertical: 7,
+    paddingVertical: 8,
     paddingHorizontal: 16,
     ...webOnly({ cursor: 'pointer' }),
   },
-  declineBtnText: { color: '#DC2626', fontSize: 12, fontWeight: '600' },
+  declineBtnText: { color: colors.red, fontSize: 13, fontWeight: '600' },
   btnDisabled: { opacity: 0.5 },
 
   sectionHeader: {
