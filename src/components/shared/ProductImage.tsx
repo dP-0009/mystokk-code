@@ -37,12 +37,27 @@ export function ProductImage({
       {uri ? (
         <>
           {!loaded ? <Skeleton /> : null}
-          <Image
-            source={{ uri }}
-            style={StyleSheet.absoluteFill}
-            resizeMode="cover"
-            onLoadEnd={() => setLoaded(true)}
-          />
+          {Platform.OS === 'web' ? (
+            // Real <img> so the browser can lazy-load below-the-fold thumbnails
+            // and decode them off the main thread. react-native-web's <Image>
+            // renders a background-image div, which can't do native lazy-load.
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            React.createElement('img' as any, {
+              src: uri,
+              loading: 'lazy',
+              decoding: 'async',
+              alt: '',
+              onLoad: () => setLoaded(true),
+              style: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' },
+            })
+          ) : (
+            <Image
+              source={{ uri }}
+              style={StyleSheet.absoluteFill}
+              resizeMode="cover"
+              onLoadEnd={() => setLoaded(true)}
+            />
+          )}
         </>
       ) : (
         fallback ?? null

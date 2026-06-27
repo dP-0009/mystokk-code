@@ -30,6 +30,7 @@ import { MainLayout, PageBody, PageHeader } from '../components/layout';
 import { AddVendorModal } from '../components/network/AddVendorModal';
 import { BulkUploadModal } from '../components/network/BulkUploadModal';
 import { ViewVendorModal } from '../components/network/ViewVendorModal';
+import { VendorAvatar } from '../components/shared/VendorAvatar';
 import { webOnly } from '../components/layout/web';
 import { colors, radius, shadows } from '../theme/tokens';
 import { openEmail, openWhatsApp } from '../utils/contact';
@@ -41,20 +42,6 @@ type Props = CompositeScreenProps<
 >;
 
 type Tab = 'network' | 'pending';
-
-/** Avatar palette mirrors the UI mirror's `.va-*` swatches. */
-const AVATAR_PALETTE = ['#2563EB', '#16A34A', '#EA580C', '#7C3AED', '#0891B2', '#DC2626', '#64748B'] as const;
-
-function firstLetter(name: string | null | undefined): string {
-  const c = name?.trim()?.[0];
-  return c ? c.toUpperCase() : '?';
-}
-
-function avatarColor(seed: string): string {
-  let h = 0;
-  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
-  return AVATAR_PALETTE[h % AVATAR_PALETTE.length];
-}
 
 /** A manual contact that hasn't registered yet shows "Manual"; everyone else is "Connected". */
 function isManualOnly(v: NetworkVendor): boolean {
@@ -122,6 +109,8 @@ export function NetworkScreen({ navigation }: Props): React.JSX.Element {
 
   const acceptMutation = useMutation({
     mutationFn: acceptConnection,
+    onSuccess: () => toast.success('Connection accepted!'),
+    onError: (e) => toast.error(e instanceof Error ? e.message : 'Could not accept request.'),
     onSettled: () => {
       setBusyId(null);
       invalidate();
@@ -129,6 +118,8 @@ export function NetworkScreen({ navigation }: Props): React.JSX.Element {
   });
   const rejectMutation = useMutation({
     mutationFn: rejectConnection,
+    onSuccess: () => toast.info('Request declined'),
+    onError: (e) => toast.error(e instanceof Error ? e.message : 'Could not decline request.'),
     onSettled: () => {
       setBusyId(null);
       invalidate();
@@ -349,9 +340,7 @@ function VendorRow({
       testID={`network-row-${item.row_id}`}
     >
       <View style={[styles.td, styles.colCompany, styles.companyCell]}>
-        <View style={[styles.avatar, { backgroundColor: avatarColor(item.company_name) }]}>
-          <Text style={styles.avatarText}>{firstLetter(item.company_name)}</Text>
-        </View>
+        <VendorAvatar name={item.company_name} logoUrl={item.logo_url} size={34} />
         <View style={styles.companyText}>
           <Text style={styles.companyName} numberOfLines={1}>
             {item.company_name}
@@ -473,9 +462,7 @@ function PendingRow({
       onHoverOut={() => setHover(false)}
     >
       <View style={[styles.td, styles.colCompany, styles.companyCell]}>
-        <View style={[styles.avatar, { backgroundColor: avatarColor(name) }]}>
-          <Text style={styles.avatarText}>{firstLetter(name)}</Text>
-        </View>
+        <VendorAvatar name={name} logoUrl={item.logo_url} size={34} />
         <View style={styles.companyText}>
           <Text style={styles.companyName} numberOfLines={1}>
             {name}
@@ -639,15 +626,6 @@ const styles = StyleSheet.create({
 
   // Company cell — `.fca.g8`
   companyCell: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  avatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  avatarText: { color: colors.bgWhite, fontSize: 13, fontWeight: '700' },
   companyText: { flex: 1, minWidth: 0 },
   companyName: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
   companyEmail: { fontSize: 11, color: colors.textMuted, marginTop: 1 },

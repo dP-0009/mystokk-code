@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { useToast, type ToastItem, type ToastVariant } from '../../stores/toast';
+import { useToastStore, type ToastItem, type ToastVariant } from '../../stores/toast';
 import { colors } from '../../theme/tokens';
 import { webOnly } from '../layout/web';
 
@@ -14,6 +14,7 @@ const VARIANT_ICON: Record<ToastVariant, { name: keyof typeof Ionicons.glyphMap;
   success: { name: 'checkmark-circle', color: colors.green },
   error: { name: 'close-circle', color: colors.red },
   info: { name: 'information-circle', color: colors.accent },
+  warning: { name: 'warning', color: colors.orange },
   delete: { name: 'trash', color: colors.red },
 };
 
@@ -23,7 +24,7 @@ const VARIANT_ICON: Record<ToastVariant, { name: keyof typeof Ionicons.glyphMap;
  * the right, auto-dismisses after 3s, and can be closed immediately via its ✕.
  */
 export function ToastHost(): React.JSX.Element | null {
-  const toasts = useToast((s) => s.toasts);
+  const toasts = useToastStore((s) => s.toasts);
 
   if (toasts.length === 0) return null;
 
@@ -37,7 +38,7 @@ export function ToastHost(): React.JSX.Element | null {
 }
 
 function ToastRow({ item }: { item: ToastItem }): React.JSX.Element {
-  const dismiss = useToast((s) => s.dismiss);
+  const dismiss = useToastStore((s) => s.dismiss);
   const opacity = useRef(new Animated.Value(0)).current;
   const translateX = useRef(new Animated.Value(40)).current;
   const useNative = Platform.OS !== 'web';
@@ -83,26 +84,28 @@ function ToastRow({ item }: { item: ToastItem }): React.JSX.Element {
 }
 
 const styles = StyleSheet.create({
-  // Pinned bottom-right, above everything. Stacks toasts with a 10px gap.
+  // Pinned bottom-right, above everything. column-reverse so the newest toast
+  // sits at the bottom and older ones stack upward. Stacked with a 10px gap.
   host: {
     position: 'absolute',
     bottom: 24,
     right: 24,
     gap: 10,
+    flexDirection: 'column-reverse',
     alignItems: 'flex-end',
-    zIndex: 9999,
+    zIndex: 99999,
     ...webOnly({ position: 'fixed' }),
   },
   toast: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    minWidth: 240,
-    maxWidth: 360,
+    minWidth: 260,
+    maxWidth: 380,
     backgroundColor: colors.primary, // #0F172A
     borderRadius: 12,
     paddingVertical: 14,
-    paddingHorizontal: 20,
+    paddingHorizontal: 18,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.25,

@@ -1,16 +1,24 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import type { MainTabParamList, RootStackParamList } from '../navigation';
 import { getDashboardData, type ReceivedItem } from '../services/supabase/dashboard';
+import {
+  acceptConnection,
+  getPendingConnections,
+  rejectConnection,
+  type PendingConnection,
+} from '../services/supabase/network';
 import { colors, radius } from '../theme/tokens';
 import { MainLayout, PageBody, PageHeader } from '../components/layout';
 import { StatCard } from '../components/dashboard/StatCard';
+import { webOnly } from '../components/layout/web';
+import { toast } from '../stores/toast';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabParamList, 'Dashboard'>,
@@ -24,11 +32,60 @@ function money(currency: string | null, price: number | null): string {
   return `${currency ?? ''} ${price}`.trim();
 }
 
+/** First alphanumeric character of a name, uppercased (avatar initial). */
+function initial(name: string): string {
+  return (name.trim().match(/[a-z0-9]/i)?.[0] ?? '?').toUpperCase();
+}
+
+/** "Sent 5 minutes ago" / "Sent 3 hours ago" / "Sent 2 days ago". */
+function sentAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  if (Number.isNaN(diff)) return '';
+  const min = Math.round(diff / 60_000);
+  if (min < 1) return 'Sent just now';
+  if (min < 60) return `Sent ${min} minute${min === 1 ? '' : 's'} ago`;
+  const hr = Math.round(min / 60);
+  if (hr < 24) return `Sent ${hr} hour${hr === 1 ? '' : 's'} ago`;
+  const day = Math.round(hr / 24);
+  return `Sent ${day} day${day === 1 ? '' : 's'} ago`;
+}
+
 export function DashboardScreen({ navigation }: Props): React.JSX.Element {
+  const queryClient = useQueryClient();
+  const [busyId, setBusyId] = useState<string | null>(null);
+
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: DASHBOARD_KEY,
     queryFn: getDashboardData,
     staleTime: 60_000, // don't refetch on every tab switch
+  });
+
+  // Pending incoming connection requests (status='pending', receiver = me).
+  // Shares the Network screen's cache so accept/decline stay in sync.
+  const { data: pendingData } = useQuery({
+    queryKey: ['network', 'pending'],
+    queryFn: getPendingConnections,
+    staleTime: 60_000,
+  });
+  const pending = pendingData ?? [];
+
+  const onConnectionSettled = (): void => {
+    setBusyId(null);
+    void queryClient.invalidateQueries({ queryKey: ['network'] });
+    void queryClient.invalidateQueries({ queryKey: DASHBOARD_KEY });
+  };
+
+  const acceptMutation = useMutation({
+    mutationFn: acceptConnection,
+    onSuccess: () => toast.success('Connection accepted!'),
+    onError: (e) => toast.error(e instanceof Error ? e.message : 'Could not accept request.'),
+    onSettled: onConnectionSettled,
+  });
+  const declineMutation = useMutation({
+    mutationFn: rejectConnection,
+    onSuccess: () => toast.info('Request declined'),
+    onError: (e) => toast.error(e instanceof Error ? e.message : 'Could not decline request.'),
+    onSettled: onConnectionSettled,
   });
 
   return (
@@ -103,6 +160,28 @@ export function DashboardScreen({ navigation }: Props): React.JSX.Element {
               />
             </View>
 
+            {/* Pending Requests — only when there are incoming requests */}
+            {pending.length > 0 ? (
+              <View style={styles.pendingSection}>
+                <Text style={styles.pendingHeader}>Pending Requests</Text>
+                {pending.map((p) => (
+                  <PendingRequestCard
+                    key={p.connection_id}
+                    item={p}
+                    busy={busyId === p.connection_id}
+                    onAccept={() => {
+                      setBusyId(p.connection_id);
+                      acceptMutation.mutate(p.connection_id);
+                    }}
+                    onDecline={() => {
+                      setBusyId(p.connection_id);
+                      declineMutation.mutate(p.connection_id);
+                    }}
+                  />
+                ))}
+              </View>
+            ) : null}
+
             {/* Recently Shared With You */}
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Recently Shared With You</Text>
@@ -128,6 +207,52 @@ export function DashboardScreen({ navigation }: Props): React.JSX.Element {
         )}
       </PageBody>
     </MainLayout>
+  );
+}
+
+/** An incoming connection request card with Accept / Decline actions. */
+function PendingRequestCard({
+  item,
+  busy,
+  onAccept,
+  onDecline,
+}: {
+  item: PendingConnection;
+  busy: boolean;
+  onAccept: () => void;
+  onDecline: () => void;
+}): React.JSX.Element {
+  const name = item.company_name ?? item.contact_person ?? 'A vendor';
+  return (
+    <View style={styles.pendingCard}>
+      <View style={styles.pendingAvatar}>
+        <Text style={styles.pendingAvatarText}>{initial(name)}</Text>
+      </View>
+      <View style={styles.pendingInfo}>
+        <Text style={styles.pendingTitle} numberOfLines={2}>
+          {name} wants to connect with you
+        </Text>
+        <Text style={styles.pendingSub}>{sentAgo(item.created_at)}</Text>
+      </View>
+      <View style={styles.pendingActions}>
+        <Pressable
+          style={[styles.acceptBtn, busy ? styles.btnDisabled : null]}
+          onPress={onAccept}
+          disabled={busy}
+          testID={`pending-accept-${item.connection_id}`}
+        >
+          <Text style={styles.acceptBtnText}>Accept</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.declineBtn, busy ? styles.btnDisabled : null]}
+          onPress={onDecline}
+          disabled={busy}
+          testID={`pending-decline-${item.connection_id}`}
+        >
+          <Text style={styles.declineBtnText}>Decline</Text>
+        </Pressable>
+      </View>
+    </View>
   );
 }
 
@@ -185,6 +310,55 @@ const styles = StyleSheet.create({
 
   // `.stat-grid`
   statGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginBottom: 28 },
+
+  // Pending Requests section
+  pendingSection: { marginBottom: 18 },
+  pendingHeader: { fontSize: 15, fontWeight: '700', color: '#0F172A', marginBottom: 10 },
+  pendingCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#2563EB',
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    marginBottom: 10,
+  },
+  pendingAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#DBEAFE',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  pendingAvatarText: { color: '#1D4ED8', fontSize: 16, fontWeight: '700' },
+  pendingInfo: { flex: 1, minWidth: 0 },
+  pendingTitle: { fontSize: 14, fontWeight: '700', color: '#0F172A' },
+  pendingSub: { fontSize: 12, color: '#94A3B8', marginTop: 2 },
+  pendingActions: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 },
+  acceptBtn: {
+    backgroundColor: '#16A34A',
+    borderRadius: 8,
+    paddingVertical: 7,
+    paddingHorizontal: 16,
+    ...webOnly({ cursor: 'pointer' }),
+  },
+  acceptBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '600' },
+  declineBtn: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 8,
+    paddingVertical: 7,
+    paddingHorizontal: 16,
+    ...webOnly({ cursor: 'pointer' }),
+  },
+  declineBtnText: { color: '#DC2626', fontSize: 12, fontWeight: '600' },
+  btnDisabled: { opacity: 0.5 },
 
   sectionHeader: {
     flexDirection: 'row',

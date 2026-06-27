@@ -39,6 +39,7 @@ export interface InventoryItem {
   status: InventoryStatus;
   shared_count: number;
   specs: Record<string, string>;
+  created_at: string;
 }
 
 export interface ShareActivity {

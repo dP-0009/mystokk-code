@@ -14,10 +14,11 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 
 import type { InventoryInput } from '../../services/supabase/inventory';
-import type { UploadFile } from '../../services/supabase/storage';
+import { toFullUrl, type UploadFile } from '../../services/supabase/storage';
 import { CURRENCIES, UNITS } from '../../constants/inventory';
 import { colors, radius, shadows } from '../../theme/tokens';
 import { webOnly } from '../layout/web';
+import { useLightbox } from '../shared/Lightbox';
 
 /* ------------------------------------------------------------------ *
  * Document MIME resolution — the OS/browser often reports
@@ -42,28 +43,70 @@ function resolveDocMime(reported: string | undefined, name: string): string {
 
 const NUMERIC = /^\d*\.?\d*$/;
 
+/** Human-readable file size, e.g. "820 KB" / "1.4 MB". Empty when unknown. */
+function formatSize(bytes?: number): string {
+  if (!bytes || bytes <= 0) return '';
+  const kb = bytes / 1024;
+  if (kb < 1024) return `${Math.round(kb)} KB`;
+  return `${(kb / 1024).toFixed(1)} MB`;
+}
+
+/** Pre-populated field values (all strings — the form edits text). */
+export interface AddItemFormInitial {
+  productCode?: string;
+  title?: string;
+  quantity?: string;
+  unit?: string;
+  price?: string;
+  currency?: string;
+  origin?: string;
+  stockLocation?: string;
+  description?: string;
+}
+
 interface AddItemFormProps {
   submitting: boolean;
   error?: string | null;
   onSubmit: (input: InventoryInput, photos: UploadFile[], docs: UploadFile[]) => void | Promise<void>;
   onCancel: () => void;
+  /** Seed values for editing an existing item. Applied on mount. */
+  initial?: AddItemFormInitial;
+  /** Already-saved photo URLs — shown read-only above newly-added ones. */
+  existingPhotoUrls?: string[];
+  /** Already-saved documents — shown read-only above newly-added ones. */
+  existingDocs?: { name: string }[];
+  /** Primary button label. Defaults to "Submit". */
+  submitLabel?: string;
 }
 
 type Errors = Partial<Record<'title' | 'quantity' | 'price', string>>;
 
-export function AddItemForm({ submitting, error, onSubmit, onCancel }: AddItemFormProps): React.JSX.Element {
-  const [productCode, setProductCode] = useState('');
-  const [title, setTitle] = useState('');
-  const [quantity, setQuantity] = useState('');
-  const [unit, setUnit] = useState('pcs');
-  const [price, setPrice] = useState('');
-  const [currency, setCurrency] = useState('AED');
-  const [origin, setOrigin] = useState('');
-  const [stockLocation, setStockLocation] = useState('');
-  const [description, setDescription] = useState('');
+export function AddItemForm({
+  submitting,
+  error,
+  onSubmit,
+  onCancel,
+  initial,
+  existingPhotoUrls,
+  existingDocs,
+  submitLabel = 'Submit',
+}: AddItemFormProps): React.JSX.Element {
+  const [productCode, setProductCode] = useState(initial?.productCode ?? '');
+  const [title, setTitle] = useState(initial?.title ?? '');
+  const [quantity, setQuantity] = useState(initial?.quantity ?? '');
+  const [unit, setUnit] = useState(initial?.unit ?? 'pcs');
+  const [price, setPrice] = useState(initial?.price ?? '');
+  const [currency, setCurrency] = useState(initial?.currency ?? 'AED');
+  const [origin, setOrigin] = useState(initial?.origin ?? '');
+  const [stockLocation, setStockLocation] = useState(initial?.stockLocation ?? '');
+  const [description, setDescription] = useState(initial?.description ?? '');
   const [photos, setPhotos] = useState<UploadFile[]>([]);
   const [docs, setDocs] = useState<UploadFile[]>([]);
   const [errors, setErrors] = useState<Errors>({});
+
+  const { open: openLightbox } = useLightbox();
+  // Already-saved photos, normalized to full URLs for the shared lightbox.
+  const existingFullUrls = (existingPhotoUrls ?? []).map(toFullUrl).filter(Boolean);
 
   const pickPhotos = async (): Promise<void> => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -98,6 +141,7 @@ export function AddItemForm({ submitting, error, onSubmit, onCancel }: AddItemFo
         uri: a.uri,
         name: a.name,
         mimeType: resolveDocMime(a.mimeType, a.name),
+        size: a.size ?? undefined,
       })),
     ]);
   };
@@ -235,8 +279,18 @@ export function AddItemForm({ submitting, error, onSubmit, onCancel }: AddItemFo
           hint="PNG or JPG, up to 8 images"
           onPress={pickPhotos}
         />
-        {photos.length > 0 ? (
+        {existingFullUrls.length > 0 || photos.length > 0 ? (
           <View style={styles.thumbs}>
+            {existingFullUrls.map((url, i) => (
+              <Pressable
+                key={url}
+                onPress={() => openLightbox(existingFullUrls, i)}
+                style={webOnly({ cursor: 'pointer' })}
+                accessibilityLabel={`View photo ${i + 1}`}
+              >
+                <Image source={{ uri: url }} style={styles.thumb} />
+              </Pressable>
+            ))}
             {photos.map((p, i) => (
               <View key={`${p.uri}-${i}`} style={styles.thumbWrap}>
                 <Image source={{ uri: p.uri }} style={styles.thumb} />
@@ -262,12 +316,22 @@ export function AddItemForm({ submitting, error, onSubmit, onCancel }: AddItemFo
           hint="PDF, Word, Excel, CSV"
           onPress={pickDocs}
         />
+        {(existingDocs ?? []).map((d, i) => (
+          <View key={`existing-${i}-${d.name}`} style={styles.docRow}>
+            <Ionicons name="document-text-outline" size={18} color={colors.textSecondary} />
+            <Text style={styles.docName} numberOfLines={1}>
+              {d.name}
+            </Text>
+            <Text style={styles.docSaved}>Saved</Text>
+          </View>
+        ))}
         {docs.map((d, i) => (
           <View key={`${d.uri}-${i}`} style={styles.docRow}>
             <Ionicons name="document-text-outline" size={18} color={colors.textSecondary} />
             <Text style={styles.docName} numberOfLines={1}>
               {d.name}
             </Text>
+            {formatSize(d.size) ? <Text style={styles.docSize}>{formatSize(d.size)}</Text> : null}
             <Pressable onPress={() => removeDoc(i)} hitSlop={8} accessibilityLabel={`Remove ${d.name}`}>
               <Ionicons name="close" size={16} color={colors.textMuted} />
             </Pressable>
@@ -287,7 +351,7 @@ export function AddItemForm({ submitting, error, onSubmit, onCancel }: AddItemFo
           onPress={submit}
           disabled={submitting}
         >
-          <Text style={styles.btnPrimaryText}>{submitting ? 'Saving…' : 'Submit'}</Text>
+          <Text style={styles.btnPrimaryText}>{submitting ? 'Saving…' : submitLabel}</Text>
         </Pressable>
       </View>
     </View>
@@ -579,10 +643,10 @@ const styles = StyleSheet.create({
   uploadTitle: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginTop: 4 },
   uploadHint: { fontSize: 12, color: colors.textMuted },
 
-  // Photo thumbnails
+  // Photo thumbnails — 72x72, border-radius 8, object-fit cover
   thumbs: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 14 },
-  thumbWrap: { width: 76, height: 76 },
-  thumb: { width: 76, height: 76, borderRadius: radius.md, backgroundColor: colors.bgChip },
+  thumbWrap: { width: 72, height: 72 },
+  thumb: { width: 72, height: 72, borderRadius: 8, backgroundColor: colors.bgChip },
   thumbRemove: {
     position: 'absolute',
     top: 4,
@@ -610,6 +674,8 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   docName: { flex: 1, fontSize: 13, color: colors.textPrimary },
+  docSize: { fontSize: 12, color: colors.textMuted, flexShrink: 0 },
+  docSaved: { fontSize: 12, fontWeight: '700', color: colors.green, flexShrink: 0 },
 
   formError: { color: colors.red, fontSize: 13, fontWeight: '600', marginBottom: 12, textAlign: 'center' },
 

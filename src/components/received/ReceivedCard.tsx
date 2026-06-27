@@ -71,6 +71,14 @@ export function ReceivedCard({ item, onPress }: ReceivedCardProps): React.JSX.El
         <Text style={styles.codeCategory} numberOfLines={1}>
           {codeCategory}
         </Text>
+        {item.stock_location ? (
+          <View style={styles.locationRow}>
+            <Ionicons name="location-outline" size={12} color={colors.textSecondary} />
+            <Text style={styles.location} numberOfLines={1}>
+              {item.stock_location}
+            </Text>
+          </View>
+        ) : null}
         <Text style={styles.price} numberOfLines={1}>
           {formatPrice(item.display_currency, item.display_price, item.unit)}
         </Text>
@@ -91,7 +99,7 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 14,
     backgroundColor: colors.bgWhite,
     borderWidth: 1,
     borderColor: colors.border,
@@ -99,7 +107,8 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
   },
-  cardHover: { borderColor: colors.borderDark, ...shadows.sm },
+  // hover — box-shadow 0 4px 12px rgba(0,0,0,0.10) + border #CBD5E1
+  cardHover: { borderColor: colors.borderDark, ...shadows.md },
 
   thumb: {
     width: 72,
@@ -116,6 +125,9 @@ const styles = StyleSheet.create({
   info: { flex: 1, minWidth: 0 },
   name: { fontSize: 14, fontWeight: '700', color: colors.textPrimary },
   codeCategory: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
+  // Stock location row (map-pin + value), 12px #475569.
+  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
+  location: { fontSize: 12, color: colors.textSecondary, flexShrink: 1 },
   price: { fontSize: 13, fontWeight: '700', color: colors.accent, marginTop: 4 },
   qty: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
   from: { fontSize: 12, color: colors.textMuted, marginTop: 2 },

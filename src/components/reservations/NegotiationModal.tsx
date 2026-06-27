@@ -75,11 +75,16 @@ export function NegotiationModal({ visible, side, data, onClose }: NegotiationMo
   const lastByMe = lastRound?.is_me ?? false;
 
   const actionable = status === 'pending' || status === 'negotiating';
+  // FIX C — after you send a counter offer the ball is in their court: lock all
+  // actions and show a waiting banner until the other party responds. `is_me` is
+  // the server's lastRound.sender_id === currentUserId comparison.
+  const waitingForReply = status === 'negotiating' && lastByMe;
   const canCounter = actionable && myRoundsUsed < MAX_ROUNDS && (status === 'negotiating' || incoming);
   const canAccept = actionable && (status === 'pending' ? incoming : !lastByMe);
   const canReject = incoming && actionable;
   const canCancel = !incoming && actionable;
   const canPass = incoming && actionable && data.is_middleman;
+  const otherParty = data.counterparty_company ?? 'the other party';
 
   // Reset transient UI each time the modal (re)opens for a reservation.
   React.useEffect(() => {
@@ -107,15 +112,10 @@ export function NegotiationModal({ visible, side, data, onClose }: NegotiationMo
     },
     onSuccess: (_r, kind) => {
       invalidate();
-      toast.success(
-        kind === 'accept'
-          ? 'Reservation accepted!'
-          : kind === 'reject'
-            ? 'Reservation rejected'
-            : kind === 'pass'
-              ? 'Passed to supplier'
-              : 'Reservation cancelled',
-      );
+      if (kind === 'accept') toast.success('Reservation accepted!');
+      else if (kind === 'reject') toast.success('Reservation rejected');
+      else if (kind === 'pass') toast.success('Passed to supplier');
+      else toast.info('Reservation cancelled');
       onClose();
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : 'Action failed.'),
@@ -270,8 +270,20 @@ export function NegotiationModal({ visible, side, data, onClose }: NegotiationMo
             ) : null}
           </ScrollView>
 
-          {/* 3. Action area (pending/negotiating) */}
-          {actionable && mode === 'view' ? (
+          {/* 3. Footer — cancelled banner (FIX D) / waiting banner (FIX C) / actions */}
+          {status === 'cancelled' ? (
+            <View style={styles.bannerWrap}>
+              <View style={styles.banner}>
+                <Text style={styles.bannerText}>This reservation was cancelled.</Text>
+              </View>
+            </View>
+          ) : waitingForReply && mode === 'view' ? (
+            <View style={styles.bannerWrap}>
+              <View style={styles.banner}>
+                <Text style={styles.bannerText}>Waiting for {otherParty} to respond...</Text>
+              </View>
+            </View>
+          ) : actionable && mode === 'view' ? (
             <View style={styles.actions}>
               {canAccept ? (
                 <Pressable
@@ -405,7 +417,7 @@ const styles = StyleSheet.create({
   },
   modal: {
     width: '100%',
-    maxWidth: 520,
+    maxWidth: 560,
     maxHeight: '90%',
     backgroundColor: colors.bgWhite,
     borderRadius: 24,
@@ -487,6 +499,11 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
+
+  // Grey status banner (waiting for reply / cancelled) — replaces the actions.
+  bannerWrap: { paddingHorizontal: 20, paddingVertical: 16, borderTopWidth: 1, borderTopColor: colors.border },
+  banner: { backgroundColor: '#F1F5F9', borderRadius: 10, paddingVertical: 12, paddingHorizontal: 16 },
+  bannerText: { fontSize: 13, color: '#64748B', textAlign: 'center', fontWeight: '600' },
   btn: { flexGrow: 1, paddingVertical: 12, paddingHorizontal: 16, borderRadius: 12, alignItems: 'center', justifyContent: 'center', ...webOnly({ cursor: 'pointer' }) },
   btnAccept: { backgroundColor: '#16A34A' },
   btnAcceptText: { fontSize: 14, fontWeight: '700', color: '#FFFFFF' },

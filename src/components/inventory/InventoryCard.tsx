@@ -106,22 +106,44 @@ export function InventoryCard({
         <Text style={styles.time}>🕐 {daysAgo(item.created_at)}</Text>
       </View>
 
-      {/* `.ia` quick actions */}
+      {/* `.ia` quick actions — share opens the modal (no navigation), ⋮ opens the menu. */}
       <View style={styles.actions}>
-        {onShare ? (
-          <Pressable style={styles.actionBtn} onPress={onShare} hitSlop={4}>
-            <Ionicons name="share-social-outline" size={14} color={colors.textSecondary} />
-          </Pressable>
-        ) : null}
+        {onShare ? <ActionButton icon="share-social-outline" onPress={onShare} /> : null}
         {hasMenu ? (
           <View ref={anchorRef} style={styles.menuAnchor}>
-            <Pressable style={styles.actionBtn} onPress={onMenuToggle} hitSlop={4} testID={`inv-menu-${item.inventory_id}`}>
-              <Ionicons name="ellipsis-vertical" size={14} color={colors.textSecondary} />
-            </Pressable>
+            <ActionButton icon="ellipsis-vertical" onPress={onMenuToggle} testID={`inv-menu-${item.inventory_id}`} />
             <ContextMenu visible={menuOpen} items={menuItems} onClose={() => onMenuClose?.()} anchorRef={anchorRef} />
           </View>
         ) : null}
       </View>
+    </Pressable>
+  );
+}
+
+/**
+ * `.ib` quick-action button — 30×30, 6px radius, #E2E8F0 border, white fill,
+ * #475569 glyph. Lights up to #F8FAFC on hover (web).
+ */
+function ActionButton({
+  icon,
+  onPress,
+  testID,
+}: {
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  onPress?: () => void;
+  testID?: string;
+}): React.JSX.Element {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <Pressable
+      style={[styles.actionBtn, hovered ? styles.actionBtnHover : null]}
+      onPress={onPress}
+      onHoverIn={() => setHovered(true)}
+      onHoverOut={() => setHovered(false)}
+      hitSlop={4}
+      testID={testID}
+    >
+      <Ionicons name={icon} size={14} color={colors.textSecondary} />
     </Pressable>
   );
 }
@@ -131,7 +153,7 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 14,
     backgroundColor: colors.bgWhite,
     borderWidth: 1,
     borderColor: colors.border, // #E2E8F0
@@ -139,8 +161,9 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
   },
-  // `.ic:hover` — box-shadow 0 4px 12px rgba(0,0,0,0.10)
+  // `.ic:hover` — box-shadow 0 4px 12px rgba(0,0,0,0.10) + border-color #CBD5E1
   cardHover: {
+    borderColor: colors.borderDark, // #CBD5E1
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
@@ -194,11 +217,13 @@ const styles = StyleSheet.create({
   actionBtn: {
     width: 30,
     height: 30,
-    borderRadius: radius.sm,
+    borderRadius: radius.sm, // 6
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.border, // #E2E8F0
     backgroundColor: colors.bgWhite,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // `.ib:hover` — background #F8FAFC
+  actionBtnHover: { backgroundColor: colors.bgPage },
 });

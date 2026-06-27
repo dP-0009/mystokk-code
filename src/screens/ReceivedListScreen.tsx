@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  LayoutChangeEvent,
   StyleSheet,
   Text,
   TextInput,
@@ -26,16 +25,8 @@ type Props = CompositeScreenProps<
   NativeStackScreenProps<RootStackParamList>
 >;
 
-const GRID_GAP = 10;
-
-/** Two columns on desktop/tablet, single column on narrow screens. */
-function columnsFor(width: number): number {
-  return width >= 560 ? 2 : 1;
-}
-
 export function ReceivedListScreen({ navigation }: Props): React.JSX.Element {
   const [search, setSearch] = useState('');
-  const [gridWidth, setGridWidth] = useState(0);
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['received'],
@@ -57,10 +48,6 @@ export function ReceivedListScreen({ navigation }: Props): React.JSX.Element {
       [r.title, r.shared_by_company_name, r.category, r.product_code].some((f) => f?.toLowerCase().includes(q)),
     );
   }, [all, search]);
-
-  const cols = columnsFor(gridWidth || 900);
-  const cardWidth = gridWidth > 0 ? (gridWidth - GRID_GAP * (cols - 1)) / cols : undefined;
-  const onGridLayout = (e: LayoutChangeEvent): void => setGridWidth(e.nativeEvent.layout.width);
 
   return (
     <MainLayout active="received">
@@ -106,14 +93,13 @@ export function ReceivedListScreen({ navigation }: Props): React.JSX.Element {
             testID="received-empty"
           />
         ) : (
-          <View style={styles.grid} onLayout={onGridLayout}>
+          <View style={styles.list}>
             {items.map((item) => (
-              <View key={item.share_id} style={cardWidth ? { width: cardWidth } : styles.cardFull}>
-                <ReceivedCard
-                  item={item}
-                  onPress={() => navigation.navigate('ReceivedDetail', { shareId: item.share_id })}
-                />
-              </View>
+              <ReceivedCard
+                key={item.share_id}
+                item={item}
+                onPress={() => navigation.navigate('ReceivedDetail', { shareId: item.share_id })}
+              />
             ))}
           </View>
         )}
@@ -140,9 +126,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgWhite,
   },
 
-  // 2-column grid, gap 10
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GRID_GAP },
-  cardFull: { width: '100%' },
+  // Single-column vertical stack, 10px between cards (mirror My Inventory).
+  list: { gap: 10 },
 
   center: { alignItems: 'center', justifyContent: 'center', paddingVertical: 80 },
   errorText: { color: colors.red, fontSize: 14, fontWeight: '600', textAlign: 'center' },

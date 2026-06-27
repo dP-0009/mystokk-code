@@ -11,6 +11,7 @@ import { ShareModal } from '../components/share/ShareModal';
 import { PreShareModal } from '../components/share/PreShareModal';
 import { ReserveModal } from '../components/reservations/ReserveModal';
 import { MainLayout, PageBody, PageHeader } from '../components/layout';
+import { webOnly } from '../components/layout/web';
 import type { ForwardContext } from '../services/supabase/shares';
 import { colors, radius } from '../theme/tokens';
 import { toast } from '../stores/toast';
@@ -27,18 +28,12 @@ function money(currency: string | null, price: number | null): string {
   return `${symbol}${price.toLocaleString()}`;
 }
 
-function relativeTime(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  if (Number.isNaN(diff)) return '';
-  const day = Math.floor(diff / 86_400_000);
-  if (day <= 0) {
-    const hr = Math.floor(diff / 3_600_000);
-    return hr <= 0 ? 'just now' : `${hr} hr${hr === 1 ? '' : 's'} ago`;
-  }
-  if (day < 7) return `${day} day${day === 1 ? '' : 's'} ago`;
-  const wk = Math.floor(day / 7);
-  if (wk < 5) return `${wk} week${wk === 1 ? '' : 's'} ago`;
-  return `${Math.floor(day / 30)} month(s) ago`;
+/** Compact age for the subtitle, e.g. "today", "1d ago", "5d ago". */
+function daysAgo(iso: string): string {
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+  if (Number.isNaN(days) || days <= 0) return 'today';
+  if (days === 1) return '1d ago';
+  return `${days}d ago`;
 }
 
 function avatarColor(name: string): string {
@@ -115,37 +110,38 @@ export function ReceivedDetailScreen({ navigation, route }: Props): React.JSX.El
     );
   }
 
-  const subtitle = [data.product_code, data.category ?? '—', relativeTime(data.created_at)]
-    .filter((p) => p !== null && p !== '')
-    .join(' | ');
+  const subtitle = `${data.product_code ?? '—'} | ${data.category ?? 'General'} • ${daysAgo(data.created_at)}`;
 
   return (
     <MainLayout active="received">
-      <PageHeader
-        title={data.title}
-        subtitle={subtitle}
-        leading={<BackLink onPress={back} />}
-        actions={
-          <View style={styles.headerActions}>
-            <Pressable style={styles.reserveBtn} onPress={() => setReserveOpen(true)}>
-              <Ionicons name="cube-outline" size={15} color={colors.bgWhite} />
-              <Text style={styles.reserveBtnText}>Reserve</Text>
-            </Pressable>
-            <Pressable style={styles.shareBtn} onPress={() => setPreShareOpen(true)}>
-              <Ionicons name="share-social-outline" size={15} color={colors.textSecondary} />
-              <Text style={styles.shareBtnText}>Share</Text>
-            </Pressable>
-          </View>
-        }
-      />
+      {/* Page header — back link, item name, meta + privacy note, and actions. */}
+      <View style={styles.header}>
+        <View style={styles.titleBlock}>
+          <BackLink onPress={back} />
+          <Text style={styles.h1} numberOfLines={2}>
+            {data.title}
+          </Text>
+          <Text style={styles.subRow} numberOfLines={1}>
+            {subtitle}
+          </Text>
+          <Text style={styles.privacy}>
+            You can share this with your network (your supplier details / pricing will not be forwarded)
+          </Text>
+        </View>
+        <View style={styles.headerActions}>
+          <Pressable style={styles.reserveBtn} onPress={() => setReserveOpen(true)}>
+            <Ionicons name="cube-outline" size={15} color={colors.bgWhite} />
+            <Text style={styles.reserveBtnText}>Reserve</Text>
+          </Pressable>
+          <Pressable style={styles.shareBtn} onPress={() => setPreShareOpen(true)}>
+            <Ionicons name="share-social-outline" size={15} color={colors.textPrimary} />
+            <Text style={styles.shareBtnText}>Share</Text>
+          </Pressable>
+        </View>
+      </View>
 
       <PageBody>
         <View style={styles.container}>
-          {/* Privacy note */}
-          <Text style={styles.privacyNote}>
-            You can share this with your network (your supplier details / pricing will not be forwarded)
-          </Text>
-
           {/* SHARED BY card */}
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Shared By</Text>
@@ -205,7 +201,12 @@ export function ReceivedDetailScreen({ navigation, route }: Props): React.JSX.El
               <Text style={styles.cardTitle}>Photos ({data.photoUrls.length})</Text>
               <View style={styles.photoGrid}>
                 {data.photoUrls.map((url, i) => (
-                  <Pressable key={url} onPress={() => openLightbox(data.photoUrls, i)}>
+                  <Pressable
+                    key={url}
+                    onPress={() => openLightbox(data.photoUrls, i)}
+                    style={webOnly({ cursor: 'pointer' })}
+                    accessibilityLabel={`View photo ${i + 1}`}
+                  >
                     <Image source={{ uri: url }} style={styles.photo} resizeMode="cover" />
                   </Pressable>
                 ))}
@@ -287,10 +288,18 @@ export function ReceivedDetailScreen({ navigation, route }: Props): React.JSX.El
 }
 
 function BackLink({ onPress }: { onPress: () => void }): React.JSX.Element {
+  const [hovered, setHovered] = useState(false);
+  const color = hovered ? colors.accent : colors.textSecondary;
   return (
-    <Pressable style={styles.back} onPress={onPress} hitSlop={6}>
-      <Ionicons name="arrow-back" size={15} color={colors.textSecondary} />
-      <Text style={styles.backText}>Back</Text>
+    <Pressable
+      style={[styles.back, webOnly({ cursor: 'pointer' })]}
+      onPress={onPress}
+      onHoverIn={() => setHovered(true)}
+      onHoverOut={() => setHovered(false)}
+      hitSlop={6}
+    >
+      <Ionicons name="arrow-back" size={14} color={color} />
+      <Text style={[styles.backText, { color }]}>Back</Text>
     </Pressable>
   );
 }
@@ -319,11 +328,31 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
   errorText: { color: colors.red, fontSize: 14, fontWeight: '600', textAlign: 'center' },
 
-  back: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 6 },
+  back: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 8 },
   backText: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
 
+  // Page header (mirror `.ph`) with a multi-line title block.
+  header: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 16,
+    paddingLeft: 28,
+    // Extra right padding so the action buttons clear the fixed notification bell.
+    paddingRight: 64,
+    paddingTop: 20,
+    paddingBottom: 16,
+    backgroundColor: colors.bgWhite,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  titleBlock: { flexShrink: 1, minWidth: 0 },
+  h1: { fontSize: 22, fontWeight: '700', color: colors.textPrimary },
+  subRow: { fontSize: 12, color: colors.textMuted, marginTop: 4 },
+  privacy: { fontSize: 12, color: colors.textSecondary, fontStyle: 'italic', marginTop: 4, lineHeight: 17 },
+
   // Header actions
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 0 },
   reserveBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -332,6 +361,7 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     paddingHorizontal: 16,
     borderRadius: radius.md, // 10
+    ...webOnly({ cursor: 'pointer' }),
   },
   reserveBtnText: { color: colors.bgWhite, fontSize: 13, fontWeight: '600' },
   shareBtn: {
@@ -340,15 +370,13 @@ const styles = StyleSheet.create({
     gap: 6,
     backgroundColor: colors.bgWhite,
     borderWidth: 1.5,
-    borderColor: colors.border,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    borderColor: colors.borderDark, // #CBD5E1
+    paddingVertical: 9,
+    paddingHorizontal: 16,
     borderRadius: radius.md,
+    ...webOnly({ cursor: 'pointer' }),
   },
-  shareBtnText: { color: colors.textSecondary, fontSize: 13, fontWeight: '600' },
-
-  // Privacy note
-  privacyNote: { fontSize: 12, color: colors.textSecondary, fontStyle: 'italic', marginBottom: 16, lineHeight: 17 },
+  shareBtnText: { color: colors.textPrimary, fontSize: 13, fontWeight: '600' }, // #0F172A
 
   // Cards — padding 16px 20px, radius 16
   card: {

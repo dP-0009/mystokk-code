@@ -80,6 +80,9 @@ export const SETTINGS_INDUSTRY_CATEGORIES: Record<string, readonly string[]> = {
   Metals: ['Steel', 'Aluminum', 'Copper', 'Iron', 'Alloys', 'Scrap Metal'],
   Chemicals: ['Industrial Chemicals', 'Agricultural Chemicals', 'Pharmaceutical', 'Cleaning Products'],
   'Food & Agriculture': ['Grains', 'Pulses', 'Spices', 'Oils & Fats', 'Fresh Produce', 'Beverages'],
+  Printing: ['Paper Rolls', 'Cardboard', 'Printing Ink', 'Packaging Paper', 'Labels'],
+  'Agriculture Equipment': ['Tractors', 'Irrigation', 'Seeds', 'Fertilizers', 'Pesticides', 'Tools'],
+  Other: ['General Merchandise', 'Mixed Goods', 'Not Listed'],
 };
 
 /** Settings Industry picker options (keys of the category mapping). */

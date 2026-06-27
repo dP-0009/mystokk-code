@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -16,7 +15,10 @@ import {
 import { UNREAD_COUNT_KEY } from '../hooks/useUnreadCount';
 import { NotificationRow } from '../components/notifications/NotificationRow';
 import { notificationTargetTab } from '../components/notifications/NotificationPopup';
+import { MainLayout, PageBody } from '../components/layout';
+import { webOnly } from '../components/layout/web';
 import { colors } from '../theme/tokens';
+import { toast } from '../stores/toast';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Notifications'>;
 
@@ -43,7 +45,14 @@ export function NotificationsScreen({ navigation }: Props): React.JSX.Element {
     void queryClient.invalidateQueries({ queryKey: UNREAD_COUNT_KEY });
   };
 
-  const markAll = useMutation({ mutationFn: markAllNotificationsRead, onSuccess: invalidate });
+  const markAll = useMutation({
+    mutationFn: markAllNotificationsRead,
+    onSuccess: () => {
+      invalidate();
+      toast.success('All notifications marked as read');
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : 'Could not update notifications.'),
+  });
 
   const all = data ?? [];
   const unread = all.filter((n) => !n.read).length;
@@ -58,30 +67,28 @@ export function NotificationsScreen({ navigation }: Props): React.JSX.Element {
     } catch {
       // best-effort; still navigate
     }
-    const tab = notificationTargetTab(n.type);
-    if (tab) navigation.navigate('Main', { screen: tab });
+    const target = notificationTargetTab(n.type);
+    if (target) navigation.navigate('Main', { screen: target });
   };
 
   return (
-    <View style={styles.fill}>
-      <SafeAreaView edges={['top']} style={styles.headerSafe}>
-        <View style={styles.headerRow}>
-          <Pressable onPress={() => navigation.goBack()} hitSlop={10} style={styles.headerSide}>
-            <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
-          </Pressable>
-          <Text style={styles.headerTitle}>Notifications</Text>
-          <Pressable
-            onPress={() => markAll.mutate()}
-            hitSlop={10}
-            disabled={unread === 0 || markAll.isPending}
-            style={styles.headerSideRight}
-            testID="notifications-mark-all"
-          >
-            <Text style={[styles.markAll, unread === 0 ? styles.markAllDisabled : null]}>Mark all read</Text>
-          </Pressable>
-        </View>
+    <MainLayout>
+      {/* Page header (mirror `.ph`) — extra right padding clears the fixed bell. */}
+      <View style={styles.header}>
+        <Text style={styles.h1}>Notifications</Text>
+        <Pressable
+          onPress={() => markAll.mutate()}
+          disabled={unread === 0 || markAll.isPending}
+          hitSlop={6}
+          testID="notifications-mark-all"
+          style={webOnly({ cursor: unread === 0 ? 'default' : 'pointer' })}
+        >
+          <Text style={[styles.markAll, unread === 0 ? styles.markAllDisabled : null]}>Mark all as read</Text>
+        </Pressable>
+      </View>
 
-        {/* Tabs */}
+      <PageBody>
+        {/* Tabs — underline style */}
         <View style={styles.tabs}>
           <TabButton label="All" active={tab === 'all'} onPress={() => setTab('all')} />
           <TabButton
@@ -90,25 +97,23 @@ export function NotificationsScreen({ navigation }: Props): React.JSX.Element {
             onPress={() => setTab('unread')}
           />
         </View>
-      </SafeAreaView>
 
-      {isLoading ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={colors.accent} size="large" />
-        </View>
-      ) : isError ? (
-        <View style={styles.center}>
-          <Text style={styles.errorText}>{error instanceof Error ? error.message : 'Failed to load.'}</Text>
-        </View>
-      ) : items.length === 0 ? (
-        <View style={styles.center}>
-          <Ionicons name="notifications-outline" size={40} color={colors.textMuted} />
-          <Text style={styles.emptyText}>
-            {tab === 'unread' ? 'No unread notifications' : 'No notifications yet'}
-          </Text>
-        </View>
-      ) : (
-        <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
+        {isLoading ? (
+          <View style={styles.center}>
+            <ActivityIndicator color={colors.accent} size="large" />
+          </View>
+        ) : isError ? (
+          <View style={styles.center}>
+            <Text style={styles.errorText}>{error instanceof Error ? error.message : 'Failed to load.'}</Text>
+          </View>
+        ) : items.length === 0 ? (
+          <View style={styles.center}>
+            <Ionicons name="notifications-outline" size={40} color={colors.textMuted} />
+            <Text style={styles.emptyText}>
+              {tab === 'unread' ? 'No unread notifications' : 'No notifications yet'}
+            </Text>
+          </View>
+        ) : (
           <View style={styles.card}>
             {items.map((n, i) => (
               <NotificationRow
@@ -119,12 +124,13 @@ export function NotificationsScreen({ navigation }: Props): React.JSX.Element {
               />
             ))}
           </View>
-        </ScrollView>
-      )}
-    </View>
+        )}
+      </PageBody>
+    </MainLayout>
   );
 }
 
+/** Underline tab — active gets a 2px #2563EB bottom border + blue text. */
 function TabButton({
   label,
   active,
@@ -142,29 +148,44 @@ function TabButton({
 }
 
 const styles = StyleSheet.create({
-  fill: { flex: 1, backgroundColor: colors.bgPage },
-  headerSafe: { backgroundColor: colors.bgWhite, borderBottomWidth: 1, borderBottomColor: colors.border },
-  headerRow: {
+  // `.ph` — title left, action right. Extra right padding clears the fixed bell.
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    gap: 16,
+    paddingLeft: 28,
+    paddingRight: 64,
+    paddingTop: 20,
+    paddingBottom: 16,
+    backgroundColor: colors.bgWhite,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
-  headerSide: { width: 90 },
-  headerSideRight: { width: 90, alignItems: 'flex-end' },
-  headerTitle: { color: colors.textPrimary, fontSize: 18, fontWeight: '700' },
+  h1: { fontSize: 22, fontWeight: '700', color: colors.textPrimary },
+
   markAll: { color: colors.accent, fontSize: 13, fontWeight: '600' },
   markAllDisabled: { color: colors.textMuted },
 
-  tabs: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingBottom: 12 },
-  tab: { paddingVertical: 7, paddingHorizontal: 16, borderRadius: 999, backgroundColor: colors.bgChip },
-  tabActive: { backgroundColor: colors.primary },
-  tabText: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
-  tabTextActive: { color: colors.bgWhite },
+  // Underline tab strip — bottom border separates tabs from the list.
+  tabs: {
+    flexDirection: 'row',
+    gap: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    marginBottom: 16,
+  },
+  tab: {
+    paddingVertical: 10,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+    marginBottom: -1, // overlap the strip's border so the active underline sits on it
+    ...webOnly({ cursor: 'pointer' }),
+  },
+  tabActive: { borderBottomColor: colors.accent }, // #2563EB
+  tabText: { fontSize: 14, fontWeight: '600', color: colors.textSecondary },
+  tabTextActive: { color: colors.accent }, // #2563EB
 
-  list: { flex: 1 },
-  listContent: { padding: 16 },
   card: {
     backgroundColor: colors.bgWhite,
     borderRadius: 16,
@@ -173,7 +194,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
 
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 },
+  center: { alignItems: 'center', justifyContent: 'center', paddingVertical: 80, gap: 12 },
   errorText: { color: colors.red, fontSize: 14, fontWeight: '600', textAlign: 'center' },
   emptyText: { fontSize: 14, color: colors.textMuted },
 });

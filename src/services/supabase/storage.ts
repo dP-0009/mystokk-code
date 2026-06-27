@@ -55,11 +55,25 @@ export function photoDetailUrl(path: string): string {
   return transformedPhotoUrl(path, PHOTO_DETAIL_TRANSFORM);
 }
 
+/**
+ * Normalize any product-photo reference to a full, loadable URL before handing
+ * it to the Lightbox. Already-absolute URLs (http/https/blob/file/data) pass
+ * through untouched; a bare storage path is resolved to its public URL on the
+ * inventory-photos bucket. Empty input returns '' (filter these out).
+ */
+export function toFullUrl(src: string | null | undefined): string {
+  if (!src) return '';
+  if (/^(https?:|blob:|file:|data:)/.test(src)) return src;
+  return supabase.storage.from(PHOTOS_BUCKET).getPublicUrl(src).data.publicUrl;
+}
+
 /** A local file selected via expo-image-picker / expo-document-picker. */
 export interface UploadFile {
   uri: string;
   name: string;
   mimeType: string;
+  /** File size in bytes, when the picker reports it (used for display). */
+  size?: number;
 }
 
 async function currentVendorId(): Promise<string> {

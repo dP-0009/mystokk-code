@@ -18,6 +18,7 @@ import { EmptyState } from '../components/shared/EmptyState';
 import { MainLayout, PageBody, PageHeader } from '../components/layout';
 import { ReservationCard } from '../components/reservations/ReservationCard';
 import { NegotiationModal } from '../components/reservations/NegotiationModal';
+import { webOnly } from '../components/layout/web';
 import { colors, radius, shadows } from '../theme/tokens';
 
 type Props = CompositeScreenProps<
@@ -234,11 +235,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.md,
+    borderRadius: 999, // round-bordered pill
     backgroundColor: colors.bgWhite,
+    ...webOnly({ cursor: 'pointer' }),
   },
   selectText: { fontSize: 13, color: colors.textPrimary },
   dropdown: {

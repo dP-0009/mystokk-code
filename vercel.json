@@ -8,7 +8,7 @@
         {
           "type": "header",
           "key": "user-agent",
-          "value": "(?i).*(whatsapp|facebookexternalhit|twitterbot|linkedinbot|telegrambot|slackbot|discordbot|googlebot).*"
+          "value": "(?i).*(whatsapp|facebookexternalhit|twitterbot|linkedinbot|telegrambot|slackbot|discordbot|googlebot|bingbot|applebot|pinterest).*"
         }
       ],
       "destination": "/api/share/:token"
@@ -26,6 +26,10 @@
     {
       "source": "/(.*)\\.(png|jpg|jpeg|gif|webp|avif|svg|ico)",
       "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+    },
+    {
+      "source": "/api/public-files/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }]
     }
   ]
 }

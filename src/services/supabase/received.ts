@@ -22,6 +22,7 @@ export interface ReceivedListItem {
   shared_by_company_name: string | null;
   display_price: number | null;
   display_currency: string | null;
+  stock_location: string | null;
   chain_depth: number;
   created_at: string;
   /** Storage path of the item's first photo (from the RPC), or null. */

@@ -27,6 +27,8 @@ export interface NetworkVendor {
   is_registered: boolean;
   status: string;
   created_at: string;
+  /** Counterparty's company logo URL (connected/registered vendors), else null. */
+  logo_url: string | null;
 }
 
 export interface PendingConnection {
@@ -40,6 +42,8 @@ export interface PendingConnection {
   country: string | null;
   city: string | null;
   created_at: string;
+  /** Requesting vendor's company logo URL, or null. */
+  logo_url: string | null;
 }
 
 export interface VendorProfile {

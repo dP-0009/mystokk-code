@@ -1,4 +1,4 @@
-import React, { type ReactNode } from 'react';
+import React, { useState, type ReactNode } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -13,6 +13,7 @@ import { Sidebar } from './Sidebar';
 import { SidebarNav, type SidebarNavId } from './SidebarNav';
 import { SidebarFooter } from './SidebarFooter';
 import { NotificationBell } from './NotificationBell';
+import { ProfileMenu } from './ProfileMenu';
 
 type Nav = CompositeNavigationProp<
   BottomTabNavigationProp<MainTabParamList>,
@@ -20,8 +21,9 @@ type Nav = CompositeNavigationProp<
 >;
 
 type MainLayoutProps = {
-  /** Which sidebar item is highlighted for this screen. */
-  active: SidebarNavId;
+  /** Which sidebar item is highlighted for this screen. Omit for screens with
+   *  no sidebar entry (e.g. Notifications) so nothing is highlighted. */
+  active?: SidebarNavId;
   /** Page content — typically `<PageHeader/>` + `<PageBody/>`. */
   children: ReactNode;
 };
@@ -36,6 +38,9 @@ type MainLayoutProps = {
 export function MainLayout({ active, children }: MainLayoutProps): React.JSX.Element {
   const navigation = useNavigation<Nav>();
   const session = useAuthStore((s) => s.session);
+  const signOut = useAuthStore((s) => s.signOut);
+  // FIX 5 — clicking the sidebar user block opens this popup (no navigation).
+  const [profileOpen, setProfileOpen] = useState(false);
 
   // Shares the ['dashboard'] cache with the Dashboard screen — only one fetch
   // per stale window regardless of how many screens mount this layout.
@@ -73,7 +78,7 @@ export function MainLayout({ active, children }: MainLayoutProps): React.JSX.Ele
         <SidebarFooter
           name={data?.vendor.companyName ?? 'MyStokk'}
           email={session?.user?.email ?? ''}
-          onPressUser={() => navigation.navigate('Profile')}
+          onPressUser={() => setProfileOpen(true)}
         />
       }
     >
@@ -89,6 +94,20 @@ export function MainLayout({ active, children }: MainLayoutProps): React.JSX.Ele
     <>
       <AppShell sidebar={sidebar}>{children}</AppShell>
       <NotificationBell />
+      <ProfileMenu
+        visible={profileOpen}
+        onClose={() => setProfileOpen(false)}
+        onSettings={() => {
+          setProfileOpen(false);
+          navigation.navigate('Settings');
+        }}
+        onLogout={() => {
+          setProfileOpen(false);
+          void signOut();
+        }}
+        fallbackName={data?.vendor.companyName ?? undefined}
+        fallbackEmail={session?.user?.email ?? ''}
+      />
     </>
   );
 }

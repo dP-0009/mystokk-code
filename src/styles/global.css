@@ -99,7 +99,9 @@ img {
 }
 
 /* Remove the grey tap-highlight flash on mobile taps. */
-button {
+button,
+a,
+[role='button'] {
   -webkit-tap-highlight-color: transparent;
 }
 

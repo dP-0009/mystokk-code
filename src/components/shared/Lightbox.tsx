@@ -17,7 +17,6 @@ import {
   Text,
   useWindowDimensions,
   View,
-  type ImageStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -116,11 +115,20 @@ export function Lightbox({
 
       {/* Image — sits above the backdrop, so clicking it does not close. */}
       <View style={styles.imageWrap} {...pan.panHandlers}>
-        <Image
-          source={{ uri }}
-          style={[styles.image, { width: width * 0.9, height: height * 0.9 }, WEB_IMAGE]}
-          resizeMode="contain"
-        />
+        {Platform.OS === 'web' ? (
+          // On web, render a real <img>: react-native-web's <Image> is a
+          // background-image <div>, which collapses to 0px when sized auto/auto,
+          // showing a blank overlay. A native <img> with object-fit: contain
+          // sizes correctly. (uri is a full https:// URL — see storage.ts.)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          React.createElement('img' as any, { src: uri, style: WEB_IMG_STYLE, alt: '' })
+        ) : (
+          <Image
+            source={{ uri }}
+            style={[styles.image, { width: width * 0.9, height: height * 0.9 }]}
+            resizeMode="contain"
+          />
+        )}
       </View>
 
       {/* Counter + thumbnail strip (carousel only) */}
@@ -195,15 +203,18 @@ export function useLightbox(): LightboxContextValue {
 
 const CIRCLE = 'rgba(255,255,255,0.15)';
 
-// Web-only image sizing: contain within 90vw/90vh. Cast because objectFit and
-// viewport units aren't in RN's ImageStyle but react-native-web honors them.
-const WEB_IMAGE = webOnly({
-  width: 'auto',
+// Web-only <img> sizing: fill the width, keep aspect ratio, cap height, and
+// contain so the whole photo is visible inside the dark overlay. Plain CSS
+// (not RN style) because this is a real DOM <img>, not an RN <Image>.
+const WEB_IMG_STYLE = {
+  width: '100%',
   height: 'auto',
   maxWidth: '90vw',
-  maxHeight: '90vh',
+  maxHeight: '85vh',
   objectFit: 'contain',
-}) as unknown as ImageStyle;
+  display: 'block',
+  borderRadius: 8,
+} as const;
 
 const styles = StyleSheet.create({
   overlay: {
@@ -215,7 +226,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.92)',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 9999,
+    zIndex: 99999,
     ...webOnly({ position: 'fixed' }),
   },
   backdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
@@ -224,9 +235,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 20,
     right: 20,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: CIRCLE,
     alignItems: 'center',
     justifyContent: 'center',
@@ -262,7 +273,16 @@ const styles = StyleSheet.create({
     gap: 10,
     zIndex: 2,
   },
-  counter: { color: '#FFFFFF', fontSize: 13, fontWeight: '600' },
+  counter: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
   thumbStrip: { gap: 8, paddingHorizontal: 16 },
   thumb: {
     width: 48,

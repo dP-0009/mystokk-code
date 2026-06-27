@@ -27,6 +27,9 @@ const BOT_KEYWORDS = [
   'slackbot',
   'discordbot',
   'googlebot',
+  'bingbot',
+  'applebot',
+  'pinterest',
 ];
 
 // Public, client-safe values (identical to what ships in the web bundle). Env

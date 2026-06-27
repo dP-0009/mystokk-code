@@ -6,8 +6,10 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import type { RootStackParamList } from '../navigation';
 import { claimShare, getPublicShare, publicPhotoUrl, resolveShareToken, type PublicShare } from '../services/supabase/shares';
+import { toFullUrl } from '../services/supabase/storage';
 import { useAuthStore } from '../stores/authStore';
 import { toast } from '../stores/toast';
+import { useLightbox } from '../components/shared/Lightbox';
 import { webOnly } from '../components/layout/web';
 import { colors, radius, shadows } from '../theme/tokens';
 
@@ -154,6 +156,8 @@ function Preview({
 }): React.JSX.Element {
   const qty = share.quantity.toLocaleString();
   const photoUrl = publicPhotoUrl(share.first_photo_path);
+  const fullPhoto = toFullUrl(photoUrl);
+  const { open: openLightbox } = useLightbox();
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.body}>
       <View style={styles.column}>
@@ -161,10 +165,17 @@ function Preview({
         <Text style={styles.stockBadge}>Stock Update</Text>
 
         {/* Product image — the inventory-photos bucket is public-read, so the
-            first photo loads here without auth (cube placeholder when none). */}
+            first photo loads here without auth (cube placeholder when none).
+            Tapping it opens the shared lightbox. */}
         <View style={styles.imageBox}>
-          {photoUrl ? (
-            <Image source={{ uri: photoUrl }} style={styles.imageImg} resizeMode="cover" />
+          {fullPhoto ? (
+            <Pressable
+              onPress={() => openLightbox([fullPhoto], 0)}
+              style={webOnly({ cursor: 'pointer' })}
+              accessibilityLabel="View photo"
+            >
+              <Image source={{ uri: fullPhoto }} style={styles.imageImg} resizeMode="cover" />
+            </Pressable>
           ) : (
             <Ionicons name="cube-outline" size={56} color={colors.textMuted} />
           )}

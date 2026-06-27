@@ -5,19 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 import type { NetworkVendor } from '../../services/supabase/network';
 import { colors } from '../../theme/tokens';
 import { webOnly } from '../layout/web';
+import { VendorAvatar } from '../shared/VendorAvatar';
 import { openWhatsApp } from '../../utils/contact';
-
-const AVATAR_PALETTE = ['#2563EB', '#16A34A', '#EA580C', '#7C3AED', '#0891B2', '#DC2626', '#64748B'] as const;
-
-function firstLetter(name: string | null | undefined): string {
-  const c = name?.trim()?.[0];
-  return c ? c.toUpperCase() : '?';
-}
-function avatarColor(seed: string): string {
-  let h = 0;
-  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
-  return AVATAR_PALETTE[h % AVATAR_PALETTE.length];
-}
 
 interface ViewVendorModalProps {
   visible: boolean;
@@ -36,9 +25,7 @@ export function ViewVendorModal({ visible, vendor, onClose }: ViewVendorModalPro
             <>
               {/* Identity */}
               <View style={styles.identity}>
-                <View style={[styles.avatar, { backgroundColor: avatarColor(vendor.company_name) }]}>
-                  <Text style={styles.avatarText}>{firstLetter(vendor.company_name)}</Text>
-                </View>
+                <VendorAvatar name={vendor.company_name} logoUrl={vendor.logo_url} size={64} />
                 <Text style={styles.company} numberOfLines={2}>
                   {vendor.company_name}
                 </Text>
@@ -116,8 +103,6 @@ const styles = StyleSheet.create({
   },
 
   identity: { alignItems: 'center', paddingTop: 28, paddingHorizontal: 24, paddingBottom: 16, gap: 6 },
-  avatar: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
-  avatarText: { color: '#FFFFFF', fontSize: 24, fontWeight: '800' },
   company: { fontSize: 18, fontWeight: '800', color: colors.textPrimary, textAlign: 'center' },
   contact: { fontSize: 13, color: colors.textSecondary },
 

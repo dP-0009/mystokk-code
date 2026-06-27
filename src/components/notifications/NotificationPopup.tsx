@@ -16,6 +16,7 @@ import {
 import { UNREAD_COUNT_KEY } from '../../hooks/useUnreadCount';
 import { colors } from '../../theme/tokens';
 import { webOnly } from '../layout/web';
+import { toast } from '../../stores/toast';
 import { NotificationRow } from './NotificationRow';
 
 type Nav = CompositeNavigationProp<
@@ -60,7 +61,14 @@ export function NotificationPopup({ onClose }: NotificationPopupProps): React.JS
     void queryClient.invalidateQueries({ queryKey: UNREAD_COUNT_KEY });
   };
 
-  const markAll = useMutation({ mutationFn: markAllNotificationsRead, onSuccess: invalidate });
+  const markAll = useMutation({
+    mutationFn: markAllNotificationsRead,
+    onSuccess: () => {
+      invalidate();
+      toast.success('All notifications marked as read');
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : 'Could not update notifications.'),
+  });
 
   const items = data ?? [];
   const unread = items.filter((n) => !n.read).length;
@@ -137,7 +145,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: '100%',
     right: 0,
-    width: 360,
+    // 8px gap below the bell — i.e. top: calc(100% + 8px).
+    marginTop: 8,
+    width: 380,
     maxHeight: 480,
     backgroundColor: colors.bgWhite,
     borderRadius: 16,
@@ -156,7 +166,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,

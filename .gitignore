@@ -56,3 +56,6 @@ client_secret*.json
 
 # local AI tooling
 .claude/
+
+# Office temp/lock files
+~$*

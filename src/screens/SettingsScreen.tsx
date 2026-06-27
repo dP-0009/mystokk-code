@@ -14,12 +14,14 @@ import {
 import { useForm } from 'react-hook-form';
 import * as ImagePicker from 'expo-image-picker';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import type { RootStackParamList } from '../navigation';
 import { MainLayout, PageBody, PageHeader } from '../components/layout';
 import { FormTextField } from '../components/shared/FormTextField';
 import { SelectField } from '../components/shared/SelectField';
+import { DropdownSelectField } from '../components/shared/DropdownSelectField';
 import { AppButton } from '../components/shared/AppButton';
 import {
   deleteMyAccount,
@@ -32,19 +34,54 @@ import { changePassword } from '../services/supabase/auth';
 import { requestPushPermissionAndRegister } from '../services/push';
 import { useAuthStore } from '../stores/authStore';
 import { COUNTRIES, SETTINGS_INDUSTRIES, SETTINGS_INDUSTRY_CATEGORIES } from '../constants/industries';
+import { webOnly } from '../components/layout/web';
 import { colors, radius, shadows } from '../theme/tokens';
 import { toast } from '../stores/toast';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
 
+/** Fingerprint of the editable profile fields — changes whenever the saved DB
+ *  values change, so the form below remounts and re-reads them. */
+function profileFingerprint(v: VendorProfile): string {
+  return [
+    v.company_name,
+    v.contact_person,
+    v.industry,
+    (v.categories ?? []).join(','),
+    v.country,
+    v.city,
+    v.address,
+    v.mobile_number,
+    v.tel_number,
+    v.description,
+    v.logo_url,
+  ]
+    .map((x) => x ?? '')
+    .join('|');
+}
+
 export function SettingsScreen({ navigation: _navigation }: Props): React.JSX.Element {
   const signOut = useAuthStore((s) => s.signOut);
 
-  const { data: vendor, isLoading } = useQuery({
+  // FIX 6 — always reload the SAVED profile from the DB on mount/focus, and
+  // remount the form so it resets to those values (no stale cache, no leftover
+  // unsaved edits when leaving and returning). No module-level state is used.
+  const { data: vendor, isLoading, refetch } = useQuery({
     queryKey: ['myVendor'],
     queryFn: getMyVendor,
     staleTime: 30_000,
+    refetchOnMount: 'always',
   });
+
+  // Bump on every focus so the form below remounts (resets to DB values), and
+  // refetch so it remounts again against fresh data once it lands.
+  const [focusNonce, setFocusNonce] = useState(0);
+  useFocusEffect(
+    React.useCallback(() => {
+      setFocusNonce((n) => n + 1);
+      void refetch();
+    }, [refetch]),
+  );
 
   // Change Password + Delete Account flows (preserved from the prior screen).
   const [pwOpen, setPwOpen] = useState(false);
@@ -97,10 +134,13 @@ export function SettingsScreen({ navigation: _navigation }: Props): React.JSX.El
             <ActivityIndicator color={colors.accent} size="large" />
           </View>
         ) : (
-          <CompanyProfileForm vendor={vendor} />
+          // key → remount (reset to DB values) on every focus and when the
+          // refetched profile differs from what's shown.
+          <CompanyProfileForm key={`${focusNonce}-${profileFingerprint(vendor)}`} vendor={vendor} />
         )}
 
         {/* Push Notifications */}
+        <Text style={styles.sectionTitle}>Push Notifications</Text>
         <View style={styles.nbBox}>
           <View style={styles.nbText}>
             <Text style={styles.nbTitle}>Push Notifications</Text>
@@ -324,7 +364,7 @@ function CompanyProfileForm({ vendor }: { vendor: VendorProfile }): React.JSX.El
         autoCapitalize="words"
         rules={{ required: 'Contact person is required' }}
       />
-      <SelectField
+      <DropdownSelectField
         control={control}
         name="industry"
         label="Industry"
@@ -422,13 +462,12 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
 
-  // `.ss-card`
+  // `.ss-card` — no overflow clip so the Industry dropdown panel can float out.
   card: {
     backgroundColor: colors.bgWhite,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.lg,
-    overflow: 'hidden',
     marginBottom: 28,
   },
   cardPadded: { padding: 20 },
@@ -512,9 +551,10 @@ const styles = StyleSheet.create({
   btnAccent: {
     backgroundColor: colors.accent,
     paddingVertical: 9,
-    paddingHorizontal: 16,
+    paddingHorizontal: 18,
     borderRadius: radius.md,
     flexShrink: 0,
+    ...webOnly({ cursor: 'pointer' }),
   },
   btnAccentText: { color: colors.bgWhite, fontSize: 13, fontWeight: '600' },
 

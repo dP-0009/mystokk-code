@@ -24,6 +24,7 @@ import {
 } from '../../services/supabase/shares';
 import { copyToClipboard, shareText } from '../../utils/clipboard';
 import { webOnly } from '../layout/web';
+import { VendorAvatar } from '../shared/VendorAvatar';
 import { colors, radius, shadows } from '../../theme/tokens';
 import { toast } from '../../stores/toast';
 
@@ -48,18 +49,6 @@ interface ShareModalProps {
 
 type Tab = 'network' | 'new';
 
-const AVATAR_COLORS = ['#2563EB', '#16A34A', '#EA580C', '#7C3AED', '#0891B2', '#DC2626'] as const;
-
-function initials(name: string | null): string {
-  if (!name) return '??';
-  const parts = name.trim().split(/\s+/);
-  return (parts.slice(0, 2).map((p) => p[0] ?? '').join('') || name[0]).toUpperCase();
-}
-function avatarColor(seed: string): string {
-  let h = 0;
-  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
-  return AVATAR_COLORS[h % AVATAR_COLORS.length];
-}
 function rowKey(v: NetworkVendor): string {
   return `${v.source}-${v.row_id}`;
 }
@@ -413,9 +402,7 @@ function NetworkTab({
                   <View style={[styles.checkbox, checked ? styles.checkboxOn : null]}>
                     {checked ? <Text style={styles.checkmark}>✓</Text> : null}
                   </View>
-                  <View style={[styles.avatar, { backgroundColor: avatarColor(v.company_name) }]}>
-                    <Text style={styles.avatarText}>{initials(v.company_name)}</Text>
-                  </View>
+                  <VendorAvatar name={v.company_name} logoUrl={v.logo_url} size={34} />
                   <View style={styles.vendorInfo}>
                     <Text style={styles.vendorName} numberOfLines={1}>
                       {v.company_name}
@@ -731,8 +718,6 @@ const styles = StyleSheet.create({
   },
   checkboxOn: { backgroundColor: colors.accent, borderColor: colors.accent },
   checkmark: { color: '#FFFFFF', fontSize: 10, fontWeight: '800' },
-  avatar: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { color: '#FFFFFF', fontWeight: '700', fontSize: 12 },
   vendorInfo: { flex: 1, minWidth: 0 },
   vendorName: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
   vendorMeta: { fontSize: 11, color: colors.textMuted, marginTop: 1 },
