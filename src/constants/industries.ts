@@ -74,13 +74,19 @@ export const INVENTORY_INDUSTRIES: readonly string[] = Object.keys(INVENTORY_IND
  * was truncated for that industry, so adjust if the intended list differs.
  */
 export const SETTINGS_INDUSTRY_CATEGORIES: Record<string, readonly string[]> = {
-  'Timber / Wood Products': ['Hardwood', 'Softwood', 'Plywood', 'MDF', 'Veneer', 'Engineered Wood', 'Timber', 'Lumber'],
-  Electronics: ['Consumer Electronics', 'Components', 'Semiconductors', 'Accessories', 'Cables', 'Displays'],
-  Textiles: ['Fabric', 'Garments', 'Raw Fiber', 'Home Textiles', 'Yarn', 'Leather'],
-  Metals: ['Steel', 'Aluminum', 'Copper', 'Iron', 'Alloys', 'Scrap Metal'],
-  Chemicals: ['Industrial Chemicals', 'Agricultural Chemicals', 'Pharmaceutical', 'Cleaning Products'],
-  'Food & Agriculture': ['Grains', 'Pulses', 'Spices', 'Oils & Fats', 'Fresh Produce', 'Beverages'],
-  Printing: ['Paper Rolls', 'Cardboard', 'Printing Ink', 'Packaging Paper', 'Labels'],
+  'Timber & Wood Products': ['Hardwood', 'Softwood', 'Plywood', 'MDF', 'Veneer', 'Engineered Wood', 'Lumber', 'Particleboard', 'OSB', 'Bamboo'],
+  'Electronics & Technology': ['Consumer Electronics', 'Components', 'Semiconductors', 'Accessories', 'Cables & Connectors', 'Displays', 'PCBs', 'Industrial Electronics'],
+  'Textiles & Apparel': ['Fabric', 'Garments', 'Raw Fiber', 'Home Textiles', 'Yarn', 'Leather', 'Denim', 'Synthetic Fiber', 'Uniforms', 'Sportswear'],
+  'Metals & Minerals': ['Steel', 'Aluminum', 'Copper', 'Iron', 'Alloys', 'Scrap Metal', 'Gold', 'Silver', 'Zinc', 'Nickel', 'Titanium'],
+  'Chemicals & Petrochemicals': ['Industrial Chemicals', 'Agricultural Chemicals', 'Pharmaceutical', 'Cleaning Products', 'Polymers', 'Adhesives', 'Paints & Coatings'],
+  'Food & Agriculture': ['Grains', 'Spices', 'Oils', 'Perishables', 'Dairy', 'Frozen Foods', 'Seeds & Plants', 'Coffee & Tea', 'Sugar', 'Pulses'],
+  'Automotive & Transportation': ['Cars', 'Trucks & HGVs', 'Auto Parts', 'Tires', 'Lubricants', 'Motorcycles', 'Marine Vessels', 'Aerospace Components'],
+  'Consumer Goods': ['Luggage & Bags', 'Toys & Games', 'Kitchenware', 'Furniture', 'Home Decor', 'Sports Equipment', 'Personal Care', 'Packaging', 'Household Products', 'Stationery', 'Cleaning Supplies'],
+  'Construction & Real Estate': ['Cement', 'Steel Structures', 'Glass', 'Tiles', 'Pipes & Fittings', 'Fixtures', 'Insulation', 'Roofing', 'Flooring', 'Bricks'],
+  'Energy & Resources': ['Crude Oil', 'Natural Gas', 'Coal', 'Solar Panels', 'Wind Components', 'Batteries', 'Generators', 'Fuel'],
+  'Healthcare & Pharmaceuticals': ['Medicines', 'Medical Devices', 'Surgical Equipment', 'Lab Supplies', 'PPE', 'Supplements', 'Diagnostics'],
+  'Plastics & Rubber': ['Raw Polymers', 'Packaging Materials', 'Industrial Rubber', 'PVC', 'Silicone', 'Foam'],
+  'Paper & Printing': ['Paper Rolls', 'Cardboard', 'Printing Ink', 'Packaging Paper', 'Labels'],
   'Agriculture Equipment': ['Tractors', 'Irrigation', 'Seeds', 'Fertilizers', 'Pesticides', 'Tools'],
   Other: ['General Merchandise', 'Mixed Goods', 'Not Listed'],
 };

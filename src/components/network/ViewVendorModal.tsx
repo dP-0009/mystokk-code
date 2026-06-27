@@ -25,7 +25,7 @@ export function ViewVendorModal({ visible, vendor, onClose }: ViewVendorModalPro
             <>
               {/* Identity */}
               <View style={styles.identity}>
-                <VendorAvatar name={vendor.company_name} logoUrl={vendor.logo_url} size={64} />
+                <VendorAvatar name={vendor.company_name} logoUrl={vendor.logo_url} email={vendor.email} size={64} />
                 <Text style={styles.company} numberOfLines={2}>
                   {vendor.company_name}
                 </Text>

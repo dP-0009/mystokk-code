@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '../../theme/tokens';
@@ -18,26 +18,55 @@ function avatarColor(seed: string): string {
   return AVATAR_PALETTE[h % AVATAR_PALETTE.length];
 }
 
+/** Clearbit logo URL for an email's company domain, or null when not derivable. */
+function clearbitFromEmail(email: string | null | undefined): string | null {
+  const domain = email?.trim().split('@')[1]?.toLowerCase();
+  if (!domain || !domain.includes('.')) return null;
+  return `https://logo.clearbit.com/${domain}`;
+}
+
 interface VendorAvatarProps {
   /** Company name — drives the fallback initial + its color. */
   name: string | null | undefined;
   /** Company logo URL. When set, shown as a circular cover image. */
   logoUrl?: string | null;
+  /**
+   * Contact email. Used for MANUAL contacts (no MyStokk account) to look up a
+   * company logo from the email domain via Clearbit when `logoUrl` is absent.
+   */
+  email?: string | null;
   /** Diameter in px (default 34). */
   size?: number;
 }
 
 /**
  * Vendor avatar shared across the app (network table, share modal, view-vendor
- * popup, …). Shows the vendor's company logo as a circular cover image with a
- * 1.5px border when `logoUrl` is set; otherwise falls back to the colored
- * letter-initial circle.
+ * popup, …). Resolution order:
+ *   1. `logoUrl` (the vendor's uploaded company logo), if set.
+ *   2. Clearbit logo derived from `email`'s domain (manual contacts).
+ *   3. Colored letter-initial circle fallback.
+ * If a remote logo fails to load (broken URL / Clearbit miss), it falls back to
+ * the next option via the image `onError` handler — never a broken-image icon.
  */
-export function VendorAvatar({ name, logoUrl, size = 34 }: VendorAvatarProps): React.JSX.Element {
+export function VendorAvatar({ name, logoUrl, email, size = 34 }: VendorAvatarProps): React.JSX.Element {
   const dim = { width: size, height: size, borderRadius: size / 2 };
 
-  if (logoUrl) {
-    return <Image source={{ uri: logoUrl }} style={[styles.logo, dim]} resizeMode="cover" />;
+  // Candidate remote image: explicit logo first, else Clearbit-by-domain.
+  const remoteUri = logoUrl || clearbitFromEmail(email);
+
+  // Track load failure so a broken remote logo degrades to the letter circle.
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [remoteUri]);
+
+  if (remoteUri && !failed) {
+    return (
+      <Image
+        source={{ uri: remoteUri }}
+        style={[styles.logo, dim]}
+        resizeMode="cover"
+        onError={() => setFailed(true)}
+      />
+    );
   }
 
   const seed = name?.trim() || '?';

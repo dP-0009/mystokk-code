@@ -340,7 +340,7 @@ function VendorRow({
       testID={`network-row-${item.row_id}`}
     >
       <View style={[styles.td, styles.colCompany, styles.companyCell]}>
-        <VendorAvatar name={item.company_name} logoUrl={item.logo_url} size={34} />
+        <VendorAvatar name={item.company_name} logoUrl={item.logo_url} email={item.email} size={34} />
         <View style={styles.companyText}>
           <Text style={styles.companyName} numberOfLines={1}>
             {item.company_name}
