@@ -1,5 +1,4 @@
 import { supabase } from './client';
-import { photoDetailUrl } from './storage';
 import type { NetworkVendor } from './network';
 
 /**
@@ -35,6 +34,7 @@ export interface PublicShare {
   quantity: number;
   unit: string;
   origin: string | null;
+  stock_location: string | null;
   display_price: number | null;
   display_currency: string | null;
   forward_remark: string | null;
@@ -47,12 +47,16 @@ export interface PublicShare {
 
 /**
  * Public URL for a product photo on the share landing page. The inventory-photos
- * bucket is public-read (migration 032), so this needs no auth; it returns a
- * resized 800px/q80 variant via the image-transform CDN.
+ * bucket is public-read (migration 032), so this needs no auth.
+ *
+ * NOTE: uses the PLAIN public object URL, not the image-transform CDN variant —
+ * Supabase image transformations are a paid add-on and 404 when not enabled,
+ * which left the landing page showing a blank dark box. The plain URL always
+ * loads from the public bucket.
  */
 export function publicPhotoUrl(storagePath: string | null | undefined): string | null {
   if (!storagePath) return null;
-  return photoDetailUrl(storagePath);
+  return supabase.storage.from('inventory-photos').getPublicUrl(storagePath).data.publicUrl;
 }
 
 export interface ShareResult {

@@ -93,7 +93,7 @@ export function ShareLandingScreen({ navigation, route }: Props): React.JSX.Elem
 
   return (
     <View style={styles.fill}>
-      {/* Top header bar */}
+      {/* Top header bar — logo only (no Login / Sign Up buttons by request). */}
       <View style={styles.topbar}>
         <View style={styles.logo}>
           <View style={styles.logoMark}>
@@ -101,16 +101,6 @@ export function ShareLandingScreen({ navigation, route }: Props): React.JSX.Elem
           </View>
           <Text style={styles.logoText}>MyStokk</Text>
         </View>
-        {!authed ? (
-          <View style={styles.topbarActions}>
-            <Pressable style={styles.ghostBtn} onPress={() => onAuth('Login')} testID="public-login">
-              <Text style={styles.ghostBtnText}>Login</Text>
-            </Pressable>
-            <Pressable style={styles.signupBtn} onPress={() => onAuth('Signup')} testID="public-signup">
-              <Text style={styles.signupBtnText}>Sign Up</Text>
-            </Pressable>
-          </View>
-        ) : null}
       </View>
 
       {isLoading || checkingOwner ? (
@@ -158,6 +148,9 @@ function Preview({
   const photoUrl = publicPhotoUrl(share.first_photo_path);
   const fullPhoto = toFullUrl(photoUrl);
   const { open: openLightbox } = useLightbox();
+  // Fall back to the cube placeholder if the photo URL fails to load.
+  const [imgError, setImgError] = useState(false);
+  const showPhoto = Boolean(fullPhoto) && !imgError;
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.body}>
       <View style={styles.column}>
@@ -165,16 +158,21 @@ function Preview({
         <Text style={styles.stockBadge}>Stock Update</Text>
 
         {/* Product image — the inventory-photos bucket is public-read, so the
-            first photo loads here without auth (cube placeholder when none).
-            Tapping it opens the shared lightbox. */}
+            first photo loads here without auth (cube placeholder when none or on
+            load error). Tapping it opens the shared lightbox. */}
         <View style={styles.imageBox}>
-          {fullPhoto ? (
+          {showPhoto ? (
             <Pressable
               onPress={() => openLightbox([fullPhoto], 0)}
-              style={webOnly({ cursor: 'pointer' })}
+              style={[styles.imagePress, webOnly({ cursor: 'pointer' })]}
               accessibilityLabel="View photo"
             >
-              <Image source={{ uri: fullPhoto }} style={styles.imageImg} resizeMode="cover" />
+              <Image
+                source={{ uri: fullPhoto }}
+                style={styles.imageImg}
+                resizeMode="cover"
+                onError={() => setImgError(true)}
+              />
             </Pressable>
           ) : (
             <Ionicons name="cube-outline" size={56} color={colors.textMuted} />
@@ -205,6 +203,16 @@ function Preview({
             />
             <Stat label="Origin" value={share.origin ?? '📍'} sub={share.origin ? ' ' : '—'} last />
           </View>
+
+          {share.stock_location ? (
+            <View style={styles.locationLine}>
+              <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
+              <Text style={styles.locationText}>
+                <Text style={styles.metaLabel}>Stock Location: </Text>
+                {share.stock_location}
+              </Text>
+            </View>
+          ) : null}
 
           {share.category ? (
             <Text style={styles.metaLine}>
@@ -347,11 +355,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.primaryMid,
+    backgroundColor: colors.bgChip, // light placeholder (#F1F5F9) when no photo
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
   },
+  imagePress: { width: '100%', height: '100%' },
   imageImg: { width: '100%', height: '100%' },
 
   // `.card`
@@ -392,6 +401,8 @@ const styles = StyleSheet.create({
   statValueSmall: { fontSize: 16 },
   statSub: { fontSize: 11, color: colors.textSecondary },
 
+  locationLine: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
+  locationText: { fontSize: 13, color: colors.textSecondary, flexShrink: 1 },
   metaLine: { fontSize: 13, color: colors.textSecondary, marginBottom: 16 },
   metaLabel: { fontWeight: '700' },
 
