@@ -20,7 +20,6 @@ import { useLightbox } from '../components/shared/Lightbox';
 type Props = NativeStackScreenProps<RootStackParamList, 'ReceivedDetail'>;
 
 const CURRENCY_SYMBOL: Record<string, string> = { USD: '$', INR: '₹', EUR: '€', GBP: '£', JPY: '¥', CNY: '¥' };
-const AVATAR_COLORS = ['#2563EB', '#16A34A', '#F97316', '#7C3AED', '#DC2626', '#0EA5E9'];
 
 function money(currency: string | null, price: number | null): string {
   if (price === null || price === undefined) return 'Price on request';
@@ -34,17 +33,6 @@ function daysAgo(iso: string): string {
   if (Number.isNaN(days) || days <= 0) return 'today';
   if (days === 1) return '1d ago';
   return `${days}d ago`;
-}
-
-function avatarColor(name: string): string {
-  let sum = 0;
-  for (let i = 0; i < name.length; i += 1) sum += name.charCodeAt(i);
-  return AVATAR_COLORS[sum % AVATAR_COLORS.length];
-}
-
-function initial(name: string | null): string {
-  const ch = (name ?? '').trim().match(/[a-z0-9]/i)?.[0] ?? '?';
-  return ch.toUpperCase();
 }
 
 export function ReceivedDetailScreen({ navigation, route }: Props): React.JSX.Element {
@@ -114,133 +102,168 @@ export function ReceivedDetailScreen({ navigation, route }: Props): React.JSX.El
 
   return (
     <MainLayout active="received">
-      {/* Page header — back link, item name, meta + privacy note, and actions. */}
-      <View style={styles.header}>
-        <View style={styles.titleBlock}>
-          <BackLink onPress={back} />
-          <Text style={styles.h1} numberOfLines={2}>
-            {data.title}
-          </Text>
-          <Text style={styles.subRow} numberOfLines={1}>
-            {subtitle}
-          </Text>
-          <Text style={styles.privacy}>
-            You can share this with your network (your supplier details / pricing will not be forwarded)
-          </Text>
-        </View>
-        <View style={styles.headerActions}>
-          <Pressable style={styles.reserveBtn} onPress={() => setReserveOpen(true)}>
-            <Ionicons name="cube-outline" size={15} color={colors.bgWhite} />
-            <Text style={styles.reserveBtnText}>Reserve</Text>
-          </Pressable>
-          <Pressable style={styles.shareBtn} onPress={() => setPreShareOpen(true)}>
-            <Ionicons name="share-social-outline" size={15} color={colors.textPrimary} />
-            <Text style={styles.shareBtnText}>Share</Text>
-          </Pressable>
-        </View>
-      </View>
-
       <PageBody>
-        <View style={styles.container}>
-          {/* SHARED BY card */}
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Shared By</Text>
-            <View style={styles.sharedByRow}>
-              <View style={[styles.avatar, { backgroundColor: avatarColor(data.shared_by_company ?? '?') }]}>
-                <Text style={styles.avatarText}>{initial(data.shared_by_company)}</Text>
+        <BackLink onPress={back} />
+
+        {/* Two-column: main content + Shared By side panel. */}
+        <View style={styles.grid}>
+          {/* MAIN COLUMN */}
+          <View style={styles.main}>
+            {/* Header card — title + actions, then the 4-stat bar */}
+            <View style={styles.headCard}>
+              <View style={styles.headTop}>
+                <View style={styles.titleBlock}>
+                  <Text style={styles.h1} numberOfLines={2}>
+                    {data.title}
+                  </Text>
+                  <Text style={styles.subRow} numberOfLines={1}>
+                    {subtitle}
+                  </Text>
+                  <Text style={styles.privacy}>
+                    Reserve directly here - no need to call. Your network remains private.
+                  </Text>
+                </View>
+                <View style={styles.headerActions}>
+                  <Pressable style={styles.reserveBtn} onPress={() => setReserveOpen(true)}>
+                    <Ionicons name="cube-outline" size={15} color={colors.bgWhite} />
+                    <Text style={styles.reserveBtnText}>Reserve</Text>
+                  </Pressable>
+                  <Pressable style={styles.shareBtn} onPress={() => setPreShareOpen(true)}>
+                    <Ionicons name="share-social-outline" size={15} color={colors.textPrimary} />
+                    <Text style={styles.shareBtnText}>Share</Text>
+                  </Pressable>
+                </View>
               </View>
-              <View style={styles.sharedByInfo}>
-                <Text style={styles.companyName} numberOfLines={1}>
-                  {data.shared_by_company ?? 'A vendor'}
-                </Text>
-                <Text style={styles.companyMeta}>Company</Text>
-                {data.contact_person ? (
-                  <Text style={styles.companyMeta}>Contact Person: {data.contact_person}</Text>
-                ) : null}
+
+              {/* 4-stat bar */}
+              <View style={styles.statCard}>
+                <StatCol value={data.quantity} label="Total Qty" unit={data.unit} />
+                <StatCol
+                  value={data.reserved_by_me}
+                  label="Reserved by me"
+                  unit={data.unit}
+                  valueColor={colors.orange}
+                  bg={colors.orangeLight}
+                />
+                <StatCol
+                  value={data.available_to_me}
+                  label="Available"
+                  unit={data.unit}
+                  valueColor={colors.green}
+                  bg={colors.greenLight}
+                />
+                <StatCol value={data.shared_with} label="Shared With" icon="people-outline" last />
               </View>
             </View>
-            <Text style={styles.sharedByHint}>
-              Reserve directly here - no need to call. Your network remains private.
+
+            {/* Price + remark */}
+            <Text style={styles.price}>
+              {money(data.display_currency, data.display_price)}
+              {data.display_price !== null ? <Text style={styles.priceUnit}> / {data.unit}</Text> : null}
             </Text>
-          </View>
+            {data.forward_remark ? (
+              <View style={styles.remark}>
+                <Text style={styles.remarkText}>{data.forward_remark}</Text>
+              </View>
+            ) : null}
 
-          {/* Price */}
-          <Text style={styles.price}>
-            {money(data.display_currency, data.display_price)}
-            {data.display_price !== null ? <Text style={styles.priceUnit}> / {data.unit}</Text> : null}
-          </Text>
+            {/* Stock location */}
+            {data.stock_location ? (
+              <View style={styles.locationRow}>
+                <Ionicons name="location-outline" size={16} color={colors.textSecondary} />
+                <Text style={styles.locationText}>
+                  <Text style={styles.locationLabel}>Stock Location: </Text>
+                  {data.stock_location}
+                </Text>
+              </View>
+            ) : null}
 
-          {data.forward_remark ? (
-            <View style={styles.remark}>
-              <Text style={styles.remarkText}>{data.forward_remark}</Text>
-            </View>
-          ) : null}
+            {/* Photos */}
+            {data.photoUrls.length > 0 ? (
+              <View style={styles.card}>
+                <View style={styles.cardTitleRow}>
+                  <Ionicons name="image-outline" size={16} color={colors.textPrimary} />
+                  <Text style={styles.cardTitle}>Photos ({data.photoUrls.length})</Text>
+                </View>
+                <View style={styles.photoGrid}>
+                  {data.photoUrls.map((url, i) => (
+                    <Pressable
+                      key={url}
+                      onPress={() => openLightbox(data.photoUrls, i)}
+                      style={webOnly({ cursor: 'pointer' })}
+                      accessibilityLabel={`View photo ${i + 1}`}
+                    >
+                      <Image source={{ uri: url }} style={styles.photo} resizeMode="cover" />
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            ) : null}
 
-          {/* 4-STAT ROW — one white card, columns split by a right border */}
-          <View style={styles.statCard}>
-            <StatCol value={data.quantity} label="Total Qty" />
-            <StatCol value={data.reserved_by_me} label="Reserved by me" valueColor="#F97316" />
-            <StatCol value={data.available_to_me} label="Available" valueColor="#16A34A" />
-            <StatCol value={data.shared_with} label="Shared With" last />
-          </View>
+            {/* Details */}
+            {data.description ? (
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>Details</Text>
+                <Text style={styles.detailsText}>{data.description}</Text>
+              </View>
+            ) : null}
 
-          {/* STOCK LOCATION */}
-          {data.stock_location ? (
-            <View style={styles.locationRow}>
-              <Ionicons name="location-outline" size={16} color={colors.textSecondary} />
-              <Text style={styles.locationText}>
-                <Text style={styles.locationLabel}>Stock Location: </Text>
-                {data.stock_location}
-              </Text>
-            </View>
-          ) : null}
-
-          {/* PHOTOS */}
-          {data.photoUrls.length > 0 ? (
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Photos ({data.photoUrls.length})</Text>
-              <View style={styles.photoGrid}>
-                {data.photoUrls.map((url, i) => (
+            {/* Packing list / spec sheets */}
+            {data.files.length > 0 ? (
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>📎 Packing List / Spec Sheets</Text>
+                {data.files.map((file) => (
                   <Pressable
-                    key={url}
-                    onPress={() => openLightbox(data.photoUrls, i)}
-                    style={webOnly({ cursor: 'pointer' })}
-                    accessibilityLabel={`View photo ${i + 1}`}
+                    key={file.url}
+                    style={styles.fileRow}
+                    onPress={() => Linking.openURL(file.url)}
+                    accessibilityLabel={`Open ${file.name}`}
                   >
-                    <Image source={{ uri: url }} style={styles.photo} resizeMode="cover" />
+                    <Ionicons name="document-text-outline" size={18} color={colors.textSecondary} />
+                    <Text style={styles.fileName} numberOfLines={1}>
+                      {file.name}
+                    </Text>
                   </Pressable>
                 ))}
               </View>
-            </View>
-          ) : null}
+            ) : null}
+          </View>
 
-          {/* DETAILS TEXT BLOCK */}
-          {data.description ? (
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Details</Text>
-              <Text style={styles.detailsText}>{data.description}</Text>
-            </View>
-          ) : null}
+          {/* SIDE PANEL — Shared By */}
+          <View style={styles.aside}>
+            <View style={styles.sharedPanel}>
+              <View style={styles.sharedHead}>
+                <View style={styles.sharedIcon}>
+                  <Ionicons name="person-outline" size={18} color={colors.accent} />
+                </View>
+                <Text style={styles.sharedTitle}>Shared By</Text>
+              </View>
 
-          {/* PACKING LIST / SPEC SHEETS */}
-          {data.files.length > 0 ? (
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>📎 Packing List / Spec Sheets</Text>
-              {data.files.map((file) => (
-                <Pressable
-                  key={file.url}
-                  style={styles.fileRow}
-                  onPress={() => Linking.openURL(file.url)}
-                  accessibilityLabel={`Open ${file.name}`}
-                >
-                  <Ionicons name="document-text-outline" size={18} color={colors.textSecondary} />
-                  <Text style={styles.fileName} numberOfLines={1}>
-                    {file.name}
-                  </Text>
-                </Pressable>
-              ))}
+              <Text style={styles.sharedLabel}>Company</Text>
+              <Text style={styles.sharedValue} numberOfLines={2}>
+                {data.shared_by_company ?? 'A vendor'}
+              </Text>
+
+              {data.contact_person ? (
+                <>
+                  <Text style={[styles.sharedLabel, styles.sharedLabelSpaced]}>Contact Person</Text>
+                  <Text style={styles.sharedValue}>{data.contact_person}</Text>
+                </>
+              ) : null}
+
+              {data.shared_by_email ? (
+                <View style={styles.contactRow}>
+                  <Pressable
+                    style={styles.contactBtn}
+                    onPress={() => Linking.openURL(`mailto:${data.shared_by_email}`)}
+                    accessibilityLabel="Email vendor"
+                  >
+                    <Ionicons name="mail-outline" size={16} color={colors.accent} />
+                  </Pressable>
+                </View>
+              ) : null}
             </View>
-          ) : null}
+          </View>
         </View>
       </PageBody>
 
@@ -307,49 +330,65 @@ function BackLink({ onPress }: { onPress: () => void }): React.JSX.Element {
 function StatCol({
   value,
   label,
+  unit,
   valueColor,
+  bg,
+  icon,
   last = false,
 }: {
   value: number;
   label: string;
+  unit?: string;
   valueColor?: string;
+  bg?: string;
+  icon?: React.ComponentProps<typeof Ionicons>['name'];
   last?: boolean;
 }): React.JSX.Element {
   return (
-    <View style={[styles.statCol, last ? null : styles.statColDivider]}>
-      <Text style={[styles.statVal, valueColor ? { color: valueColor } : null]}>{value.toLocaleString()}</Text>
+    <View style={[styles.statCol, bg ? { backgroundColor: bg } : null, last ? null : styles.statColDivider]}>
       <Text style={styles.statLabel}>{label}</Text>
+      <View style={styles.statValRow}>
+        <Text style={[styles.statVal, valueColor ? { color: valueColor } : null]}>{value.toLocaleString()}</Text>
+        {unit ? <Text style={styles.statUnit}>{unit}</Text> : null}
+        {icon ? <Ionicons name={icon} size={15} color={colors.accent} /> : null}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { width: '100%', maxWidth: 860, alignSelf: 'center' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
   errorText: { color: colors.red, fontSize: 14, fontWeight: '600', textAlign: 'center' },
 
-  back: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 8 },
+  back: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 16 },
   backText: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
 
-  // Page header (mirror `.ph`) with a multi-line title block.
-  header: {
+  // Two-column grid: main content + Shared By side panel (wraps on narrow screens).
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 20, alignItems: 'flex-start' },
+  main: { flexGrow: 1, flexBasis: 540, minWidth: 320 },
+  aside: { flexGrow: 1, flexBasis: 300, minWidth: 260 },
+
+  // Header card holding the title block, actions, and the stat bar.
+  headCard: {
+    backgroundColor: colors.bgWhite,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg, // 16
+    padding: 20,
+    marginBottom: 16,
+  },
+  headTop: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: 16,
-    paddingLeft: 28,
-    // Extra right padding so the action buttons clear the fixed notification bell.
-    paddingRight: 64,
-    paddingTop: 20,
-    paddingBottom: 16,
-    backgroundColor: colors.bgWhite,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    flexWrap: 'wrap',
+    marginBottom: 18,
   },
   titleBlock: { flexShrink: 1, minWidth: 0 },
   h1: { fontSize: 22, fontWeight: '700', color: colors.textPrimary },
   subRow: { fontSize: 12, color: colors.textMuted, marginTop: 4 },
-  privacy: { fontSize: 12, color: colors.textSecondary, fontStyle: 'italic', marginTop: 4, lineHeight: 17 },
+  privacy: { fontSize: 12, color: colors.textSecondary, fontStyle: 'italic', marginTop: 6, lineHeight: 17 },
 
   // Header actions
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 0 },
@@ -388,6 +427,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 16,
   },
+  cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
   cardTitle: {
     fontSize: 13,
     fontWeight: '700',
@@ -396,15 +436,6 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginBottom: 14,
   },
-
-  // Shared By
-  sharedByRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  avatar: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { color: colors.bgWhite, fontSize: 15, fontWeight: '700' },
-  sharedByInfo: { flex: 1, minWidth: 0 },
-  companyName: { fontSize: 13, fontWeight: '700', color: colors.textPrimary },
-  companyMeta: { fontSize: 12, color: colors.textMuted, marginTop: 1 },
-  sharedByHint: { fontSize: 12, color: colors.accent, fontStyle: 'italic', marginTop: 12 },
 
   // Price
   price: { fontSize: 20, fontWeight: '800', color: colors.accent, marginBottom: 4 },
@@ -416,7 +447,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     padding: 12,
     marginTop: 8,
-    marginBottom: 4,
+    marginBottom: 16,
   },
   remarkText: { fontSize: 13, color: colors.amber },
 
@@ -428,20 +459,20 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: radius.lg, // 16
     overflow: 'hidden',
-    marginTop: 14,
-    marginBottom: 16,
   },
-  statCol: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 18, paddingHorizontal: 6 },
+  statCol: { flex: 1, justifyContent: 'center', paddingVertical: 16, paddingHorizontal: 12 },
   statColDivider: { borderRightWidth: 1, borderRightColor: colors.border }, // #E2E8F0
-  statVal: { fontSize: 20, fontWeight: '800', color: colors.primary },
   statLabel: {
-    fontSize: 11,
+    fontSize: 10,
+    fontWeight: '600',
     color: colors.textMuted, // #94A3B8
     textTransform: 'uppercase',
     letterSpacing: 0.3,
-    marginTop: 4,
-    textAlign: 'center',
+    marginBottom: 6,
   },
+  statValRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 4 },
+  statVal: { fontSize: 20, fontWeight: '800', color: colors.primary },
+  statUnit: { fontSize: 12, color: colors.textMuted, marginBottom: 2 },
 
   // Stock location
   locationRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 16 },
@@ -449,8 +480,8 @@ const styles = StyleSheet.create({
   locationLabel: { fontWeight: '700' },
 
   // Photos
-  photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  photo: { width: 92, height: 92, borderRadius: radius.md, backgroundColor: colors.bgChip },
+  photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  photo: { width: 200, height: 150, borderRadius: radius.md, backgroundColor: colors.bgChip },
 
   // Details text block
   detailsText: { fontSize: 13, color: colors.textSecondary, lineHeight: 22 },
@@ -467,4 +498,45 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   fileName: { flex: 1, fontSize: 13, color: colors.textPrimary },
+
+  // Shared By side panel (light blue).
+  sharedPanel: {
+    backgroundColor: colors.accentLight, // #EFF6FF
+    borderWidth: 1,
+    borderColor: colors.accentMid, // #DBEAFE
+    borderRadius: radius.lg,
+    padding: 20,
+  },
+  sharedHead: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 },
+  sharedIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: colors.accentMid,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sharedTitle: { fontSize: 16, fontWeight: '700', color: colors.textPrimary },
+  sharedLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.accent,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+    marginBottom: 4,
+  },
+  sharedLabelSpaced: { marginTop: 16 },
+  sharedValue: { fontSize: 15, fontWeight: '700', color: colors.textPrimary },
+  contactRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 18 },
+  contactBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: colors.bgWhite,
+    borderWidth: 1,
+    borderColor: colors.accentMid,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...webOnly({ cursor: 'pointer' }),
+  },
 });

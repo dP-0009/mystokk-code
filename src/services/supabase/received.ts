@@ -1,5 +1,5 @@
 import { supabase } from './client';
-import { photoDetailUrl, photoThumbUrl } from './storage';
+import { photoThumbUrl, toFullUrl } from './storage';
 
 /**
  * Received shares service (privacy chain — Spec §6.1 / §7.2).
@@ -63,6 +63,7 @@ export interface ReceivedShareDetail {
   product_code: string | null;
   stock_location: string | null;
   contact_person: string | null;
+  shared_by_email: string | null;
   shared_with: number;
   /** Signed thumbnail URLs (owner's photos, readable via the recipient-read policy). */
   photoUrls: string[];
@@ -106,9 +107,10 @@ export async function getReceivedShareDetail(shareId: string): Promise<ReceivedS
   if (!row) throw new Error('Shared item not found or no longer available.');
   const { photos, files: rawFiles, ...scalars } = row;
 
-  // Public-read photos bucket → resized public URLs (800px/q80), no signing.
+  // Public-read photos bucket → plain public object URLs (no image-transform CDN,
+  // which is a paid add-on and 404s when disabled). Guarantees the lightbox loads.
   const photoPaths = photos ?? [];
-  const photoUrls: string[] = photoPaths.map((p) => photoDetailUrl(p));
+  const photoUrls: string[] = photoPaths.map((p) => toFullUrl(p)).filter(Boolean);
 
   // Sign the packing-list / spec-sheet documents, keeping their display names.
   const fileRows = rawFiles ?? [];

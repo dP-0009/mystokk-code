@@ -268,12 +268,12 @@ const styles = StyleSheet.create({
   },
   textarea: { minHeight: 80, ...webOnly({ resize: 'vertical' }) },
 
-  // Quantity — large input + stepper, dark emphasized border
+  // Quantity — large input + stepper, soft border (no black box).
   qtyWrap: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: colors.primary,
+    borderColor: colors.border, // #E2E8F0 — was near-black, which read as an ugly outline box
     borderRadius: radius.md,
     backgroundColor: colors.bgWhite,
     paddingLeft: 14,
