@@ -33,9 +33,10 @@ type InventoryCardProps = {
 };
 
 /**
- * Inventory grid card (mirror `.ic`): thumbnail + info block, with share/menu
- * quick-actions pinned top-right. Lifts on hover (web). The ⋮ button opens a
- * View / Edit / Share / Delete context menu (mirror `.ddm`).
+ * My Inventory grid card: a [thumbnail | info] top row, a divider, then a footer
+ * with the time-ago (+ pending badge) on the left and the share / ⋮ quick-action
+ * buttons on the right. Lifts on hover (web). The ⋮ button opens a
+ * View / Edit / Share / Delete context menu. Rendered in a responsive grid.
  */
 export function InventoryCard({
   item,
@@ -71,57 +72,70 @@ export function InventoryCard({
       onHoverOut={() => setHovered(false)}
       style={[styles.card, hovered ? styles.cardHover : null, menuOpen ? styles.cardElevated : null]}
     >
-      {/* `.ith` thumbnail */}
-      <ProductImage
-        uri={item.thumbUrl}
-        width={72}
-        height={72}
-        borderRadius={radius.md}
-        fallback={<Ionicons name="cube-outline" size={26} color={colors.textMuted} />}
-      />
+      {/* Top: thumbnail + info */}
+      <View style={styles.top}>
+        <ProductImage
+          uri={item.thumbUrl}
+          width={84}
+          height={84}
+          borderRadius={radius.md}
+          fallback={<Ionicons name="cube-outline" size={28} color={colors.textMuted} />}
+        />
 
-      {/* `.ii` info block */}
-      <View style={styles.info}>
-        <Text style={styles.name} numberOfLines={1}>
-          {item.title}
-        </Text>
-        <Text style={styles.code} numberOfLines={1}>
-          {item.product_code ?? '—'} | {item.category ?? 'General'}
-        </Text>
-        {price ? (
-          <Text style={styles.price} numberOfLines={1}>
-            {price}
+        <View style={styles.info}>
+          <Text style={styles.name} numberOfLines={1}>
+            {item.title}
           </Text>
-        ) : (
-          <Text style={styles.priceEmpty}>—</Text>
-        )}
-        <Text style={styles.qty} numberOfLines={1}>
-          {item.quantity_available}/{item.quantity} {item.unit}
-        </Text>
-        {item.pending_count > 0 ? (
-          <View style={styles.pendingBadge}>
-            <Text style={styles.pendingText}>⚠ {item.pending_count} pending</Text>
-          </View>
-        ) : null}
-        <Text style={styles.time}>🕐 {daysAgo(item.created_at)}</Text>
+          <Text style={styles.code} numberOfLines={1}>
+            {item.product_code ?? '—'} | {item.category ?? 'General'}
+          </Text>
+          {price ? (
+            <Text style={styles.price} numberOfLines={1}>
+              {price}
+            </Text>
+          ) : (
+            <Text style={styles.priceEmpty}>—</Text>
+          )}
+          <Text style={styles.qty} numberOfLines={1}>
+            <Text style={styles.qtyAvail}>{item.quantity_available}</Text>
+            <Text style={styles.qtyMuted}>
+              /{item.quantity} {item.unit}
+            </Text>
+          </Text>
+        </View>
       </View>
 
-      {/* `.ia` quick actions — share opens the modal (no navigation), ⋮ opens the menu. */}
-      <View style={styles.actions}>
-        {onShare ? <ActionButton icon="share-social-outline" onPress={onShare} /> : null}
-        {hasMenu ? (
-          <View ref={anchorRef} style={styles.menuAnchor}>
-            <ActionButton icon="ellipsis-vertical" onPress={onMenuToggle} testID={`inv-menu-${item.inventory_id}`} />
-            <ContextMenu visible={menuOpen} items={menuItems} onClose={() => onMenuClose?.()} anchorRef={anchorRef} />
+      {/* Divider + footer: time-ago (+ pending) left, quick actions right */}
+      <View style={styles.divider} />
+      <View style={styles.footer}>
+        <View style={styles.footerLeft}>
+          <View style={styles.timeWrap}>
+            <Ionicons name="time-outline" size={12} color={colors.textMuted} />
+            <Text style={styles.time}>{daysAgo(item.created_at)}</Text>
           </View>
-        ) : null}
+          {item.pending_count > 0 ? (
+            <View style={styles.pendingBadge}>
+              <Text style={styles.pendingText}>⚠ {item.pending_count} pending</Text>
+            </View>
+          ) : null}
+        </View>
+
+        <View style={styles.actions}>
+          {onShare ? <ActionButton icon="share-social-outline" onPress={onShare} /> : null}
+          {hasMenu ? (
+            <View ref={anchorRef} style={styles.menuAnchor}>
+              <ActionButton icon="ellipsis-vertical" onPress={onMenuToggle} testID={`inv-menu-${item.inventory_id}`} />
+              <ContextMenu visible={menuOpen} items={menuItems} onClose={() => onMenuClose?.()} anchorRef={anchorRef} />
+            </View>
+          ) : null}
+        </View>
       </View>
     </Pressable>
   );
 }
 
 /**
- * `.ib` quick-action button — 30×30, 6px radius, #E2E8F0 border, white fill,
+ * Quick-action button — 30×30, 6px radius, #E2E8F0 border, white fill,
  * #475569 glyph. Lights up to #F8FAFC on hover (web).
  */
 function ActionButton({
@@ -149,11 +163,11 @@ function ActionButton({
 }
 
 const styles = StyleSheet.create({
-  // `.ic` — horizontal row: [thumb 72] [info flex-1] [share] [3-dot]
   card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
+    // Grid item — ~3 across on desktop, wraps to 2 / 1 as width shrinks.
+    flexGrow: 1,
+    flexBasis: '31%',
+    minWidth: 300,
     backgroundColor: colors.bgWhite,
     borderWidth: 1,
     borderColor: colors.border, // #E2E8F0
@@ -161,7 +175,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
   },
-  // `.ic:hover` — box-shadow 0 4px 12px rgba(0,0,0,0.10) + border-color #CBD5E1
+  // hover — box-shadow 0 4px 12px rgba(0,0,0,0.10) + border-color #CBD5E1
   cardHover: {
     borderColor: colors.borderDark, // #CBD5E1
     shadowColor: '#000',
@@ -172,48 +186,38 @@ const styles = StyleSheet.create({
   },
   // Lift above sibling cards while its menu is open so the dropdown isn't clipped.
   cardElevated: { zIndex: 50 },
-  // `.ith`
-  thumb: {
-    width: 72,
-    height: 72,
-    borderRadius: radius.md,
-    backgroundColor: colors.bgChip,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-    flexShrink: 0,
-  },
-  thumbImg: { width: '100%', height: '100%' },
-  // `.ii`
+
+  top: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+
   info: { flex: 1, minWidth: 0 },
-  // `.iname`
   name: { fontSize: 14, fontWeight: '700', color: colors.textPrimary, marginBottom: 3 },
-  // `.icode`
   code: { fontSize: 11, color: colors.textMuted, marginBottom: 6 },
-  // `.iprice`
-  price: { fontSize: 13, fontWeight: '700', color: colors.accent, marginBottom: 3 },
-  priceEmpty: { fontSize: 13, fontWeight: '700', color: colors.textMuted, marginBottom: 3 },
-  // `.iqty`
-  qty: { fontSize: 12, color: colors.textSecondary },
-  // `.pb-badge`
+  price: { fontSize: 14, fontWeight: '700', color: colors.green, marginBottom: 3 },
+  priceEmpty: { fontSize: 14, fontWeight: '700', color: colors.textMuted, marginBottom: 3 },
+  qty: { fontSize: 12 },
+  qtyAvail: { color: colors.textPrimary, fontWeight: '700' },
+  qtyMuted: { color: colors.textMuted },
+
+  divider: { height: 1, backgroundColor: colors.border, marginTop: 12, marginBottom: 10 },
+
+  footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  footerLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1, minWidth: 0 },
+  timeWrap: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  time: { fontSize: 11, color: colors.textMuted },
+  // pending pill — #FFF7ED bg / #F97316 text
   pendingBadge: {
-    alignSelf: 'flex-start',
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.orangeLight,
     borderRadius: 20,
     paddingVertical: 2,
     paddingHorizontal: 8,
-    marginTop: 4,
   },
   pendingText: { fontSize: 11, fontWeight: '600', color: colors.orange },
-  // `.itime`
-  time: { fontSize: 11, color: colors.textMuted, marginTop: 6 },
-  // `.ia` — inline at the end of the row.
+
   actions: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 0, zIndex: 20 },
   // Relative wrapper so the dropdown anchors to the ⋮ button (top:100%, right:0).
   menuAnchor: { position: 'relative', zIndex: 1000 },
-  // `.ib`
   actionBtn: {
     width: 30,
     height: 30,
@@ -224,6 +228,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // `.ib:hover` — background #F8FAFC
+  // hover — background #F8FAFC
   actionBtnHover: { backgroundColor: colors.bgPage },
 });

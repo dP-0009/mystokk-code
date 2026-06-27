@@ -292,5 +292,6 @@ const styles = StyleSheet.create({
   optionTextActive: { color: colors.accent, fontWeight: '600' },
 
   // Full-width single-column card list.
-  list: { gap: 10 },
+  // Responsive multi-column grid — cards wrap ~3 across on desktop, 2 / 1 narrower.
+  list: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
 });

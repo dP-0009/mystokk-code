@@ -126,8 +126,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgWhite,
   },
 
-  // Single-column vertical stack, 10px between cards (mirror My Inventory).
-  list: { gap: 10 },
+  // Responsive multi-column grid — cards wrap and fill ~3 across on desktop,
+  // collapsing to 2 / 1 as the viewport narrows (min card width 320).
+  list: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
 
   center: { alignItems: 'center', justifyContent: 'center', paddingVertical: 80 },
   errorText: { color: colors.red, fontSize: 14, fontWeight: '600', textAlign: 'center' },
