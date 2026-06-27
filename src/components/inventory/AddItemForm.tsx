@@ -2,6 +2,7 @@ import React, { useState, type ReactNode } from 'react';
 import {
   Image,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -481,32 +482,57 @@ function Select({
         <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={15} color={colors.textMuted} />
       </Pressable>
       {open ? (
-        <View style={styles.dropdown}>
-          {options.length === 0 ? (
-            <View style={styles.option}>
-              <Text style={styles.selectPlaceholder}>No options</Text>
-            </View>
-          ) : (
-            options.map((opt) => {
-              const active = opt === value;
-              return (
-                <Pressable
-                  key={opt}
-                  style={styles.option}
-                  onPress={() => {
-                    onChange(opt);
-                    setOpen(false);
-                  }}
-                >
-                  <Text style={[styles.optionText, active ? styles.optionTextActive : null]}>{opt}</Text>
-                  {active ? <Ionicons name="checkmark" size={15} color={colors.accent} /> : null}
-                </Pressable>
-              );
-            })
-          )}
-        </View>
+        <>
+          {/* Invisible full-screen catcher so a click anywhere else closes the menu. */}
+          <Pressable style={styles.outside} onPress={() => setOpen(false)} />
+          <View style={styles.dropdown}>
+            {options.length === 0 ? (
+              <View style={styles.option}>
+                <Text style={styles.selectPlaceholder}>No options</Text>
+              </View>
+            ) : (
+              <ScrollView style={styles.dropdownScroll} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
+                {options.map((opt) => (
+                  <SelectOption
+                    key={opt}
+                    label={opt}
+                    active={opt === value}
+                    onPress={() => {
+                      onChange(opt);
+                      setOpen(false);
+                    }}
+                  />
+                ))}
+              </ScrollView>
+            )}
+          </View>
+        </>
       ) : null}
     </View>
+  );
+}
+
+/** One option row in the Select dropdown — highlights on hover (web). */
+function SelectOption({
+  label,
+  active,
+  onPress,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+}): React.JSX.Element {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <Pressable
+      style={[styles.option, hovered ? styles.optionHover : null, active ? styles.optionActive : null]}
+      onPress={onPress}
+      onHoverIn={() => setHovered(true)}
+      onHoverOut={() => setHovered(false)}
+    >
+      <Text style={[styles.optionText, active ? styles.optionTextActive : null]}>{label}</Text>
+      {active ? <Ionicons name="checkmark" size={15} color={colors.accent} /> : null}
+    </Pressable>
   );
 }
 
@@ -599,31 +625,47 @@ const styles = StyleSheet.create({
   selectTrigger: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   selectValue: { fontSize: 13, color: colors.textPrimary, flexShrink: 1 },
   selectPlaceholder: { fontSize: 13, color: colors.textMuted, flexShrink: 1 },
+  // Full-screen transparent catcher behind the open panel (outside-click close).
+  outside: {
+    position: 'absolute',
+    top: -2000,
+    bottom: -2000,
+    left: -2000,
+    right: -2000,
+    zIndex: 9998,
+    ...webOnly({ cursor: 'default' }),
+  },
+  // Floating panel — clean rounded card like the context menu (screenshot d):
+  // soft shadow, hairline border, clipped corners, no always-on scrollbars.
   dropdown: {
     position: 'absolute',
     top: '100%',
     left: 0,
     right: 0,
-    marginTop: 4,
-    maxHeight: 240,
+    marginTop: 6,
     backgroundColor: colors.bgWhite,
     borderWidth: 1,
     borderColor: colors.border, // #E2E8F0
-    borderRadius: radius.md, // 10
-    paddingVertical: 4,
-    // Explicit-height scrollable list — keeps its own scroll, but floats over
-    // (z-index 9999) and is never clipped by the section card below it.
-    overflow: 'scroll',
+    borderRadius: 14,
+    paddingVertical: 6,
+    overflow: 'hidden', // clip option rows to the rounded corners
     zIndex: 9999,
     ...shadows.dropdown,
   },
+  // The scroll lives inside the clipped panel — vertical only, appears only when
+  // the list is taller than 240px (no horizontal scrollbar, no arrow buttons).
+  dropdownScroll: { maxHeight: 240 },
   option: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: 9,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
+    marginHorizontal: 4,
+    borderRadius: 8,
   },
+  optionHover: { backgroundColor: colors.bgChip }, // #F1F5F9
+  optionActive: { backgroundColor: colors.accentLight }, // #EFF6FF
   optionText: { fontSize: 13, color: colors.textSecondary },
   optionTextActive: { color: colors.accent, fontWeight: '600' },
 
