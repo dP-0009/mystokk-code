@@ -109,24 +109,25 @@ function buildTitle(share: PublicShare | null): string {
 }
 
 /** No product photo on the item → branded placeholder card. */
-const FALLBACK_OG_IMAGE = 'https://placehold.co/1200x630/1e293b/ffffff?text=MyStokk+Stock+Update';
+const FALLBACK_OG_IMAGE = 'https://placehold.co/600x600/1e293b/ffffff?text=MyStokk';
 
 /**
  * og:image is the item's FIRST product photo. The inventory-photos bucket is
  * public-read (migration 032), so we point straight at Supabase's native image
- * transformation CDN (`/render/image/public`), which returns an exact 1200x630
+ * transformation CDN (`/render/image/public`), which returns a 600x600 square
  * cover-cropped JPEG with a correct Content-Length, served from the edge.
  *
- * This deliberately bypasses our own /api/public-files Python shim: that
- * function cold-starts slowly (PIL import + fetch + resize), and WhatsApp's
- * image fetch times out on a cold start and then caches a no-thumbnail preview.
- * Supabase's CDN-cached transform responds fast every time. No photo →
- * branded placeholder.
+ * A square image renders as the compact left-thumbnail preview on WhatsApp
+ * (rather than a full-width banner) — the small preview we want. It also
+ * deliberately bypasses our own /api/public-files Python shim: that function
+ * cold-starts slowly (PIL import + fetch + resize) and WhatsApp's image fetch
+ * times out on a cold start, then caches a no-thumbnail preview. Supabase's
+ * CDN-cached transform responds fast every time. No photo → branded placeholder.
  */
 function resolveOgImage(share: PublicShare | null): string {
   if (!share?.first_photo_path) return FALLBACK_OG_IMAGE;
   const path = share.first_photo_path.split('/').map(encodeURIComponent).join('/');
-  return `${SUPABASE_URL}/storage/v1/render/image/public/${PHOTO_BUCKET}/${path}?width=1200&height=630&resize=cover`;
+  return `${SUPABASE_URL}/storage/v1/render/image/public/${PHOTO_BUCKET}/${path}?width=600&height=600&resize=cover`;
 }
 
 function renderOgHtml(share: PublicShare | null, canonical: string, imageUrl: string): string {
@@ -146,11 +147,11 @@ function renderOgHtml(share: PublicShare | null, canonical: string, imageUrl: st
 <meta property="og:title" content="${title}" />
 <meta property="og:description" content="${description}" />
 <meta property="og:image" content="${image}" />
-<meta property="og:image:width" content="1200" />
-<meta property="og:image:height" content="630" />
+<meta property="og:image:width" content="600" />
+<meta property="og:image:height" content="600" />
 <meta property="og:url" content="${url}" />
 <meta property="og:site_name" content="MyStokk" />
-<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:card" content="summary" />
 <meta name="twitter:title" content="${title}" />
 <meta name="twitter:description" content="${description}" />
 <meta name="twitter:image" content="${image}" />
