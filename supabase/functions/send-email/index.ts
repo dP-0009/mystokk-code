@@ -36,7 +36,9 @@ const json = (body: unknown, status = 200): Response =>
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 
-const SHARE_BASE = Deno.env.get('PUBLIC_SHARE_BASE_URL') ?? 'https://mystokk.vercel.app';
+// Hardcoded on purpose: a stale PUBLIC_SHARE_BASE_URL secret (= app.mystokk.com)
+// was overriding the default, so links kept opening the wrong domain. Pin it here.
+const SHARE_BASE = 'https://mystokk.vercel.app';
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL') ?? '',

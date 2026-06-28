@@ -161,9 +161,12 @@ export function buildShareEmail(params: ShareEmailParams): EmailContent {
   const safeTitle = escapeHtml(productTitle);
   const safeCompany = escapeHtml(senderCompany);
 
+  // Small, neat thumbnail — capped height keeps tall/portrait photos from
+  // dominating the email while staying clearly visible. width/height stay auto
+  // so the aspect ratio is preserved across email clients.
   const photoBlock =
     photoUrl !== null
-      ? `<img src="${photoUrl}" alt="${safeTitle}" width="424" style="width:100%;max-width:424px;height:auto;border-radius:10px;border:1px solid ${BRAND.slate200};margin-bottom:16px;" />`
+      ? `<img src="${photoUrl}" alt="${safeTitle}" style="display:block;max-width:200px;max-height:200px;width:auto;height:auto;border-radius:10px;border:1px solid ${BRAND.slate200};margin-bottom:16px;" />`
       : '';
 
   const locationBlock = stockLocation
