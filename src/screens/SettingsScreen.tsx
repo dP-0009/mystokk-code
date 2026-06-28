@@ -11,6 +11,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useForm } from 'react-hook-form';
 import * as ImagePicker from 'expo-image-picker';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -62,6 +63,9 @@ function profileFingerprint(v: VendorProfile): string {
 
 export function SettingsScreen({ navigation: _navigation }: Props): React.JSX.Element {
   const signOut = useAuthStore((s) => s.signOut);
+  const session = useAuthStore((s) => s.session);
+  const accountEmail = session?.user?.email ?? '—';
+  const emailVerified = Boolean(session?.user?.email_confirmed_at);
 
   // FIX 6 — always reload the SAVED profile from the DB on mount/focus, and
   // remount the form so it resets to those values (no stale cache, no leftover
@@ -127,6 +131,36 @@ export function SettingsScreen({ navigation: _navigation }: Props): React.JSX.El
       <PageHeader title="Settings" subtitle="Manage your account and company profile" />
 
       <PageBody contentContainerStyle={styles.column}>
+        {/* Account — read-only email / role / verification (no "Hi …" greeting) */}
+        <View style={styles.accountCard}>
+          <View style={styles.accountHeader}>
+            <Ionicons name="person-outline" size={16} color={colors.textPrimary} />
+            <Text style={styles.accountTitle}>Account</Text>
+          </View>
+          <Text style={styles.roLabel}>Email</Text>
+          <View style={styles.roField}>
+            <Text style={styles.roText} numberOfLines={1}>
+              {accountEmail}
+            </Text>
+          </View>
+          <View style={styles.accountRow}>
+            <View style={styles.accountCol}>
+              <Text style={styles.roLabel}>Role</Text>
+              <View style={styles.roField}>
+                <Text style={styles.roText}>Vendor</Text>
+              </View>
+            </View>
+            <View style={styles.accountCol}>
+              <Text style={styles.roLabel}>Email Verified</Text>
+              <View style={styles.roField}>
+                <Text style={[styles.roText, emailVerified ? styles.roVerified : null]}>
+                  {emailVerified ? 'Yes' : 'No'}
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
         {/* Company Profile */}
         <Text style={styles.sectionTitle}>Company Profile</Text>
         {isLoading || !vendor ? (
@@ -472,6 +506,31 @@ const styles = StyleSheet.create({
   },
   cardPadded: { padding: 20 },
   center: { alignItems: 'center', justifyContent: 'center', paddingVertical: 40 },
+
+  // Account card (read-only email / role / verification)
+  accountCard: {
+    backgroundColor: colors.bgWhite,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    padding: 20,
+    marginBottom: 28,
+  },
+  accountHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
+  accountTitle: { fontSize: 15, fontWeight: '700', color: colors.textPrimary },
+  accountRow: { flexDirection: 'row', gap: 16, marginTop: 14 },
+  accountCol: { flex: 1, minWidth: 0 },
+  roLabel: { fontSize: 12, fontWeight: '700', color: colors.textSecondary, marginBottom: 6 },
+  roField: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    backgroundColor: colors.bgPage,
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+  },
+  roText: { fontSize: 13, color: colors.textMuted },
+  roVerified: { color: colors.green, fontWeight: '700' },
 
   // Form
   formLabel: {

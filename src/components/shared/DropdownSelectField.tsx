@@ -119,6 +119,7 @@ function Option({
       <Text style={[styles.optionText, selected ? styles.optionTextSelected : null]} numberOfLines={1}>
         {label}
       </Text>
+      {selected ? <Ionicons name="checkmark" size={16} color={colors.accent} /> : null}
     </Pressable>
   );
 }
@@ -173,7 +174,15 @@ const styles = StyleSheet.create({
     elevation: 12,
   },
   panelScroll: { maxHeight: 280 },
-  option: { paddingVertical: 10, paddingHorizontal: 16, ...webOnly({ cursor: 'pointer' }) },
+  option: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    ...webOnly({ cursor: 'pointer' }),
+  },
   optionHover: { backgroundColor: colors.bgChip }, // #F1F5F9
   optionSelected: { backgroundColor: colors.accentLight }, // #EFF6FF
   optionText: { fontSize: 13, color: colors.textPrimary },

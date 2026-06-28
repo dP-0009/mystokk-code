@@ -74,21 +74,19 @@ export const INVENTORY_INDUSTRIES: readonly string[] = Object.keys(INVENTORY_IND
  * was truncated for that industry, so adjust if the intended list differs.
  */
 export const SETTINGS_INDUSTRY_CATEGORIES: Record<string, readonly string[]> = {
-  'Timber & Wood Products': ['Hardwood', 'Softwood', 'Plywood', 'MDF', 'Veneer', 'Engineered Wood', 'Lumber', 'Particleboard', 'OSB', 'Bamboo'],
-  'Electronics & Technology': ['Consumer Electronics', 'Components', 'Semiconductors', 'Accessories', 'Cables & Connectors', 'Displays', 'PCBs', 'Industrial Electronics'],
-  'Textiles & Apparel': ['Fabric', 'Garments', 'Raw Fiber', 'Home Textiles', 'Yarn', 'Leather', 'Denim', 'Synthetic Fiber', 'Uniforms', 'Sportswear'],
-  'Metals & Minerals': ['Steel', 'Aluminum', 'Copper', 'Iron', 'Alloys', 'Scrap Metal', 'Gold', 'Silver', 'Zinc', 'Nickel', 'Titanium'],
-  'Chemicals & Petrochemicals': ['Industrial Chemicals', 'Agricultural Chemicals', 'Pharmaceutical', 'Cleaning Products', 'Polymers', 'Adhesives', 'Paints & Coatings'],
-  'Food & Agriculture': ['Grains', 'Spices', 'Oils', 'Perishables', 'Dairy', 'Frozen Foods', 'Seeds & Plants', 'Coffee & Tea', 'Sugar', 'Pulses'],
-  'Automotive & Transportation': ['Cars', 'Trucks & HGVs', 'Auto Parts', 'Tires', 'Lubricants', 'Motorcycles', 'Marine Vessels', 'Aerospace Components'],
-  'Consumer Goods': ['Luggage & Bags', 'Toys & Games', 'Kitchenware', 'Furniture', 'Home Decor', 'Sports Equipment', 'Personal Care', 'Packaging', 'Household Products', 'Stationery', 'Cleaning Supplies'],
-  'Construction & Real Estate': ['Cement', 'Steel Structures', 'Glass', 'Tiles', 'Pipes & Fittings', 'Fixtures', 'Insulation', 'Roofing', 'Flooring', 'Bricks'],
-  'Energy & Resources': ['Crude Oil', 'Natural Gas', 'Coal', 'Solar Panels', 'Wind Components', 'Batteries', 'Generators', 'Fuel'],
-  'Healthcare & Pharmaceuticals': ['Medicines', 'Medical Devices', 'Surgical Equipment', 'Lab Supplies', 'PPE', 'Supplements', 'Diagnostics'],
-  'Plastics & Rubber': ['Raw Polymers', 'Packaging Materials', 'Industrial Rubber', 'PVC', 'Silicone', 'Foam'],
-  'Paper & Printing': ['Paper Rolls', 'Cardboard', 'Printing Ink', 'Packaging Paper', 'Labels'],
-  'Agriculture Equipment': ['Tractors', 'Irrigation', 'Seeds', 'Fertilizers', 'Pesticides', 'Tools'],
-  Other: ['General Merchandise', 'Mixed Goods', 'Not Listed'],
+  'Agriculture & Food': ['Grains & Cereals', 'Fruits & Vegetables', 'Dairy Products', 'Meat & Poultry', 'Seafood', 'Beverages', 'Edible Oils', 'Spices & Condiments', 'Processed Foods', 'Animal Feed', 'Others'],
+  'Textiles & Apparel': ['Fabrics', 'Yarn & Thread', 'Garments', 'Home Textiles', 'Footwear', 'Leather Goods', 'Apparel Accessories', 'Raw Fiber', 'Technical Textiles', 'Workwear', 'Others'],
+  'Chemicals & Petrochemicals': ['Industrial Chemicals', 'Specialty Chemicals', 'Polymers & Plastics', 'Fertilizers', 'Paints & Coatings', 'Adhesives', 'Lubricants', 'Pharmaceutical Ingredients', 'Agrochemicals', 'Dyes & Pigments', 'Others'],
+  'Metals & Mining': ['Steel', 'Aluminum', 'Copper', 'Iron Ore', 'Precious Metals', 'Scrap Metal', 'Minerals', 'Alloys', 'Metal Sheets', 'Pipes & Tubes', 'Others'],
+  'Electronics & Technology': ['Consumer Electronics', 'Components', 'Semiconductors', 'Computers & IT Hardware', 'Mobile & Accessories', 'Networking Equipment', 'Displays', 'Cables & Connectors', 'Industrial Electronics', 'Audio & Video', 'Others'],
+  'Machinery & Equipment': ['Industrial Machinery', 'Construction Equipment', 'Agricultural Machinery', 'Machine Tools', 'Pumps & Valves', 'Generators', 'Material Handling', 'CNC Machines', 'Packaging Machinery', 'Spare Parts', 'Others'],
+  Automotive: ['Vehicles', 'Auto Parts', 'Tires & Rubber', 'Automotive Electronics', 'Engine Components', 'Body Parts', 'Interior Components', 'Lubricants & Fluids', 'Tools & Equipment', 'Electric Vehicle Parts', 'Others'],
+  'Construction & Building Materials': ['Cement & Concrete', 'Steel & Rebar', 'Glass', 'Ceramics & Tiles', 'Wood & Timber', 'Roofing Materials', 'Insulation', 'Plumbing Supplies', 'Electrical Supplies', 'Prefabricated Structures', 'Others'],
+  'Energy & Utilities': ['Oil & Gas', 'Coal', 'Renewable Energy Equipment', 'Power Equipment', 'Energy Storage', 'Smart Grid Components', 'Solar Panels', 'Wind Turbines', 'Transformers', 'Meters & Instruments', 'Others'],
+  'Healthcare & Pharmaceuticals': ['Medicines', 'Medical Devices', 'Diagnostic Equipment', 'Hospital Supplies', 'Personal Protective Equipment', 'Laboratory Equipment', 'Nutraceuticals', 'Veterinary Products', 'Surgical Instruments', 'Healthcare IT', 'Others'],
+  'Consumer Goods': ['Personal Care', 'Household Products', 'Packaging', 'Stationery', 'Toys & Games', 'Sports Equipment', 'Luggage & Bags', 'Kitchenware', 'Furniture', 'Home Decor', 'Others'],
+  'Logistics & Packaging': ['Packaging Materials', 'Pallets & Containers', 'Warehouse Equipment', 'Shipping Supplies', 'Labels & Tags', 'Stretch Film', 'Corrugated Boxes', 'Protective Packaging', 'Cold Chain Equipment', 'Tracking Systems', 'Others'],
+  Others: ['General Trade', 'Multi-Industry', 'Miscellaneous', 'Others'],
 };
 
 /** Settings Industry picker options (keys of the category mapping). */
