@@ -91,13 +91,12 @@ function escapeHtml(value: string): string {
     .replace(/'/g, '&#39;');
 }
 
-/** "{qty} {unit} from {company} • {city}, {country} • Powered by MyStokk" — parts omitted when absent. Never includes price. */
+/** "{company} • {city} • {country} • Powered by MyStokk" — parts omitted when absent. Never includes price. */
 function buildDescription(share: PublicShare | null): string {
   if (!share) return 'View this shared item on MyStokk.';
-  const qty = `${share.quantity.toLocaleString('en-US')} ${share.unit}`.trim();
-  const fromCompany = share.shared_by_company ? `${qty} from ${share.shared_by_company}` : qty;
-  const location = [share.shared_by_city, share.shared_by_country].filter(Boolean).join(', ');
-  return [fromCompany, location, 'Powered by MyStokk'].filter(Boolean).join(' • ');
+  return [share.shared_by_company, share.shared_by_city, share.shared_by_country, 'Powered by MyStokk']
+    .filter(Boolean)
+    .join(' • ');
 }
 
 /**

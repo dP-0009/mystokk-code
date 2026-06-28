@@ -21,7 +21,10 @@ export const SHARE_BASE = (
 ).replace(/\/+$/, '');
 
 export function shareUrl(token: string): string {
-  return `${SHARE_BASE}/share/${token}`;
+  // Point straight at the OG endpoint so social crawlers (WhatsApp, etc.) always
+  // get the rich preview + image; the endpoint 302-redirects humans to the SPA
+  // share landing. This is more reliable than relying on a user-agent rewrite.
+  return `${SHARE_BASE}/api/share/${token}`;
 }
 
 export interface PublicShare {
