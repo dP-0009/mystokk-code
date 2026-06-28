@@ -101,12 +101,14 @@ export function MainLayout({ active, children }: MainLayoutProps): React.JSX.Ele
           setProfileOpen(false);
           navigation.navigate('Settings');
         }}
+        onNotifications={() => {
+          setProfileOpen(false);
+          navigation.navigate('Notifications');
+        }}
         onLogout={() => {
           setProfileOpen(false);
           void signOut();
         }}
-        fallbackName={data?.vendor.companyName ?? undefined}
-        fallbackEmail={session?.user?.email ?? ''}
       />
     </>
   );
