@@ -258,6 +258,7 @@ export interface DirectShare {
   share_id: string;
   recipient_id: string | null;
   recipient_company: string | null; // null → public-forward link
+  recipient_email: string | null; // recipient vendor's email (null for public links)
   token: string;
   status: string; // 'active' | 'revoked'
   created_at: string;

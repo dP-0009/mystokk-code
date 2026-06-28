@@ -15,7 +15,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  useWindowDimensions,
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -47,7 +46,6 @@ export function Lightbox({
   onClose,
   showThumbnails = true,
 }: LightboxProps): React.JSX.Element | null {
-  const { width, height } = useWindowDimensions();
   const [current, setCurrent] = useState(index);
   const count = images.length;
   const isCarousel = count > 1;
@@ -113,50 +111,54 @@ export function Lightbox({
         </>
       ) : null}
 
-      {/* Image — sits above the backdrop, so clicking it does not close. */}
-      <View style={styles.imageWrap} {...pan.panHandlers}>
-        {Platform.OS === 'web' ? (
-          // On web, render a real <img>: react-native-web's <Image> is a
-          // background-image <div>, which collapses to 0px when sized auto/auto,
-          // showing a blank overlay. A native <img> with object-fit: contain
-          // sizes correctly. (uri is a full https:// URL — see storage.ts.)
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          React.createElement('img' as any, { src: uri, style: WEB_IMG_STYLE, alt: '' })
-        ) : (
-          <Image
-            source={{ uri }}
-            style={[styles.image, { width: width * 0.9, height: height * 0.9 }]}
-            resizeMode="contain"
-          />
-        )}
-      </View>
-
-      {/* Counter + thumbnail strip (carousel only) */}
-      {isCarousel ? (
-        <View style={styles.bottom} pointerEvents="box-none">
-          <Text style={styles.counter}>
-            {current + 1} / {count}
-          </Text>
-          {showThumbnails ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.thumbStrip}
-            >
-              {images.map((thumb, i) => (
-                <Pressable
-                  key={`${i}-${thumb}`}
-                  onPress={() => setCurrent(i)}
-                  style={[styles.thumb, i === current ? styles.thumbActive : null]}
-                  accessibilityLabel={`View image ${i + 1}`}
-                >
-                  <Image source={{ uri: thumb }} style={styles.thumbImg} resizeMode="cover" />
-                </Pressable>
-              ))}
-            </ScrollView>
-          ) : null}
+      {/* Column: image area (flex) over the controls — they never overlap, so a
+          tall image is shown whole (contain) between the top close and the
+          bottom strip. box-none lets clicks on the empty margins reach the
+          backdrop (close); the image + controls keep their own taps. */}
+      <View style={styles.content} pointerEvents="box-none">
+        <View style={styles.imageArea} pointerEvents="box-none">
+          <View style={styles.imageWrap} {...pan.panHandlers}>
+            {Platform.OS === 'web' ? (
+              // On web, render a real <img>: react-native-web's <Image> is a
+              // background-image <div>, which collapses to 0px when sized
+              // auto/auto. A native <img> with object-fit: contain sizes
+              // correctly. (uri is a full https:// URL — see storage.ts.)
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              React.createElement('img' as any, { src: uri, style: WEB_IMG_STYLE, alt: '' })
+            ) : (
+              <Image source={{ uri }} style={styles.nativeImage} resizeMode="contain" />
+            )}
+          </View>
         </View>
-      ) : null}
+
+        {/* Counter + thumbnail strip (carousel only) — in normal flow below the
+            image so they never cover it. */}
+        {isCarousel ? (
+          <View style={styles.bottom} pointerEvents="box-none">
+            <Text style={styles.counter}>
+              {current + 1} / {count}
+            </Text>
+            {showThumbnails ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.thumbStrip}
+              >
+                {images.map((thumb, i) => (
+                  <Pressable
+                    key={`${i}-${thumb}`}
+                    onPress={() => setCurrent(i)}
+                    style={[styles.thumb, i === current ? styles.thumbActive : null]}
+                    accessibilityLabel={`View image ${i + 1}`}
+                  >
+                    <Image source={{ uri: thumb }} style={styles.thumbImg} resizeMode="cover" />
+                  </Pressable>
+                ))}
+              </ScrollView>
+            ) : null}
+          </View>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -207,10 +209,12 @@ const CIRCLE = 'rgba(255,255,255,0.15)';
 // contain so the whole photo is visible inside the dark overlay. Plain CSS
 // (not RN style) because this is a real DOM <img>, not an RN <Image>.
 const WEB_IMG_STYLE = {
-  width: '100%',
+  width: 'auto',
   height: 'auto',
-  maxWidth: '90vw',
-  maxHeight: '85vh',
+  // Leave room for the top close button and the bottom counter/thumbnail strip
+  // so a tall image is never cropped or hidden behind the controls.
+  maxWidth: '92vw',
+  maxHeight: 'calc(100vh - 210px)',
   objectFit: 'contain',
   display: 'block',
   borderRadius: 8,
@@ -261,16 +265,17 @@ const styles = StyleSheet.create({
   arrowLeft: { left: 20 },
   arrowRight: { right: 20 },
 
-  imageWrap: { alignItems: 'center', justifyContent: 'center', zIndex: 1 },
-  image: { borderRadius: 8 },
+  // Column: image area (flex) above the controls — never overlapping.
+  content: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, flexDirection: 'column' },
+  imageArea: { flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16, paddingTop: 60 },
+  imageWrap: { flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center' },
+  nativeImage: { width: '100%', height: '100%' },
 
   bottom: {
-    position: 'absolute',
-    bottom: 20,
-    left: 0,
-    right: 0,
     alignItems: 'center',
     gap: 10,
+    paddingTop: 8,
+    paddingBottom: 20,
     zIndex: 2,
   },
   counter: {

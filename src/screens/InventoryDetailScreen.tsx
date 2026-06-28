@@ -28,6 +28,7 @@ import { createPublicLink } from '../services/supabase/shares';
 import { copyToClipboard, shareText } from '../utils/clipboard';
 import { StatusChip } from '../components/shared/StatusChip';
 import { ShareModal } from '../components/share/ShareModal';
+import { ManageSharesModal } from '../components/share/ManageSharesModal';
 import { useLightbox } from '../components/shared/Lightbox';
 import { MainLayout, PageBody } from '../components/layout';
 import { webOnly } from '../components/layout/web';
@@ -90,6 +91,7 @@ export function InventoryDetailScreen({ navigation, route }: Props): React.JSX.E
   const queryClient = useQueryClient();
   const [menuOpen, setMenuOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [sharesOpen, setSharesOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const canShare = useAuthStore(selectCanShare);
   const { open: openLightbox } = useLightbox();
@@ -241,7 +243,13 @@ export function InventoryDetailScreen({ navigation, route }: Props): React.JSX.E
               <View style={styles.statDivider} />
               <StatCell label="AVAILABLE" labelColor={colors.green} value={item.quantity_available} unit={item.unit} />
               <View style={styles.statDivider} />
-              <StatCell label="SHARED WITH" labelColor={colors.textMuted} value={item.shared_count} icon="people" />
+              <StatCell
+                label="SHARED WITH"
+                labelColor={colors.textMuted}
+                value={item.shared_count}
+                icon="people"
+                onPress={() => setSharesOpen(true)}
+              />
             </View>
 
             {/* Price band */}
@@ -350,16 +358,24 @@ export function InventoryDetailScreen({ navigation, route }: Props): React.JSX.E
         onShared={() => void refetch()}
       />
 
+      {/* Manage Shares — who I've shared this item with (owner-scoped). */}
+      <ManageSharesModal
+        visible={sharesOpen}
+        inventoryId={inventoryId}
+        onClose={() => setSharesOpen(false)}
+        onShareMore={() => {
+          setSharesOpen(false);
+          onShare();
+        }}
+      />
+
       {/* ⋯ overflow menu */}
       <Modal visible={menuOpen} transparent animationType="fade" onRequestClose={() => setMenuOpen(false)}>
         <Pressable style={styles.overlay} onPress={() => setMenuOpen(false)}>
           <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
             <View style={styles.sheetHandle} />
             <MenuItem label="Generate Public Link" onPress={() => closeMenuThen(() => linkMutation.mutate())} />
-            <MenuItem
-              label="Manage Shares"
-              onPress={() => closeMenuThen(() => navigation.navigate('ManageShares', { inventoryId }))}
-            />
+            <MenuItem label="Manage Shares" onPress={() => closeMenuThen(() => setSharesOpen(true))} />
             <MenuItem label="Archive Item" onPress={() => closeMenuThen(confirmArchive)} />
           </Pressable>
         </Pressable>
@@ -448,15 +464,21 @@ function StatCell({
   value,
   unit,
   icon,
+  onPress,
 }: {
   label: string;
   labelColor: ColorValue;
   value: number;
   unit?: string;
   icon?: IoniconName;
+  onPress?: () => void;
 }): React.JSX.Element {
   return (
-    <View style={styles.statCell}>
+    <Pressable
+      style={[styles.statCell, onPress ? webOnly({ cursor: 'pointer' }) : null]}
+      onPress={onPress}
+      disabled={!onPress}
+    >
       <Text style={[styles.statLabel, { color: labelColor }]} numberOfLines={1}>
         {label}
       </Text>
@@ -465,7 +487,7 @@ function StatCell({
         {unit ? <Text style={styles.statUnit}> {unit}</Text> : null}
         {icon ? <Ionicons name={icon} size={13} color={colors.accent} style={styles.statIcon} /> : null}
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -553,7 +575,7 @@ const styles = StyleSheet.create({
 
   wrap: { width: '100%', maxWidth: 760, alignSelf: 'center' },
 
-  backLink: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 14, alignSelf: 'center' },
+  backLink: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 14, alignSelf: 'flex-start' },
   backText: { fontSize: 14, color: colors.textSecondary, fontWeight: '600' },
   backTextHover: { color: colors.accent },
 
