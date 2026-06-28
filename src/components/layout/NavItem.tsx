@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { colors, radius } from '../../theme/tokens';
+import { PulsingDot } from '../shared/PulsingDot';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -13,6 +14,8 @@ type NavItemProps = {
   active?: boolean;
   /** Optional blue count pill (mirror `.nb`). Hidden when undefined or 0. */
   badge?: number;
+  /** Pulsing red attention dot (e.g. a reservation awaiting a response). */
+  dot?: boolean;
   onPress?: () => void;
 };
 
@@ -26,6 +29,7 @@ export function NavItem({
   label,
   active = false,
   badge,
+  dot = false,
   onPress,
 }: NavItemProps): React.JSX.Element {
   const [hovered, setHovered] = useState(false);
@@ -56,6 +60,11 @@ export function NavItem({
           <Text style={styles.badgeText}>{badge > 99 ? '99+' : badge}</Text>
         </View>
       ) : null}
+      {dot ? (
+        <View style={styles.dotWrap}>
+          <PulsingDot size={9} />
+        </View>
+      ) : null}
     </Pressable>
   );
 }
@@ -82,4 +91,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 7,
   },
   badgeText: { color: colors.bgWhite, fontSize: 11, fontWeight: '600' },
+  // Right-aligned attention dot — small inset so the halo isn't clipped.
+  dotWrap: { width: 14, alignItems: 'center', justifyContent: 'center' },
 });

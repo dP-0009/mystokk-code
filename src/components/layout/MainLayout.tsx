@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import type { MainTabParamList, RootStackParamList } from '../../navigation';
 import { getDashboardData } from '../../services/supabase/dashboard';
+import { useReservationAttention } from '../../hooks/useReservationAttention';
 import { useAuthStore } from '../../stores/authStore';
 import { AppShell } from './AppShell';
 import { Sidebar } from './Sidebar';
@@ -50,6 +51,9 @@ export function MainLayout({ active, children }: MainLayoutProps): React.JSX.Ele
     staleTime: 60_000,
   });
 
+  // Pulsing red dot on Reservation Hub when a reservation awaits this vendor.
+  const reservationAttention = useReservationAttention();
+
   const goTo = (id: SidebarNavId): void => {
     // Route the tab destinations through `Main` so the sidebar works from any
     // context — including root-stack screens (e.g. Add Item) where the bare tab
@@ -85,6 +89,7 @@ export function MainLayout({ active, children }: MainLayoutProps): React.JSX.Ele
       <SidebarNav
         activeId={active}
         counts={{ inventory: data?.stats.inventory, received: data?.stats.received }}
+        reservationAttention={reservationAttention > 0}
         onNavigate={goTo}
       />
     </Sidebar>

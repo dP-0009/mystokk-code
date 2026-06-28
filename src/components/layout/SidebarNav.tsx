@@ -45,6 +45,8 @@ type SidebarNavProps = {
   activeId?: SidebarNavId;
   /** Counts feeding the My Inventory / Received Inventory badge pills. */
   counts?: { inventory?: number; received?: number };
+  /** When true, the Reservation Hub item shows a pulsing red attention dot. */
+  reservationAttention?: boolean;
   /** Fired with the tapped item's id — wire to navigation. */
   onNavigate?: (id: SidebarNavId) => void;
 };
@@ -56,6 +58,7 @@ type SidebarNavProps = {
 export function SidebarNav({
   activeId,
   counts,
+  reservationAttention,
   onNavigate,
 }: SidebarNavProps): React.JSX.Element {
   return (
@@ -67,6 +70,7 @@ export function SidebarNav({
           label={entry.label}
           active={entry.id === activeId}
           badge={entry.badge ? counts?.[entry.badge] : undefined}
+          dot={entry.id === 'reservations' ? reservationAttention : undefined}
           onPress={() => onNavigate?.(entry.id)}
         />
       ))}

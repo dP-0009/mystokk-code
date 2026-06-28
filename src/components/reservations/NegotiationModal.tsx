@@ -48,18 +48,25 @@ interface NegotiationModalProps {
 }
 
 /**
- * Reservation negotiation popup (spec). Header (item + status), request info,
- * a scrollable message thread, and pending actions (Accept / Reject / Counter).
- * Counter Offer reveals price + note inputs inline; a History button opens a
- * second popup with the full round-by-round timeline.
+ * Reservation negotiation popup. Header (item + status), request info, a
+ * chat-style thread of the original request and every counter (terms + note),
+ * and turn-based actions.
+ *
+ * Turn rule: only the party whose turn it is to respond sees Accept / Counter /
+ * Reject. The party who moved last sees just a "View Full History" button and a
+ * waiting banner. Rounds are capped at 3 per side, and — because the buyer's
+ * opening reservation is their round 1 — the buyer gets 2 counters while the
+ * seller gets 3; the counter form warns on the final round.
  */
 export function NegotiationModal({ visible, side, data, onClose }: NegotiationModalProps): React.JSX.Element {
   const queryClient = useQueryClient();
   const incoming = side === 'incoming';
+  const isRequester = !incoming; // the buyer who reserved views the 'outgoing' side
 
   const [status, setStatus] = useState(data.status);
   const [mode, setMode] = useState<'view' | 'counter'>('view');
   const [negPrice, setNegPrice] = useState('');
+  const [negQty, setNegQty] = useState('');
   const [negNote, setNegNote] = useState('');
   const [historyOpen, setHistoryOpen] = useState(false);
 
@@ -70,20 +77,27 @@ export function NegotiationModal({ visible, side, data, onClose }: NegotiationMo
     enabled: visible,
   });
   const rounds = roundsQuery.data ?? [];
-  const myRoundsUsed = rounds.filter((r) => r.is_me).length;
   const lastRound = rounds[rounds.length - 1];
-  const lastByMe = lastRound?.is_me ?? false;
 
+  // Rounds the caller has consumed, counting the buyer's opening reservation.
+  const myCounters = rounds.filter((r) => r.is_me).length;
+  const myRoundsUsed = myCounters + (isRequester ? 1 : 0);
+  const nextRoundNumber = myRoundsUsed + 1;
+  const roundsExhausted = myRoundsUsed >= MAX_ROUNDS;
+  const isFinalRound = nextRoundNumber === MAX_ROUNDS;
+
+  // Whose turn is it? On a fresh request the buyer moved last (their reserve);
+  // mid-negotiation it's whoever sent the latest counter.
+  const lastMoveByMe = status === 'pending' ? isRequester : lastRound?.is_me ?? false;
   const actionable = status === 'pending' || status === 'negotiating';
-  // FIX C — after you send a counter offer the ball is in their court: lock all
-  // actions and show a waiting banner until the other party responds. `is_me` is
-  // the server's lastRound.sender_id === currentUserId comparison.
-  const waitingForReply = status === 'negotiating' && lastByMe;
-  const canCounter = actionable && myRoundsUsed < MAX_ROUNDS && (status === 'negotiating' || incoming);
-  const canAccept = actionable && (status === 'pending' ? incoming : !lastByMe);
-  const canReject = incoming && actionable;
-  const canCancel = !incoming && actionable;
-  const canPass = incoming && actionable && data.is_middleman;
+  const myTurn = actionable && !lastMoveByMe;
+  const waitingForReply = actionable && lastMoveByMe;
+
+  const canAccept = myTurn;
+  const canCounter = myTurn && !roundsExhausted;
+  const canReject = myTurn && incoming;
+  const canCancel = myTurn && !incoming;
+  const canPass = myTurn && incoming && data.is_middleman;
   const otherParty = data.counterparty_company ?? 'the other party';
 
   // Reset transient UI each time the modal (re)opens for a reservation.
@@ -92,6 +106,7 @@ export function NegotiationModal({ visible, side, data, onClose }: NegotiationMo
       setStatus(data.status);
       setMode('view');
       setNegPrice('');
+      setNegQty('');
       setNegNote('');
       setHistoryOpen(false);
     }
@@ -99,6 +114,7 @@ export function NegotiationModal({ visible, side, data, onClose }: NegotiationMo
 
   const invalidate = (): void => {
     void queryClient.invalidateQueries({ queryKey: ['reservations'] });
+    void queryClient.invalidateQueries({ queryKey: ['reservationAttention'] });
     void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     void queryClient.invalidateQueries({ queryKey: ['inventory'] });
   };
@@ -121,12 +137,20 @@ export function NegotiationModal({ visible, side, data, onClose }: NegotiationMo
     onError: (e) => toast.error(e instanceof Error ? e.message : 'Action failed.'),
   });
 
-  const counterQty = data.latest_counter_qty ?? data.quantity;
+  // The counter keeps the latest agreed quantity unless the user changes it.
+  const baseQty = data.latest_counter_qty ?? data.quantity;
   const counter = useMutation({
-    mutationFn: () => submitNegotiationRound(data.reservation_id, Number(negPrice), Number(counterQty), negNote.trim() || null),
+    mutationFn: () =>
+      submitNegotiationRound(
+        data.reservation_id,
+        Number(negPrice),
+        Number(negQty || baseQty),
+        negNote.trim() || null,
+      ),
     onSuccess: () => {
       setMode('view');
       setNegPrice('');
+      setNegQty('');
       setNegNote('');
       setStatus('negotiating');
       void roundsQuery.refetch();
@@ -136,31 +160,47 @@ export function NegotiationModal({ visible, side, data, onClose }: NegotiationMo
     onError: (e) => toast.error(e instanceof Error ? e.message : 'Could not send counter.'),
   });
 
-  // Conversation thread: original request note + every round that carried a message.
-  type Msg = { key: string; mine: boolean; sender: string; text: string; time: string };
-  const messages: Msg[] = [];
-  if (data.message) {
-    messages.push({
+  // Conversation thread: the opening request + every counter, each as a bubble
+  // carrying its terms (price · qty) and any note.
+  type Msg = {
+    key: string;
+    mine: boolean;
+    sender: string;
+    terms: string;
+    note: string | null;
+    tag: string;
+    time: string;
+  };
+  const messages: Msg[] = [
+    {
       key: 'request',
-      mine: !incoming,
-      sender: incoming ? data.counterparty_company ?? 'Buyer' : 'You',
-      text: data.message,
+      mine: isRequester,
+      sender: isRequester ? 'You' : data.counterparty_company ?? 'Buyer',
+      terms: `${data.quantity.toLocaleString()} ${data.unit} @ ${money(data.currency, data.offered_price ?? data.list_price)}`,
+      note: data.message,
+      tag: 'Request',
       time: when(data.created_at),
-    });
-  }
+    },
+  ];
   rounds.forEach((r, i) => {
-    if (r.message) {
-      messages.push({
-        key: `round-${r.round_number}-${i}`,
-        mine: r.is_me,
-        sender: r.is_me ? 'You' : r.proposer_company ?? data.counterparty_company ?? 'Them',
-        text: r.message,
-        time: when(r.created_at),
-      });
-    }
+    messages.push({
+      key: `round-${r.round_number}-${i}`,
+      mine: r.is_me,
+      sender: r.is_me ? 'You' : r.proposer_company ?? data.counterparty_company ?? 'Them',
+      terms: `${money(data.currency, r.counter_price)} · ${r.counter_quantity?.toLocaleString() ?? data.quantity.toLocaleString()} ${data.unit}`,
+      note: r.message,
+      tag: `Counter ${r.round_number}`,
+      time: when(r.created_at),
+    });
   });
 
   const offeredDisplay = money(data.currency, data.offered_price ?? data.list_price);
+
+  const historyButton = (
+    <Pressable style={styles.footerHistoryBtn} onPress={() => setHistoryOpen(true)} testID="negotiation-history-footer">
+      <Text style={styles.footerHistoryText}>View Full History</Text>
+    </Pressable>
+  );
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -207,15 +247,17 @@ export function NegotiationModal({ visible, side, data, onClose }: NegotiationMo
               <Text style={styles.sectionTitle}>Notes & messages</Text>
               {roundsQuery.isLoading ? (
                 <ActivityIndicator color={colors.accent} style={styles.loading} />
-              ) : messages.length === 0 ? (
-                <Text style={styles.empty}>No messages yet.</Text>
               ) : (
                 <View style={styles.thread}>
                   {messages.map((m) => (
                     <View key={m.key} style={[styles.bubbleRow, m.mine ? styles.bubbleRowMine : styles.bubbleRowTheirs]}>
                       <View style={[styles.bubble, m.mine ? styles.bubbleMine : styles.bubbleTheirs]}>
-                        <Text style={styles.bubbleSender}>{m.sender}</Text>
-                        <Text style={styles.bubbleText}>{m.text}</Text>
+                        <View style={styles.bubbleHead}>
+                          <Text style={styles.bubbleSender}>{m.sender}</Text>
+                          <Text style={styles.bubbleTag}>{m.tag}</Text>
+                        </View>
+                        <Text style={styles.bubbleTerms}>{m.terms}</Text>
+                        {m.note ? <Text style={styles.bubbleNote}>“{m.note}”</Text> : null}
                         <Text style={styles.bubbleTime}>{m.time}</Text>
                       </View>
                     </View>
@@ -228,6 +270,13 @@ export function NegotiationModal({ visible, side, data, onClose }: NegotiationMo
             {mode === 'counter' ? (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Counter offer</Text>
+                <View style={[styles.roundInfo, isFinalRound ? styles.roundInfoFinal : null]}>
+                  <Text style={[styles.roundInfoText, isFinalRound ? styles.roundInfoTextFinal : null]}>
+                    {isFinalRound
+                      ? '⚠ This is your last negotiation round — make it count.'
+                      : `Round ${nextRoundNumber} of ${MAX_ROUNDS} · ${MAX_ROUNDS - nextRoundNumber} more after this`}
+                  </Text>
+                </View>
                 <Text style={styles.fieldLabel}>Your Counter Price</Text>
                 <TextInput
                   style={styles.input}
@@ -237,6 +286,16 @@ export function NegotiationModal({ visible, side, data, onClose }: NegotiationMo
                   placeholder="0.00"
                   placeholderTextColor={colors.textMuted}
                   testID="counter-price"
+                />
+                <Text style={styles.fieldLabel}>Counter Quantity</Text>
+                <TextInput
+                  style={styles.input}
+                  keyboardType="numeric"
+                  value={negQty}
+                  onChangeText={(t) => NUMERIC.test(t) && setNegQty(t)}
+                  placeholder={String(baseQty)}
+                  placeholderTextColor={colors.textMuted}
+                  testID="counter-qty"
                 />
                 <Text style={styles.fieldLabel}>Add a note (optional)</Text>
                 <TextInput
@@ -270,20 +329,29 @@ export function NegotiationModal({ visible, side, data, onClose }: NegotiationMo
             ) : null}
           </ScrollView>
 
-          {/* 3. Footer — cancelled banner (FIX D) / waiting banner (FIX C) / actions */}
-          {status === 'cancelled' ? (
+          {/* 3. Footer — status banner / waiting + history / turn-based actions */}
+          {!actionable ? (
             <View style={styles.bannerWrap}>
               <View style={styles.banner}>
-                <Text style={styles.bannerText}>This reservation was cancelled.</Text>
+                <Text style={styles.bannerText}>
+                  {status === 'confirmed'
+                    ? 'This reservation was confirmed.'
+                    : status === 'rejected'
+                      ? 'This reservation was rejected.'
+                      : status === 'cancelled'
+                        ? 'This reservation was cancelled.'
+                        : status === 'passed'
+                          ? 'Passed to supplier — awaiting their response.'
+                          : 'This reservation is closed.'}
+                </Text>
               </View>
             </View>
           ) : waitingForReply && mode === 'view' ? (
-            <View style={styles.bannerWrap}>
-              <View style={styles.banner}>
-                <Text style={styles.bannerText}>Waiting for {otherParty} to respond...</Text>
-              </View>
+            <View style={styles.waitingFooter}>
+              <Text style={styles.bannerText}>Waiting for {otherParty} to respond…</Text>
+              {historyButton}
             </View>
-          ) : actionable && mode === 'view' ? (
+          ) : myTurn && mode === 'view' ? (
             <View style={styles.actions}>
               {canAccept ? (
                 <Pressable
@@ -341,6 +409,13 @@ export function NegotiationModal({ visible, side, data, onClose }: NegotiationMo
           <HistoryModal
             visible={historyOpen}
             rounds={rounds}
+            request={{
+              company: data.counterparty_company,
+              isRequester,
+              terms: `${data.quantity.toLocaleString()} ${data.unit} @ ${money(data.currency, data.offered_price ?? data.list_price)}`,
+              note: data.message,
+              time: when(data.created_at),
+            }}
             currency={data.currency}
             status={status}
             onClose={() => setHistoryOpen(false)}
@@ -351,16 +426,18 @@ export function NegotiationModal({ visible, side, data, onClose }: NegotiationMo
   );
 }
 
-/** Full negotiation history — round-by-round cards, oldest first. */
+/** Full negotiation history — the opening request + round-by-round counters. */
 function HistoryModal({
   visible,
   rounds,
+  request,
   currency,
   status,
   onClose,
 }: {
   visible: boolean;
   rounds: NegotiationRound[];
+  request: { company: string | null; isRequester: boolean; terms: string; note: string | null; time: string };
   currency: string | null;
   status: string;
   onClose: () => void;
@@ -376,30 +453,43 @@ function HistoryModal({
             </Pressable>
           </View>
           <ScrollView style={styles.historyScroll} contentContainerStyle={styles.scrollContent}>
-            {rounds.length === 0 ? (
-              <Text style={styles.empty}>No counter-offers yet — this is the original request.</Text>
-            ) : (
-              rounds.map((r, i) => {
-                const isLast = i === rounds.length - 1;
-                const outcome = isLast && status !== 'negotiating' && status !== 'pending' ? status : 'countered';
-                return (
-                  <View key={`${r.round_number}-${i}`} style={styles.histCard}>
-                    <View style={styles.histTop}>
-                      <Text style={styles.histRound}>Round {r.round_number}</Text>
-                      <View style={styles.histBadge}>
-                        <Text style={styles.histBadgeText}>{outcome}</Text>
-                      </View>
-                    </View>
-                    <Text style={styles.histWho}>{r.is_me ? 'You offered' : `${r.proposer_company ?? 'They'} offered`}</Text>
-                    <Text style={styles.histPrice}>
-                      {money(currency, r.counter_price)} · Qty {r.counter_quantity?.toLocaleString() ?? '—'}
+            {/* The opening request is always the first entry. */}
+            <View style={styles.histCard}>
+              <View style={styles.histTop}>
+                <Text style={styles.histRound}>Initial request</Text>
+                <View style={styles.histBadge}>
+                  <Text style={styles.histBadgeText}>requested</Text>
+                </View>
+              </View>
+              <Text style={styles.histWho}>
+                {request.isRequester ? 'You requested' : `${request.company ?? 'They'} requested`}
+              </Text>
+              <Text style={styles.histPrice}>{request.terms}</Text>
+              {request.note ? <Text style={styles.histNote}>“{request.note}”</Text> : null}
+              <Text style={styles.histTime}>{request.time}</Text>
+            </View>
+
+            {rounds.map((r, i) => {
+              const isLast = i === rounds.length - 1;
+              const outcome = isLast && status !== 'negotiating' && status !== 'pending' ? status : 'countered';
+              return (
+                <View key={`${r.round_number}-${i}`} style={styles.histCard}>
+                  <View style={styles.histTop}>
+                    <Text style={styles.histRound}>
+                      {r.is_me ? 'You' : r.proposer_company ?? 'They'} · Counter {r.round_number}
                     </Text>
-                    {r.message ? <Text style={styles.histNote}>“{r.message}”</Text> : null}
-                    <Text style={styles.histTime}>{when(r.created_at)}</Text>
+                    <View style={styles.histBadge}>
+                      <Text style={styles.histBadgeText}>{outcome}</Text>
+                    </View>
                   </View>
-                );
-              })
-            )}
+                  <Text style={styles.histPrice}>
+                    {money(currency, r.counter_price)} · Qty {r.counter_quantity?.toLocaleString() ?? '—'}
+                  </Text>
+                  {r.message ? <Text style={styles.histNote}>“{r.message}”</Text> : null}
+                  <Text style={styles.histTime}>{when(r.created_at)}</Text>
+                </View>
+              );
+            })}
           </ScrollView>
         </Pressable>
       </Pressable>
@@ -455,21 +545,27 @@ const styles = StyleSheet.create({
   historyBtnText: { fontSize: 12, fontWeight: '700', color: colors.accent },
 
   loading: { marginVertical: 10, alignSelf: 'flex-start' },
-  empty: { fontSize: 13, color: colors.textMuted },
 
   // Conversation thread
   thread: { gap: 10 },
   bubbleRow: { flexDirection: 'row' },
   bubbleRowMine: { justifyContent: 'flex-end' },
   bubbleRowTheirs: { justifyContent: 'flex-start' },
-  bubble: { maxWidth: '82%', borderRadius: 14, paddingVertical: 8, paddingHorizontal: 12 },
+  bubble: { maxWidth: '85%', borderRadius: 14, paddingVertical: 9, paddingHorizontal: 12 },
   bubbleMine: { backgroundColor: colors.accentLight }, // #EFF6FF
   bubbleTheirs: { backgroundColor: colors.bgChip }, // #F1F5F9
-  bubbleSender: { fontSize: 11, fontWeight: '700', color: colors.textSecondary, marginBottom: 2 },
-  bubbleText: { fontSize: 13, color: colors.textPrimary },
-  bubbleTime: { fontSize: 10, color: colors.textMuted, marginTop: 4 },
+  bubbleHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 3 },
+  bubbleSender: { fontSize: 11, fontWeight: '700', color: colors.textSecondary },
+  bubbleTag: { fontSize: 10, fontWeight: '700', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.3 },
+  bubbleTerms: { fontSize: 13.5, fontWeight: '700', color: colors.textPrimary },
+  bubbleNote: { fontSize: 13, color: colors.textSecondary, marginTop: 3, fontStyle: 'italic' },
+  bubbleTime: { fontSize: 10, color: colors.textMuted, marginTop: 5 },
 
   // Counter form
+  roundInfo: { backgroundColor: colors.accentLight, borderRadius: 10, paddingVertical: 9, paddingHorizontal: 12 },
+  roundInfoFinal: { backgroundColor: colors.redLight },
+  roundInfoText: { fontSize: 12, fontWeight: '700', color: colors.accent },
+  roundInfoTextFinal: { color: colors.red },
   fieldLabel: { fontSize: 12, fontWeight: '600', color: colors.textSecondary, marginBottom: 4, marginTop: 4 },
   input: {
     borderWidth: 1.5,
@@ -500,10 +596,31 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
   },
 
-  // Grey status banner (waiting for reply / cancelled) — replaces the actions.
+  // Grey status banner (closed reservations).
   bannerWrap: { paddingHorizontal: 20, paddingVertical: 16, borderTopWidth: 1, borderTopColor: colors.border },
   banner: { backgroundColor: '#F1F5F9', borderRadius: 10, paddingVertical: 12, paddingHorizontal: 16 },
   bannerText: { fontSize: 13, color: '#64748B', textAlign: 'center', fontWeight: '600' },
+
+  // Waiting footer — waiting text + the only available action (history).
+  waitingFooter: {
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    alignItems: 'center',
+  },
+  footerHistoryBtn: {
+    alignSelf: 'stretch',
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    alignItems: 'center',
+    ...webOnly({ cursor: 'pointer' }),
+  },
+  footerHistoryText: { fontSize: 14, fontWeight: '700', color: colors.textPrimary },
+
   btn: { flexGrow: 1, paddingVertical: 12, paddingHorizontal: 16, borderRadius: 12, alignItems: 'center', justifyContent: 'center', ...webOnly({ cursor: 'pointer' }) },
   btnAccept: { backgroundColor: '#16A34A' },
   btnAcceptText: { fontSize: 14, fontWeight: '700', color: '#FFFFFF' },
@@ -517,7 +634,7 @@ const styles = StyleSheet.create({
   // History cards
   histCard: { backgroundColor: colors.bgWhite, borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 14, marginBottom: 10 },
   histTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
-  histRound: { fontSize: 13, fontWeight: '800', color: colors.textPrimary },
+  histRound: { fontSize: 13, fontWeight: '800', color: colors.textPrimary, flexShrink: 1 },
   histBadge: { backgroundColor: colors.bgChip, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
   histBadgeText: { fontSize: 11, fontWeight: '700', color: colors.textSecondary, textTransform: 'capitalize' },
   histWho: { fontSize: 12, color: colors.textMuted },

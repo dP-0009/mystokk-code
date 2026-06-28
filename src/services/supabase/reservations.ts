@@ -65,6 +65,9 @@ export interface IncomingReservation {
   first_photo_path: string | null;
   /** Counterparty's contact email (for the card's email action), or null. */
   counterparty_email: string | null;
+  /** True when the caller sent the most recent counter — i.e. it's NOT their
+   *  turn (they're waiting on the other party). Null when there are no counters. */
+  latest_round_by_me: boolean | null;
   /** Public thumbnail URL derived from first_photo_path (set by the list getters). */
   thumbUrl?: string | null;
 }
@@ -87,6 +90,17 @@ export async function getNegotiationRounds(reservationId: string): Promise<Negot
   const { data, error } = await supabase.rpc('get_negotiation_rounds', { p_reservation_id: reservationId });
   if (error) throw error;
   return (data ?? []) as NegotiationRound[];
+}
+
+/**
+ * Count of reservations awaiting THIS vendor's response — a fresh request to
+ * the seller, or a counter where the other party moved last. Backs the sidebar
+ * Reservation Hub red dot.
+ */
+export async function countReservationsAwaitingMe(): Promise<number> {
+  const { data, error } = await supabase.rpc('count_reservations_awaiting_me');
+  if (error) throw error;
+  return (data as number) ?? 0;
 }
 
 /** Public thumbnail URL for a reservation card from the item's first photo path. */

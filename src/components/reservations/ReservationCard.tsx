@@ -61,8 +61,15 @@ export function ReservationCard({ item, side, onOpen, onConfirm, onReject, busy 
   const offered = offeredLine(item);
   const cancelled = item.status === 'cancelled';
 
-  // Inline Negotiate / Reject / Confirm only for received requests awaiting a response.
-  const actionable = side === 'received' && (item.status === 'pending' || item.status === 'negotiating');
+  // Turn-based actions: only the party whose turn it is to respond sees the
+  // action buttons; the one who moved last sees a History button + a waiting
+  // hint. A fresh request awaits the seller; mid-negotiation it awaits whoever
+  // did NOT send the latest counter (latest_round_by_me).
+  const open = item.status === 'pending' || item.status === 'negotiating';
+  const isRequester = side === 'sent';
+  const lastMoveByMe = item.status === 'pending' ? isRequester : item.latest_round_by_me ?? false;
+  const myTurn = open && !lastMoveByMe;
+  const waiting = open && lastMoveByMe;
   const email = item.counterparty_email;
 
   return (
@@ -111,18 +118,30 @@ export function ReservationCard({ item, side, onOpen, onConfirm, onReject, busy 
         </View>
       </Pressable>
 
-      {/* Action row — contact icons left, inline actions right */}
+      {/* Action row — contact icons left, turn-based actions right */}
       <View style={styles.actionRow}>
         <View style={styles.contactIcons}>
-          {item.status === 'negotiating' ? (
-            <ContactIcon name="time-outline" onPress={onOpen} label="History" />
-          ) : null}
           {email ? (
             <ContactIcon name="mail-outline" onPress={() => Linking.openURL(`mailto:${email}`)} label="Email" />
           ) : null}
+          {waiting ? (
+            <Text style={styles.waitingText} numberOfLines={1}>
+              Waiting for {vendor} to respond…
+            </Text>
+          ) : null}
         </View>
 
-        {actionable ? (
+        {/* Whoever moved last sees only History; whoever's turn it is gets actions. */}
+        {waiting ? (
+          <Pressable
+            style={[styles.historyBtn, webOnly({ cursor: 'pointer' })]}
+            onPress={onOpen}
+            testID={`reservation-history-${item.reservation_id}`}
+          >
+            <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
+            <Text style={styles.historyText}>History</Text>
+          </Pressable>
+        ) : myTurn ? (
           <View style={styles.actions}>
             <Pressable
               style={[styles.negotiateBtn, webOnly({ cursor: 'pointer' })]}
@@ -132,14 +151,16 @@ export function ReservationCard({ item, side, onOpen, onConfirm, onReject, busy 
               <Ionicons name="chatbubble-ellipses-outline" size={14} color={colors.purple} />
               <Text style={styles.negotiateText}>Negotiate</Text>
             </Pressable>
-            <Pressable
-              style={[styles.rejectBtn, busy ? styles.btnDisabled : null, webOnly({ cursor: 'pointer' })]}
-              onPress={onReject}
-              disabled={busy}
-              testID={`reservation-reject-${item.reservation_id}`}
-            >
-              <Ionicons name="close" size={16} color={colors.red} />
-            </Pressable>
+            {side === 'received' ? (
+              <Pressable
+                style={[styles.rejectBtn, busy ? styles.btnDisabled : null, webOnly({ cursor: 'pointer' })]}
+                onPress={onReject}
+                disabled={busy}
+                testID={`reservation-reject-${item.reservation_id}`}
+              >
+                <Ionicons name="close" size={16} color={colors.red} />
+              </Pressable>
+            ) : null}
             <Pressable
               style={[styles.confirmBtn, busy ? styles.btnDisabled : null, webOnly({ cursor: 'pointer' })]}
               onPress={onConfirm}
@@ -147,7 +168,7 @@ export function ReservationCard({ item, side, onOpen, onConfirm, onReject, busy 
               testID={`reservation-confirm-${item.reservation_id}`}
             >
               <Ionicons name="checkmark" size={15} color={colors.bgWhite} />
-              <Text style={styles.confirmText}>Confirm</Text>
+              <Text style={styles.confirmText}>{side === 'received' ? 'Confirm' : 'Accept'}</Text>
             </Pressable>
           </View>
         ) : null}
@@ -218,7 +239,21 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
-  contactIcons: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  contactIcons: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1, minWidth: 0 },
+  waitingText: { fontSize: 12, color: colors.textMuted, fontStyle: 'italic', flexShrink: 1 },
+  historyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.bgWhite,
+    borderRadius: 8,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    flexShrink: 0,
+  },
+  historyText: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
   contactBtn: {
     width: 30,
     height: 30,
