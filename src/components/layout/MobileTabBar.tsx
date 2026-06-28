@@ -1,0 +1,108 @@
+import React from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+
+import { colors, radius, shadows } from '../../theme/tokens';
+import { PulsingDot } from '../shared/PulsingDot';
+import type { SidebarNavId } from './SidebarNav';
+
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+
+type Tab = { id: SidebarNavId; label: string; icon: IoniconName };
+
+/** Five primary destinations; the sixth slot is the burger "Menu". */
+const TABS: readonly Tab[] = [
+  { id: 'dashboard', label: 'Home', icon: 'grid-outline' },
+  { id: 'inventory', label: 'Inventory', icon: 'cube-outline' },
+  { id: 'received', label: 'Received', icon: 'file-tray-outline' },
+  { id: 'reservations', label: 'Reserve', icon: 'calendar-outline' },
+  { id: 'network', label: 'Network', icon: 'people-outline' },
+];
+
+type MobileTabBarProps = {
+  /** Highlighted destination (null when the menu sheet is the active surface). */
+  activeId?: SidebarNavId;
+  /** Pulsing red dot on Reservation Hub when a reservation awaits a response. */
+  reservationAttention?: boolean;
+  /** True while the burger menu sheet is open (highlights the Menu item). */
+  menuActive?: boolean;
+  onNavigate?: (id: SidebarNavId) => void;
+  onOpenMenu?: () => void;
+};
+
+/**
+ * Floating bottom navigation for mobile viewports — replaces the desktop
+ * sidebar. Five tabs plus a burger "Menu" that opens the account/links sheet.
+ * Pinned to the bottom with side margins, rounded corners and a soft shadow so
+ * it reads as a floating bar.
+ */
+export function MobileTabBar({
+  activeId,
+  reservationAttention,
+  menuActive,
+  onNavigate,
+  onOpenMenu,
+}: MobileTabBarProps): React.JSX.Element {
+  return (
+    <View style={styles.wrap} pointerEvents="box-none">
+      <View style={styles.bar}>
+        {TABS.map((tab) => {
+          const active = !menuActive && tab.id === activeId;
+          return (
+            <Pressable key={tab.id} style={styles.item} onPress={() => onNavigate?.(tab.id)} accessibilityRole="button">
+              <View style={styles.iconWrap}>
+                <Ionicons name={tab.icon} size={21} color={active ? colors.accent : colors.textMuted} />
+                {tab.id === 'reservations' && reservationAttention ? (
+                  <View style={styles.dot}>
+                    <PulsingDot size={8} />
+                  </View>
+                ) : null}
+              </View>
+              <Text style={[styles.label, active ? styles.labelActive : null]} numberOfLines={1}>
+                {tab.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+
+        {/* Burger menu */}
+        <Pressable style={styles.item} onPress={onOpenMenu} accessibilityRole="button" accessibilityLabel="Menu">
+          <View style={styles.iconWrap}>
+            <Ionicons name="menu" size={22} color={menuActive ? colors.accent : colors.textMuted} />
+          </View>
+          <Text style={[styles.label, menuActive ? styles.labelActive : null]} numberOfLines={1}>
+            Menu
+          </Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  // Fixed band across the bottom; transparent so taps pass through the margins.
+  wrap: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 10,
+    paddingBottom: 10,
+  },
+  bar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.bgWhite,
+    borderRadius: radius.lg, // 16
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    ...shadows.dropdown,
+  },
+  item: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 3, paddingVertical: 2 },
+  iconWrap: { width: 26, height: 22, alignItems: 'center', justifyContent: 'center' },
+  dot: { position: 'absolute', top: -1, right: 0 },
+  label: { fontSize: 10, fontWeight: '600', color: colors.textMuted },
+  labelActive: { color: colors.accent, fontWeight: '700' },
+});

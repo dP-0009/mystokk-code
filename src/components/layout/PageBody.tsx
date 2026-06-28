@@ -2,6 +2,7 @@ import React, { type ReactNode } from 'react';
 import { ScrollView, StyleSheet, type ViewStyle } from 'react-native';
 
 import { colors } from '../../theme/tokens';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 type PageBodyProps = {
   children: ReactNode;
@@ -11,16 +12,19 @@ type PageBodyProps = {
 
 /**
  * Scrolling content region below the page header (mirror `.pb`).
- * flex:1 so it fills the remaining height; 24x28 padding; vertical scroll.
+ * flex:1 so it fills the remaining height; vertical scroll. On mobile the
+ * padding tightens and the bottom is padded so content clears the floating
+ * footer nav.
  */
 export function PageBody({
   children,
   contentContainerStyle,
 }: PageBodyProps): React.JSX.Element {
+  const isMobile = useIsMobile();
   return (
     <ScrollView
       style={styles.body}
-      contentContainerStyle={[styles.content, contentContainerStyle]}
+      contentContainerStyle={[isMobile ? styles.contentMobile : styles.content, contentContainerStyle]}
     >
       {children}
     </ScrollView>
@@ -31,4 +35,6 @@ const styles = StyleSheet.create({
   // `.pb`
   body: { flex: 1, backgroundColor: colors.bgPage },
   content: { paddingHorizontal: 28, paddingVertical: 24 },
+  // Tighter sides + extra bottom so the floating footer nav doesn't cover content.
+  contentMobile: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 100 },
 });

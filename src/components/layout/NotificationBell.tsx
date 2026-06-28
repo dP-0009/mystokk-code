@@ -13,6 +13,11 @@ type NotificationBellProps = {
    * pass a value to render the bell without the realtime subscription.
    */
   count?: number;
+  /**
+   * Render inline (e.g. inside the mobile top bar) instead of pinned to the
+   * top-right of the viewport.
+   */
+  inline?: boolean;
 };
 
 /**
@@ -20,7 +25,7 @@ type NotificationBellProps = {
  * badge shows the unread count. Clicking it toggles a dropdown popup (not a
  * navigation); the popup closes on outside click or Escape (web).
  */
-export function NotificationBell({ count }: NotificationBellProps): React.JSX.Element {
+export function NotificationBell({ count, inline = false }: NotificationBellProps): React.JSX.Element {
   const liveUnread = useUnreadCount();
   const unread = count ?? liveUnread;
   const [open, setOpen] = useState(false);
@@ -45,7 +50,7 @@ export function NotificationBell({ count }: NotificationBellProps): React.JSX.El
   }, [open]);
 
   return (
-    <View ref={anchorRef} style={[styles.anchor, open ? styles.anchorOpen : null]}>
+    <View ref={anchorRef} style={[inline ? styles.anchorInline : styles.anchor, open ? styles.anchorOpen : null]}>
       <Pressable
         style={styles.bell}
         onPress={() => setOpen((o) => !o)}
@@ -77,6 +82,8 @@ const styles = StyleSheet.create({
     zIndex: 1000,
     ...webOnly({ position: 'fixed' }),
   },
+  // Inline variant — sits in normal flow (e.g. the mobile top bar).
+  anchorInline: { position: 'relative', zIndex: 1000 },
   // Lift above page content while the popup is open.
   anchorOpen: { zIndex: 9999 },
   bell: { ...webOnly({ cursor: 'pointer' }) },

@@ -148,6 +148,8 @@ const styles = StyleSheet.create({
     // 8px gap below the bell — i.e. top: calc(100% + 8px).
     marginTop: 8,
     width: 380,
+    // Never overflow a narrow (mobile) viewport.
+    ...webOnly({ maxWidth: 'calc(100vw - 24px)' }),
     maxHeight: 480,
     backgroundColor: colors.bgWhite,
     borderRadius: 16,

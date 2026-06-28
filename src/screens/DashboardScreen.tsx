@@ -14,11 +14,14 @@ import {
   rejectConnection,
   type PendingConnection,
 } from '../services/supabase/network';
+import type { ColorValue } from '../theme/tokens';
 import { colors, radius } from '../theme/tokens';
 import { MainLayout, PageBody, PageHeader } from '../components/layout';
-import { StatCard } from '../components/dashboard/StatCard';
+import { useIsMobile } from '../hooks/useIsMobile';
 import { webOnly } from '../components/layout/web';
 import { toast } from '../stores/toast';
+
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabParamList, 'Dashboard'>,
@@ -34,6 +37,7 @@ function money(currency: string | null, price: number | null): string {
 
 export function DashboardScreen({ navigation }: Props): React.JSX.Element {
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const { data, isLoading, isError, error, refetch } = useQuery({
@@ -72,20 +76,13 @@ export function DashboardScreen({ navigation }: Props): React.JSX.Element {
 
   return (
     <MainLayout active="dashboard">
-      <PageHeader
-        title="Dashboard"
-        subtitle="Overview of your trading activity"
-      />
+      {/* On mobile the top app bar already shows the identity, so the page-title
+          header is omitted (matches the mobile dashboard design). */}
+      {isMobile ? null : (
+        <PageHeader title="Dashboard" subtitle="Overview of your trading activity" />
+      )}
 
       <PageBody>
-        {/* Right-aligned action, sitting directly below the fixed bell icon. */}
-        <View style={styles.actionRow}>
-          <Pressable style={styles.addBtn} onPress={() => navigation.navigate('InventoryCreate')}>
-            <Ionicons name="add" size={16} color={colors.bgWhite} />
-            <Text style={styles.addBtnText}>Add Inventory</Text>
-          </Pressable>
-        </View>
-
         {isLoading ? (
           <View style={styles.center}>
             <ActivityIndicator color={colors.accent} size="large" />
@@ -101,44 +98,63 @@ export function DashboardScreen({ navigation }: Props): React.JSX.Element {
           </View>
         ) : (
           <>
-            {/* Stat cards */}
-            <View style={styles.statGrid}>
-              <StatCard
+            {/* Overview — four tappable tiles (incl. Vendors) */}
+            <Text style={styles.sectionLabel}>Overview</Text>
+            <View style={[styles.tileGrid, isMobile ? styles.tileGridMobile : null]}>
+              <OverviewTile
                 label="My Inventory"
                 value={data.stats.inventory}
-                sub="In your catalog"
                 icon="cube"
-                iconColor={colors.accent}
-                iconBg={colors.accentMid}
+                color={colors.accent}
+                bg={colors.accentMid}
+                mobile={isMobile}
                 onPress={() => navigation.navigate('Inventory')}
               />
-              <StatCard
-                label="Received Items"
+              <OverviewTile
+                label="Received"
                 value={data.stats.received}
-                sub="Shared with you"
                 icon="file-tray"
-                iconColor={colors.green}
-                iconBg={colors.greenLight}
+                color={colors.green}
+                bg={colors.greenLight}
+                mobile={isMobile}
                 onPress={() => navigation.navigate('Received')}
               />
-              <StatCard
-                // Closest available metric is the reservation/negotiation count.
-                label="Conversations"
+              <OverviewTile
+                label="Reservations"
                 value={data.stats.reservations}
-                sub="Active threads"
-                icon="chatbubble-ellipses"
-                iconColor={colors.purple}
-                iconBg={colors.purpleLight}
+                icon="bookmark"
+                color={colors.purple}
+                bg={colors.purpleLight}
+                mobile={isMobile}
                 onPress={() => navigation.navigate('Reservations')}
               />
-              <StatCard
-                label="My Network"
+              <OverviewTile
+                label="Vendors"
                 value={data.stats.network}
-                sub="Connected vendors"
                 icon="people"
-                iconColor={colors.orange}
-                iconBg={colors.orangeLight}
+                color={colors.orange}
+                bg={colors.orangeLight}
+                mobile={isMobile}
                 onPress={() => navigation.navigate('Network')}
+              />
+            </View>
+
+            {/* Quick Actions — Add Inventory + Add Vendor */}
+            <Text style={styles.sectionLabel}>Quick Actions</Text>
+            <View style={styles.quickRow}>
+              <QuickAction
+                label="Add Inventory"
+                icon="add"
+                color={colors.accent}
+                bg={colors.accentMid}
+                onPress={() => navigation.navigate('InventoryCreate')}
+              />
+              <QuickAction
+                label="Add Vendor"
+                icon="person-add"
+                color={colors.green}
+                bg={colors.greenLight}
+                onPress={() => navigation.navigate('AddVendor')}
               />
             </View>
 
@@ -286,8 +302,108 @@ function ReceivedRow({
   );
 }
 
+/** A tappable Overview tile: tinted icon square, big value, label. */
+function OverviewTile({
+  label,
+  value,
+  icon,
+  color,
+  bg,
+  mobile,
+  onPress,
+}: {
+  label: string;
+  value: number;
+  icon: IoniconName;
+  color: ColorValue;
+  bg: ColorValue;
+  mobile: boolean;
+  onPress: () => void;
+}): React.JSX.Element {
+  return (
+    <Pressable
+      style={[styles.tile, mobile ? styles.tileMobile : styles.tileDesktop, webOnly({ cursor: 'pointer' })]}
+      onPress={onPress}
+    >
+      <View style={[styles.tileIcon, { backgroundColor: bg }]}>
+        <Ionicons name={icon} size={20} color={color} />
+      </View>
+      <Text style={styles.tileValue}>{value}</Text>
+      <Text style={styles.tileLabel}>{label}</Text>
+    </Pressable>
+  );
+}
+
+/** A Quick Action card: round tinted icon + label. */
+function QuickAction({
+  label,
+  icon,
+  color,
+  bg,
+  onPress,
+}: {
+  label: string;
+  icon: IoniconName;
+  color: ColorValue;
+  bg: ColorValue;
+  onPress: () => void;
+}): React.JSX.Element {
+  return (
+    <Pressable style={[styles.quickCard, webOnly({ cursor: 'pointer' })]} onPress={onPress}>
+      <View style={[styles.quickIcon, { backgroundColor: bg }]}>
+        <Ionicons name={icon} size={22} color={color} />
+      </View>
+      <Text style={styles.quickLabel}>{label}</Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center', paddingVertical: 80, gap: 12 },
+
+  // Section labels (mirror "OVERVIEW" / "QUICK ACTIONS")
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 12,
+    marginTop: 4,
+  },
+
+  // Overview tiles
+  tileGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginBottom: 24 },
+  tileGridMobile: { gap: 12 },
+  tile: {
+    backgroundColor: colors.bgWhite,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    padding: 16,
+    gap: 8,
+  },
+  tileDesktop: { flexGrow: 1, flexBasis: 0, minWidth: 170 },
+  tileMobile: { flexGrow: 1, flexBasis: '46%', minWidth: 140 },
+  tileIcon: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  tileValue: { fontSize: 26, fontWeight: '800', color: colors.textPrimary },
+  tileLabel: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
+
+  // Quick Actions
+  quickRow: { flexDirection: 'row', gap: 12, marginBottom: 24 },
+  quickCard: {
+    flex: 1,
+    backgroundColor: colors.bgWhite,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    paddingVertical: 18,
+    alignItems: 'center',
+    gap: 10,
+  },
+  quickIcon: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center' },
+  quickLabel: { fontSize: 13, fontWeight: '700', color: colors.textPrimary },
+
   errorText: { color: colors.red, fontSize: 14, fontWeight: '600', textAlign: 'center' },
   retry: { paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.primary, borderRadius: radius.md },
   retryText: { color: colors.bgWhite, fontWeight: '700' },

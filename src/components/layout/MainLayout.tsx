@@ -1,4 +1,5 @@
 import React, { useState, type ReactNode } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -8,13 +9,19 @@ import { useQuery } from '@tanstack/react-query';
 import type { MainTabParamList, RootStackParamList } from '../../navigation';
 import { getDashboardData } from '../../services/supabase/dashboard';
 import { useReservationAttention } from '../../hooks/useReservationAttention';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import { useAuthStore } from '../../stores/authStore';
+import { colors } from '../../theme/tokens';
 import { AppShell } from './AppShell';
 import { Sidebar } from './Sidebar';
 import { SidebarNav, type SidebarNavId } from './SidebarNav';
 import { SidebarFooter } from './SidebarFooter';
 import { NotificationBell } from './NotificationBell';
 import { ProfileMenu } from './ProfileMenu';
+import { MobileTopBar } from './MobileTopBar';
+import { MobileTabBar } from './MobileTabBar';
+import { MobileMenuSheet } from './MobileMenuSheet';
+import { webOnly } from './web';
 
 type Nav = CompositeNavigationProp<
   BottomTabNavigationProp<MainTabParamList>,
@@ -40,8 +47,11 @@ export function MainLayout({ active, children }: MainLayoutProps): React.JSX.Ele
   const navigation = useNavigation<Nav>();
   const session = useAuthStore((s) => s.session);
   const signOut = useAuthStore((s) => s.signOut);
+  const isMobile = useIsMobile();
   // FIX 5 — clicking the sidebar user block opens this popup (no navigation).
   const [profileOpen, setProfileOpen] = useState(false);
+  // Mobile burger sheet.
+  const [menuOpen, setMenuOpen] = useState(false);
 
   // Shares the ['dashboard'] cache with the Dashboard screen — only one fetch
   // per stale window regardless of how many screens mount this layout.
@@ -95,6 +105,48 @@ export function MainLayout({ active, children }: MainLayoutProps): React.JSX.Ele
     </Sidebar>
   );
 
+  // Mobile chrome — no sidebar; a top app bar + a floating footer nav, with the
+  // account/links living in a burger sheet.
+  if (isMobile) {
+    return (
+      <>
+        <View style={styles.mobileShell}>
+          <MobileTopBar company={data?.vendor.companyName ?? 'MyStokk'} />
+          <View style={styles.mobileMain}>{children}</View>
+          <MobileTabBar
+            activeId={active}
+            reservationAttention={reservationAttention > 0}
+            menuActive={menuOpen}
+            onNavigate={goTo}
+            onOpenMenu={() => setMenuOpen(true)}
+          />
+        </View>
+        <MobileMenuSheet
+          visible={menuOpen}
+          name={data?.vendor.companyName ?? 'MyStokk'}
+          email={session?.user?.email ?? ''}
+          onClose={() => setMenuOpen(false)}
+          onProfile={() => {
+            setMenuOpen(false);
+            navigation.navigate('Profile');
+          }}
+          onSettings={() => {
+            setMenuOpen(false);
+            navigation.navigate('Settings');
+          }}
+          onNotifications={() => {
+            setMenuOpen(false);
+            navigation.navigate('Notifications');
+          }}
+          onLogout={() => {
+            setMenuOpen(false);
+            void signOut();
+          }}
+        />
+      </>
+    );
+  }
+
   return (
     <>
       <AppShell sidebar={sidebar}>{children}</AppShell>
@@ -118,3 +170,8 @@ export function MainLayout({ active, children }: MainLayoutProps): React.JSX.Ele
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  mobileShell: { flex: 1, flexDirection: 'column', backgroundColor: colors.bgPage, ...webOnly({ minHeight: '100vh' }) },
+  mobileMain: { flex: 1, minHeight: 0 },
+});
