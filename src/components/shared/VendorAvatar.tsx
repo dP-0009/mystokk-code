@@ -18,11 +18,24 @@ function avatarColor(seed: string): string {
   return AVATAR_PALETTE[h % AVATAR_PALETTE.length];
 }
 
-/** Clearbit logo URL for an email's company domain, or null when not derivable. */
-function clearbitFromEmail(email: string | null | undefined): string | null {
+/** Free/personal email providers — these have no "company" logo, so fall back
+ *  to the letter circle instead of showing the provider's icon. */
+const FREE_EMAIL_DOMAINS = new Set([
+  'gmail.com', 'googlemail.com', 'yahoo.com', 'yahoo.co.in', 'ymail.com', 'rocketmail.com',
+  'hotmail.com', 'outlook.com', 'live.com', 'msn.com', 'icloud.com', 'me.com', 'mac.com',
+  'aol.com', 'proton.me', 'protonmail.com', 'gmx.com', 'mail.com', 'zoho.com', 'yandex.com',
+]);
+
+/**
+ * Company logo URL derived from a manual contact's email domain, or null when
+ * not derivable (no email / personal provider). Clearbit's logo API was sunset,
+ * so we use Google's favicon service, which reliably returns a company's
+ * logo/favicon for any real domain.
+ */
+function logoFromEmail(email: string | null | undefined): string | null {
   const domain = email?.trim().split('@')[1]?.toLowerCase();
-  if (!domain || !domain.includes('.')) return null;
-  return `https://logo.clearbit.com/${domain}`;
+  if (!domain || !domain.includes('.') || FREE_EMAIL_DOMAINS.has(domain)) return null;
+  return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=128`;
 }
 
 interface VendorAvatarProps {
@@ -43,16 +56,16 @@ interface VendorAvatarProps {
  * Vendor avatar shared across the app (network table, share modal, view-vendor
  * popup, …). Resolution order:
  *   1. `logoUrl` (the vendor's uploaded company logo), if set.
- *   2. Clearbit logo derived from `email`'s domain (manual contacts).
+ *   2. A logo derived from `email`'s company domain (manual contacts).
  *   3. Colored letter-initial circle fallback.
- * If a remote logo fails to load (broken URL / Clearbit miss), it falls back to
+ * If a remote logo fails to load (broken URL / domain miss), it falls back to
  * the next option via the image `onError` handler — never a broken-image icon.
  */
 export function VendorAvatar({ name, logoUrl, email, size = 34 }: VendorAvatarProps): React.JSX.Element {
   const dim = { width: size, height: size, borderRadius: size / 2 };
 
-  // Candidate remote image: explicit logo first, else Clearbit-by-domain.
-  const remoteUri = logoUrl || clearbitFromEmail(email);
+  // Candidate remote image: explicit uploaded logo first, else logo-by-email-domain.
+  const remoteUri = logoUrl || logoFromEmail(email);
 
   // Track load failure so a broken remote logo degrades to the letter circle.
   const [failed, setFailed] = useState(false);
