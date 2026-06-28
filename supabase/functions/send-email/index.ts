@@ -8,8 +8,9 @@
 //   4. reservation_update — accepted / rejected / countered
 //
 // Secrets (set via `supabase secrets set`, NEVER in the app .env):
-//   RESEND_API_KEY, RESEND_FROM_EMAIL, PUBLIC_SHARE_BASE_URL (optional)
+//   RESEND_API_KEY, RESEND_FROM_EMAIL
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are injected automatically.
+// (The share/link base URL is hardcoded below — see SHARE_BASE.)
 // ============================================================================
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
