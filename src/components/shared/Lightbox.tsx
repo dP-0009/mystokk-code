@@ -111,54 +111,52 @@ export function Lightbox({
         </>
       ) : null}
 
-      {/* Column: image area (flex) over the controls — they never overlap, so a
-          tall image is shown whole (contain) between the top close and the
-          bottom strip. box-none lets clicks on the empty margins reach the
-          backdrop (close); the image + controls keep their own taps. */}
-      <View style={styles.content} pointerEvents="box-none">
-        <View style={styles.imageArea} pointerEvents="box-none">
-          <View style={styles.imageWrap} {...pan.panHandlers}>
-            {Platform.OS === 'web' ? (
-              // On web, render a real <img>: react-native-web's <Image> is a
-              // background-image <div>, which collapses to 0px when sized
-              // auto/auto. A native <img> with object-fit: contain sizes
-              // correctly. (uri is a full https:// URL — see storage.ts.)
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              React.createElement('img' as any, { src: uri, style: WEB_IMG_STYLE, alt: '' })
-            ) : (
-              <Image source={{ uri }} style={styles.nativeImage} resizeMode="contain" />
-            )}
-          </View>
+      {/* Image area fills the space above the controls; minHeight:0 lets the
+          flex column actually shrink so a tall image is scaled down whole
+          (contain) instead of overflowing/being clipped. box-none lets clicks
+          on the empty margins reach the backdrop (close). */}
+      <View style={styles.imageArea} pointerEvents="box-none">
+        <View style={styles.imageWrap} {...pan.panHandlers}>
+          {Platform.OS === 'web' ? (
+            // On web, render a real <img>: react-native-web's <Image> is a
+            // background-image <div>, which collapses to 0px when sized
+            // auto/auto. A native <img> with object-fit: contain sizes
+            // correctly. (uri is a full https:// URL — see storage.ts.)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            React.createElement('img' as any, { src: uri, style: WEB_IMG_STYLE, alt: '' })
+          ) : (
+            <Image source={{ uri }} style={styles.nativeImage} resizeMode="contain" />
+          )}
         </View>
-
-        {/* Counter + thumbnail strip (carousel only) — in normal flow below the
-            image so they never cover it. */}
-        {isCarousel ? (
-          <View style={styles.bottom} pointerEvents="box-none">
-            <Text style={styles.counter}>
-              {current + 1} / {count}
-            </Text>
-            {showThumbnails ? (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.thumbStrip}
-              >
-                {images.map((thumb, i) => (
-                  <Pressable
-                    key={`${i}-${thumb}`}
-                    onPress={() => setCurrent(i)}
-                    style={[styles.thumb, i === current ? styles.thumbActive : null]}
-                    accessibilityLabel={`View image ${i + 1}`}
-                  >
-                    <Image source={{ uri: thumb }} style={styles.thumbImg} resizeMode="cover" />
-                  </Pressable>
-                ))}
-              </ScrollView>
-            ) : null}
-          </View>
-        ) : null}
       </View>
+
+      {/* Counter + thumbnail strip (carousel only) — in normal flow below the
+          image so they never cover it. */}
+      {isCarousel ? (
+        <View style={styles.bottom} pointerEvents="box-none">
+          <Text style={styles.counter}>
+            {current + 1} / {count}
+          </Text>
+          {showThumbnails ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.thumbStrip}
+            >
+              {images.map((thumb, i) => (
+                <Pressable
+                  key={`${i}-${thumb}`}
+                  onPress={() => setCurrent(i)}
+                  style={[styles.thumb, i === current ? styles.thumbActive : null]}
+                  accessibilityLabel={`View image ${i + 1}`}
+                >
+                  <Image source={{ uri: thumb }} style={styles.thumbImg} resizeMode="cover" />
+                </Pressable>
+              ))}
+            </ScrollView>
+          ) : null}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -209,12 +207,12 @@ const CIRCLE = 'rgba(255,255,255,0.15)';
 // contain so the whole photo is visible inside the dark overlay. Plain CSS
 // (not RN style) because this is a real DOM <img>, not an RN <Image>.
 const WEB_IMG_STYLE = {
+  // Fit entirely within the image area (which already reserves room for the
+  // close button + bottom strip) at the image's natural aspect ratio.
+  maxWidth: '100%',
+  maxHeight: '100%',
   width: 'auto',
   height: 'auto',
-  // Leave room for the top close button and the bottom counter/thumbnail strip
-  // so a tall image is never cropped or hidden behind the controls.
-  maxWidth: '92vw',
-  maxHeight: 'calc(100vh - 210px)',
   objectFit: 'contain',
   display: 'block',
   borderRadius: 8,
@@ -228,8 +226,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: 'rgba(0,0,0,0.92)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: 'column',
     zIndex: 99999,
     ...webOnly({ position: 'fixed' }),
   },
@@ -265,10 +262,20 @@ const styles = StyleSheet.create({
   arrowLeft: { left: 20 },
   arrowRight: { right: 20 },
 
-  // Column: image area (flex) above the controls — never overlapping.
-  content: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, flexDirection: 'column' },
-  imageArea: { flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16, paddingTop: 60 },
-  imageWrap: { flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center' },
+  // Image area fills above the controls. minHeight:0 is essential: without it a
+  // flex item won't shrink below its content, so a tall image overflows and is
+  // visually clipped. paddingTop clears the close button.
+  imageArea: {
+    flex: 1,
+    minHeight: 0,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 56,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  imageWrap: { flex: 1, minHeight: 0, width: '100%', alignItems: 'center', justifyContent: 'center' },
   nativeImage: { width: '100%', height: '100%' },
 
   bottom: {

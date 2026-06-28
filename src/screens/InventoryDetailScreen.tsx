@@ -273,7 +273,7 @@ export function InventoryDetailScreen({ navigation, route }: Props): React.JSX.E
                       style={[styles.photoThumb, webOnly({ cursor: 'pointer' })]}
                       accessibilityLabel={`View photo ${i + 1}`}
                     >
-                      <Image source={{ uri: url }} style={styles.photoImg} resizeMode="contain" />
+                      <Image source={{ uri: url }} style={styles.photoImg} resizeMode="cover" />
                     </Pressable>
                   ))}
                 </View>
