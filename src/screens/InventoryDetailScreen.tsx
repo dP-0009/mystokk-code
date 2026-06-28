@@ -212,9 +212,10 @@ export function InventoryDetailScreen({ navigation, route }: Props): React.JSX.E
   return (
     <MainLayout active="inventory">
       <PageBody>
-        <View style={styles.wrap}>
-          <BackLink onPress={() => navigation.navigate('Main', { screen: 'Inventory' })} />
+        {/* Far-left back link, just beside the sidebar (outside the centered card). */}
+        <BackLink onPress={() => navigation.navigate('Main', { screen: 'Inventory' })} />
 
+        <View style={styles.wrap}>
           <View style={styles.card}>
             {/* Header */}
             <View style={styles.cardHeader}>
@@ -272,7 +273,7 @@ export function InventoryDetailScreen({ navigation, route }: Props): React.JSX.E
                       style={[styles.photoThumb, webOnly({ cursor: 'pointer' })]}
                       accessibilityLabel={`View photo ${i + 1}`}
                     >
-                      <Image source={{ uri: url }} style={styles.photoImg} resizeMode="cover" />
+                      <Image source={{ uri: url }} style={styles.photoImg} resizeMode="contain" />
                     </Pressable>
                   ))}
                 </View>
