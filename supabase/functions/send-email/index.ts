@@ -36,7 +36,7 @@ const json = (body: unknown, status = 200): Response =>
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 
-const SHARE_BASE = Deno.env.get('PUBLIC_SHARE_BASE_URL') ?? 'https://app.mystokk.com';
+const SHARE_BASE = Deno.env.get('PUBLIC_SHARE_BASE_URL') ?? 'https://mystokk.vercel.app';
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL') ?? '',
@@ -105,7 +105,7 @@ async function handleShare(
   const [{ data: recipient }, { data: sender }, { data: item }] = await Promise.all([
     supabase.from('vendors').select('email').eq('id', p.recipientVendorId).single(),
     supabase.from('vendors').select('company_name').eq('id', share.source_vendor_id).single(),
-    supabase.from('inventory').select('title, price, currency').eq('inventory_id', p.inventoryId).single(),
+    supabase.from('inventory').select('title, price, currency, stock_location').eq('inventory_id', p.inventoryId).single(),
   ]);
   if (!recipient?.email || !item) return json({ error: 'Recipient or item missing' }, 404);
 
@@ -129,6 +129,7 @@ async function handleShare(
     senderCompany: sender?.company_name ?? 'A MyStokk vendor',
     productTitle: item.title,
     priceLabel: formatPrice(share.forward_price ?? item.price, share.forward_currency ?? item.currency),
+    stockLocation: item.stock_location ?? null,
     shareUrl: `${SHARE_BASE}/share/${share.token}`,
     photoUrl,
   });

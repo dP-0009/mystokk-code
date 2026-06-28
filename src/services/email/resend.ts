@@ -151,12 +151,13 @@ export interface ShareEmailParams {
   senderCompany: string;
   productTitle: string;
   priceLabel: string;
+  stockLocation?: string | null;
   shareUrl: string;
   photoUrl: string | null;
 }
 
 export function buildShareEmail(params: ShareEmailParams): EmailContent {
-  const { senderCompany, productTitle, priceLabel, shareUrl, photoUrl } = params;
+  const { senderCompany, productTitle, priceLabel, stockLocation, shareUrl, photoUrl } = params;
   const safeTitle = escapeHtml(productTitle);
   const safeCompany = escapeHtml(senderCompany);
 
@@ -165,17 +166,23 @@ export function buildShareEmail(params: ShareEmailParams): EmailContent {
       ? `<img src="${photoUrl}" alt="${safeTitle}" width="424" style="width:100%;max-width:424px;height:auto;border-radius:10px;border:1px solid ${BRAND.slate200};margin-bottom:16px;" />`
       : '';
 
+  const locationBlock = stockLocation
+    ? `<p style="margin:4px 0 0;color:${BRAND.slate500};font-size:13px;">📍 ${escapeHtml(stockLocation)}</p>`
+    : '';
+
   const html = layout(`
     <p style="margin:0 0 4px;color:${BRAND.slate500};font-size:13px;">${safeCompany} shared an item with you</p>
     ${photoBlock}
     <h1 style="margin:0 0 6px;font-size:20px;color:${BRAND.navy};">${safeTitle}</h1>
     <p style="margin:0 0 2px;font-size:18px;font-weight:700;color:${BRAND.emerald};">${escapeHtml(priceLabel)}</p>
+    ${locationBlock}
     <p style="margin:6px 0 0;color:${BRAND.slate500};font-size:13px;">Shared by ${safeCompany}</p>
     ${button('View item', shareUrl, BRAND.emerald)}
   `);
 
   // Plain-text fallback (also used when there is no photo).
-  const text = `${senderCompany} shared an item with you on MyStokk.\n\n${productTitle}\n${priceLabel}\nShared by ${senderCompany}\n\nView it: ${shareUrl}`;
+  const locationLine = stockLocation ? `\n${stockLocation}` : '';
+  const text = `${senderCompany} shared an item with you on MyStokk.\n\n${productTitle}\n${priceLabel}${locationLine}\nShared by ${senderCompany}\n\nView it: ${shareUrl}`;
 
   return { subject: `${senderCompany} shared "${productTitle}" with you`, html, text };
 }

@@ -113,14 +113,20 @@ const FALLBACK_OG_IMAGE = 'https://placehold.co/1200x630/1e293b/ffffff?text=MySt
 
 /**
  * og:image is the item's FIRST product photo. The inventory-photos bucket is
- * public-read (migration 032), so we point straight at the photo's public path
- * through /api/public-files, which returns a crawler-safe 1200x630 JPEG. No
- * service key or signing needed. No photo → branded placeholder.
+ * public-read (migration 032), so we point straight at Supabase's native image
+ * transformation CDN (`/render/image/public`), which returns an exact 1200x630
+ * cover-cropped JPEG with a correct Content-Length, served from the edge.
+ *
+ * This deliberately bypasses our own /api/public-files Python shim: that
+ * function cold-starts slowly (PIL import + fetch + resize), and WhatsApp's
+ * image fetch times out on a cold start and then caches a no-thumbnail preview.
+ * Supabase's CDN-cached transform responds fast every time. No photo →
+ * branded placeholder.
  */
 function resolveOgImage(share: PublicShare | null): string {
   if (!share?.first_photo_path) return FALLBACK_OG_IMAGE;
   const path = share.first_photo_path.split('/').map(encodeURIComponent).join('/');
-  return `${APP_BASE}/api/public-files/${PHOTO_BUCKET}/${path}?convert=jpeg`;
+  return `${SUPABASE_URL}/storage/v1/render/image/public/${PHOTO_BUCKET}/${path}?width=1200&height=630&resize=cover`;
 }
 
 function renderOgHtml(share: PublicShare | null, canonical: string, imageUrl: string): string {

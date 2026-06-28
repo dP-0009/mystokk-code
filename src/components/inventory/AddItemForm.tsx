@@ -562,6 +562,9 @@ function UploadZone({
 const styles = StyleSheet.create({
   // Section card — mirror `.section`
   card: {
+    // position:relative is REQUIRED for the SectionCard zIndex to take effect —
+    // without it an open select's dropdown is painted over by the card below.
+    position: 'relative',
     backgroundColor: colors.bgWhite,
     borderWidth: 1,
     borderColor: colors.border,
@@ -582,10 +585,14 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
 
-  // 2-column rows
-  row: { flexDirection: 'row', gap: 16 },
+  // 2-column rows. position:relative + zIndex lift the whole row (and any open
+  // select dropdown inside it) above the sibling fields that follow it in the
+  // same card — without this the Origin/Stock Location inputs paint over the
+  // dropdown. zIndex on colSelect alone can't do this: it only ranks the select
+  // within its own row, not against the row's later siblings.
+  row: { flexDirection: 'row', gap: 16, position: 'relative', zIndex: 1 },
   col: { flex: 1, minWidth: 0 },
-  // Selects need a higher zIndex so their dropdown layers over later fields.
+  // Keep the select column above its sibling Price column within the row.
   colSelect: { zIndex: 20 },
 
   // Field + label — mirror `.field label`
