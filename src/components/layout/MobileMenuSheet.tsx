@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { colors, radius, shadows } from '../../theme/tokens';
@@ -8,7 +8,7 @@ import { webOnly } from './web';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
-const APP_BASE = 'https://mystokk.vercel.app';
+type LegalPage = 'faq' | 'privacy' | 'terms' | 'contact';
 
 interface MobileMenuSheetProps {
   visible: boolean;
@@ -19,6 +19,7 @@ interface MobileMenuSheetProps {
   onProfile: () => void;
   onSettings: () => void;
   onNotifications: () => void;
+  onLegal: (page: LegalPage) => void;
   onLogout: () => void;
 }
 
@@ -39,6 +40,7 @@ export function MobileMenuSheet({
   onProfile,
   onSettings,
   onNotifications,
+  onLegal,
   onLogout,
 }: MobileMenuSheetProps): React.JSX.Element | null {
   const unread = useUnreadCount();
@@ -53,11 +55,6 @@ export function MobileMenuSheet({
   }, [visible, onClose]);
 
   if (!visible) return null;
-
-  const openUrl = (url: string): void => {
-    void Linking.openURL(url);
-    onClose();
-  };
 
   const initial = (name.trim()[0] ?? '?').toUpperCase();
 
@@ -91,10 +88,10 @@ export function MobileMenuSheet({
 
         <View style={styles.divider} />
 
-        <MenuItem icon="help-circle-outline" label="FAQ" onPress={() => openUrl(`${APP_BASE}/faq`)} />
-        <MenuItem icon="shield-outline" label="Privacy Policy" onPress={() => openUrl(`${APP_BASE}/privacy`)} />
-        <MenuItem icon="document-text-outline" label="Terms" onPress={() => openUrl(`${APP_BASE}/terms`)} />
-        <MenuItem icon="mail-outline" label="Contact" onPress={() => openUrl('mailto:support@mystokk.app')} />
+        <MenuItem icon="help-circle-outline" label="FAQ" onPress={() => onLegal('faq')} />
+        <MenuItem icon="shield-outline" label="Privacy Policy" onPress={() => onLegal('privacy')} />
+        <MenuItem icon="document-text-outline" label="Terms" onPress={() => onLegal('terms')} />
+        <MenuItem icon="mail-outline" label="Contact" onPress={() => onLegal('contact')} />
 
         <View style={styles.divider} />
 

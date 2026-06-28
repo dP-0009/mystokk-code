@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  FlatList,
   Image,
   Linking,
   Modal,
@@ -11,8 +10,6 @@ import {
   StyleSheet,
   Text,
   View,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -26,7 +23,6 @@ import {
   type InventoryDetail,
   type InventoryDocument,
   type ItemReservation,
-  type ShareActivity,
 } from '../services/supabase/inventory';
 import { createPublicLink } from '../services/supabase/shares';
 import { copyToClipboard, shareText } from '../utils/clipboard';
@@ -38,14 +34,25 @@ import { webOnly } from '../components/layout/web';
 import { useAuthStore, selectCanShare } from '../stores/authStore';
 import { toast } from '../stores/toast';
 import { colors } from '../theme/tokens';
+import type { ColorValue } from '../theme/tokens';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'InventoryDetail'>;
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
-const CAROUSEL_HEIGHT = 360;
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  INR: '₹',
+  USD: '$',
+  EUR: '€',
+  GBP: '£',
+  AED: 'AED ',
+  SAR: 'SAR ',
+  PKR: '₨',
+};
 
 function money(currency: string, price: number | null): string {
   if (price === null || price === undefined) return 'Price on request';
-  return `${currency} ${price.toLocaleString()}`;
+  const symbol = CURRENCY_SYMBOLS[currency] ?? `${currency} `;
+  return `${symbol}${price.toLocaleString()}`;
 }
 
 function daysAgo(iso: string): string {
@@ -55,9 +62,14 @@ function daysAgo(iso: string): string {
   return `${days}d ago`;
 }
 
+function shortDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleDateString();
+}
+
 function relativeTime(iso: string): string {
-  const then = new Date(iso).getTime();
-  const diff = Date.now() - then;
+  const diff = Date.now() - new Date(iso).getTime();
   if (Number.isNaN(diff)) return '';
   const min = Math.round(diff / 60_000);
   if (min < 1) return 'just now';
@@ -70,8 +82,7 @@ function relativeTime(iso: string): string {
   if (wk < 5) return `${wk} week${wk === 1 ? '' : 's'} ago`;
   const mo = Math.round(day / 30);
   if (mo < 12) return `${mo} month${mo === 1 ? '' : 's'} ago`;
-  const yr = Math.round(day / 365);
-  return `${yr} year${yr === 1 ? '' : 's'} ago`;
+  return `${Math.round(day / 365)} year(s) ago`;
 }
 
 export function InventoryDetailScreen({ navigation, route }: Props): React.JSX.Element {
@@ -80,8 +91,6 @@ export function InventoryDetailScreen({ navigation, route }: Props): React.JSX.E
   const [menuOpen, setMenuOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [photoIndex, setPhotoIndex] = useState(0);
-  const [carouselWidth, setCarouselWidth] = useState(0);
   const canShare = useAuthStore(selectCanShare);
   const { open: openLightbox } = useLightbox();
 
@@ -91,7 +100,6 @@ export function InventoryDetailScreen({ navigation, route }: Props): React.JSX.E
     staleTime: 30_000,
   });
 
-  // Refresh when returning (e.g. after editing the item).
   useFocusEffect(
     React.useCallback(() => {
       void refetch();
@@ -141,12 +149,6 @@ export function InventoryDetailScreen({ navigation, route }: Props): React.JSX.E
     onError: (e) => toast.error(e instanceof Error ? e.message : 'Could not delete item.'),
   });
 
-  const onMomentum = (e: NativeSyntheticEvent<NativeScrollEvent>): void => {
-    const w = e.nativeEvent.layoutMeasurement.width || 1;
-    setPhotoIndex(Math.round(e.nativeEvent.contentOffset.x / w));
-  };
-
-  // Escape closes the delete confirmation (web), mirroring the Cancel button.
   useEffect(() => {
     if (!deleteOpen || Platform.OS !== 'web' || typeof document === 'undefined') return;
     const onKey = (e: KeyboardEvent): void => {
@@ -167,7 +169,6 @@ export function InventoryDetailScreen({ navigation, route }: Props): React.JSX.E
       { text: 'Archive', onPress: () => archiveMutation.mutate() },
     ]);
 
-  // Opens the in-app delete confirmation modal (never the browser's confirm()).
   const confirmDelete = (): void => setDeleteOpen(true);
 
   if (isLoading) {
@@ -197,141 +198,143 @@ export function InventoryDetailScreen({ navigation, route }: Props): React.JSX.E
   const reserved = Math.max(item.quantity - item.quantity_available, 0);
   const specEntries = Object.entries(item.specs ?? {});
 
+  // Activity timeline — newest first, with the item's creation as the base event.
+  const activity = [
+    ...shareActivity.map((s) => ({
+      label: s.recipient_company ? `Shared with ${s.recipient_company}` : 'Create Public Share',
+      ts: s.shared_at,
+    })),
+    { label: 'Create Inventory', ts: item.created_at },
+  ].sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime());
+
   return (
     <MainLayout active="inventory">
-      {/* Page header — back link, item name, meta + privacy note, and actions. */}
-      <View style={styles.header}>
-        <View style={styles.titleBlock}>
-          <BackLink onPress={() => navigation.navigate('Main', { screen: 'Inventory' })} />
-          <Text style={styles.h1} numberOfLines={2}>
-            {item.title}
-          </Text>
-          <Text style={styles.subRow} numberOfLines={1}>
-            {item.product_code ?? '—'} | {item.category ?? 'General'} • {daysAgo(item.created_at)}
-          </Text>
-          <Text style={styles.privacy}>
-            Shared only with YOUR trusted contacts, not to open market.
-          </Text>
-        </View>
-        <View style={styles.headerActions}>
-          <ShareButton onPress={onShare} />
-          <EditButton onPress={() => navigation.navigate('InventoryEdit', { inventoryId })} />
-          <OverflowButton onPress={() => setMenuOpen(true)} />
-        </View>
-      </View>
-
       <PageBody>
-        {/* Photo carousel — sized to the content column width. */}
-        <View
-          style={[styles.carousel, { height: CAROUSEL_HEIGHT }]}
-          onLayout={(e) => setCarouselWidth(e.nativeEvent.layout.width)}
-        >
-          {photoUrls.length > 0 && carouselWidth > 0 ? (
-            <>
-              <FlatList
-                data={photoUrls}
-                horizontal
-                pagingEnabled
-                showsHorizontalScrollIndicator={false}
-                keyExtractor={(u, i) => `${i}-${u}`}
-                onMomentumScrollEnd={onMomentum}
-                renderItem={({ item: url, index: i }) => (
-                  <Pressable onPress={() => openLightbox(photoUrls, i)} style={webOnly({ cursor: 'pointer' })}>
-                    <Image
-                      source={{ uri: url }}
-                      style={{ width: carouselWidth, height: CAROUSEL_HEIGHT }}
-                      resizeMode="cover"
-                    />
-                  </Pressable>
-                )}
-              />
-              {photoUrls.length > 1 ? (
-                <View style={styles.dots}>
-                  {photoUrls.map((u, i) => (
-                    <View key={`${i}-${u}`} style={[styles.dot, i === photoIndex ? styles.dotActive : null]} />
+        <View style={styles.wrap}>
+          <BackLink onPress={() => navigation.navigate('Main', { screen: 'Inventory' })} />
+
+          <View style={styles.card}>
+            {/* Header */}
+            <View style={styles.cardHeader}>
+              <View style={styles.titleBlock}>
+                <Text style={styles.h1} numberOfLines={2}>
+                  {item.title}
+                </Text>
+                <Text style={styles.skuRow} numberOfLines={1}>
+                  {item.product_code ?? '—'} | {item.category ?? 'General'}
+                </Text>
+                <Text style={styles.timeRow}>{daysAgo(item.created_at)}</Text>
+                <Text style={styles.privacy}>Shared only with YOUR trusted contacts, not to open market.</Text>
+              </View>
+              <View style={styles.headerActions}>
+                <ShareButton onPress={onShare} />
+                <EditButton onPress={() => navigation.navigate('InventoryEdit', { inventoryId })} />
+                <OverflowButton onPress={() => setMenuOpen(true)} />
+              </View>
+            </View>
+
+            {/* Stat row */}
+            <View style={styles.statsRow}>
+              <StatCell label="TOTAL QTY" labelColor={colors.textMuted} value={item.quantity} unit={item.unit} />
+              <View style={styles.statDivider} />
+              <StatCell label="RESERVED" labelColor={colors.orange} value={reserved} unit={item.unit} />
+              <View style={styles.statDivider} />
+              <StatCell label="AVAILABLE" labelColor={colors.green} value={item.quantity_available} unit={item.unit} />
+              <View style={styles.statDivider} />
+              <StatCell label="SHARED WITH" labelColor={colors.textMuted} value={item.shared_count} icon="people" />
+            </View>
+
+            {/* Price band */}
+            <View style={styles.priceBand}>
+              <Text style={styles.priceLabel}>
+                Price: <Text style={styles.priceValue}>{money(item.currency, item.price)}</Text>
+                {item.price !== null ? <Text style={styles.priceUnit}>{`  per ${item.unit}`}</Text> : null}
+              </Text>
+              <StatusChip status={item.status} />
+            </View>
+
+            {/* Photos — tap to open the carousel lightbox */}
+            {photoUrls.length > 0 ? (
+              <SubSection icon="image-outline" title={`Photos (${photoUrls.length})`}>
+                <View style={styles.photoGrid}>
+                  {photoUrls.map((url, i) => (
+                    <Pressable
+                      key={`${i}-${url}`}
+                      onPress={() => openLightbox(photoUrls, i)}
+                      style={[styles.photoThumb, webOnly({ cursor: 'pointer' })]}
+                      accessibilityLabel={`View photo ${i + 1}`}
+                    >
+                      <Image source={{ uri: url }} style={styles.photoImg} resizeMode="cover" />
+                    </Pressable>
                   ))}
                 </View>
-              ) : null}
-            </>
-          ) : (
-            <Text style={styles.carouselPlaceholder}>📦</Text>
-          )}
+              </SubSection>
+            ) : null}
+
+            {/* Description */}
+            {item.description ? (
+              <SubSection icon="document-text-outline" title="Description">
+                <Text style={styles.description}>{item.description}</Text>
+              </SubSection>
+            ) : null}
+
+            {/* Details */}
+            {item.origin || item.stock_location ? (
+              <SubSection icon="information-circle-outline" title="Details">
+                {item.origin ? <DetailRow label="Origin" value={item.origin} /> : null}
+                {item.stock_location ? <DetailRow label="Stock Location" value={item.stock_location} /> : null}
+              </SubSection>
+            ) : null}
+
+            {/* Documents */}
+            {documents.length > 0 ? (
+              <SubSection icon="folder-outline" title="Documents">
+                {documents.map((doc) => (
+                  <DocumentRow key={doc.storage_path} doc={doc} />
+                ))}
+              </SubSection>
+            ) : null}
+
+            {/* Specifications */}
+            {specEntries.length > 0 ? (
+              <SubSection icon="list-outline" title="Specifications">
+                {specEntries.map(([k, v]) => (
+                  <DetailRow key={k} label={k} value={String(v)} />
+                ))}
+              </SubSection>
+            ) : null}
+
+            {/* Reservation History */}
+            {reservations.length > 0 ? (
+              <SubSection icon="bookmark-outline" title="Reservation History">
+                {reservations.map((r) => (
+                  <ReservationHistoryRow key={r.reservation_id} reservation={r} currency={item.currency} />
+                ))}
+              </SubSection>
+            ) : null}
+
+            {/* Activity */}
+            <SubSection icon="time-outline" title="Activity">
+              {activity.map((a, i) => (
+                <View key={i} style={styles.activityRow}>
+                  <View style={styles.activityLeft}>
+                    <View style={styles.activityDot} />
+                    <Text style={styles.activityLabel} numberOfLines={1}>
+                      {a.label}
+                    </Text>
+                  </View>
+                  <Text style={styles.activityDate}>{shortDate(a.ts)}</Text>
+                </View>
+              ))}
+            </SubSection>
+
+            {/* Delete */}
+            <Pressable style={[styles.deleteBtn, webOnly({ cursor: 'pointer' })]} onPress={confirmDelete}>
+              <Ionicons name="trash-outline" size={16} color={colors.red} />
+              <Text style={styles.deleteBtnText}>Delete Item</Text>
+            </Pressable>
+          </View>
         </View>
-
-        {/* Status + price */}
-        <View style={styles.priceRow}>
-          <Text style={styles.price}>
-            {money(item.currency, item.price)}
-            {item.price !== null ? <Text style={styles.priceUnit}> / {item.unit}</Text> : null}
-          </Text>
-          <StatusChip status={item.status} />
-        </View>
-
-        {/* 4-stat row */}
-        <View style={styles.statRow}>
-          <Stat value={item.quantity} label="Total" />
-          <Stat value={reserved} label="Reserved" />
-          <Stat value={item.quantity_available} label="Available" />
-          <Stat value={item.shared_count} label="Shared" />
-        </View>
-
-        {/* Details */}
-        <Section title="Details">
-          <DetailRow label="Origin" value={item.origin ?? '—'} />
-          <DetailRow label="Stock Location" value={item.stock_location ?? '—'} />
-          <DetailRow label="Unit" value={item.unit} />
-          <DetailRow label="Currency" value={item.currency} />
-        </Section>
-
-        {/* Description */}
-        {item.description ? (
-          <Section title="Description">
-            <Text style={styles.description}>{item.description}</Text>
-          </Section>
-        ) : null}
-
-        {/* Documents */}
-        {documents.length > 0 ? (
-          <Section title="Documents">
-            {documents.map((doc) => (
-              <DocumentRow key={doc.storage_path} doc={doc} />
-            ))}
-          </Section>
-        ) : null}
-
-        {/* Specifications */}
-        {specEntries.length > 0 ? (
-          <Section title="Specifications">
-            {specEntries.map(([k, v]) => (
-              <DetailRow key={k} label={k} value={String(v)} />
-            ))}
-          </Section>
-        ) : null}
-
-        {/* Reservation History */}
-        <Section title="Reservation History">
-          {reservations.length === 0 ? (
-            <Text style={styles.empty}>No reservations yet.</Text>
-          ) : (
-            reservations.map((r) => (
-              <ReservationHistoryRow key={r.reservation_id} reservation={r} currency={item.currency} />
-            ))
-          )}
-        </Section>
-
-        {/* Activity Log */}
-        <Section title="Activity Log">
-          {shareActivity.length === 0 ? (
-            <Text style={styles.empty}>No activity yet.</Text>
-          ) : (
-            shareActivity.map((s, i) => <ActivityRow key={i} share={s} />)
-          )}
-        </Section>
-
-        {/* Full-width delete button at the bottom of the page. */}
-        <Pressable style={styles.deleteBtn} onPress={confirmDelete}>
-          <Text style={styles.deleteBtnText}>Delete Item</Text>
-        </Pressable>
       </PageBody>
 
       <ShareModal
@@ -362,7 +365,7 @@ export function InventoryDetailScreen({ navigation, route }: Props): React.JSX.E
         </Pressable>
       </Modal>
 
-      {/* Delete confirmation (in-app modal — never the browser confirm) */}
+      {/* Delete confirmation */}
       <Modal visible={deleteOpen} transparent animationType="fade" onRequestClose={() => setDeleteOpen(false)}>
         <Pressable style={styles.confirmOverlay} onPress={() => setDeleteOpen(false)}>
           <Pressable style={styles.confirmCard} onPress={(e) => e.stopPropagation()}>
@@ -396,7 +399,6 @@ export function InventoryDetailScreen({ navigation, route }: Props): React.JSX.E
   );
 }
 
-/** '← Back to Inventory' link — #475569, turns #2563EB on hover (web). */
 function BackLink({ onPress }: { onPress: () => void }): React.JSX.Element {
   const [hovered, setHovered] = useState(false);
   return (
@@ -407,13 +409,12 @@ function BackLink({ onPress }: { onPress: () => void }): React.JSX.Element {
       hitSlop={6}
       style={[styles.backLink, webOnly({ cursor: 'pointer' })]}
     >
-      <Ionicons name="arrow-back" size={14} color={hovered ? colors.accent : colors.textSecondary} />
+      <Ionicons name="arrow-back" size={15} color={hovered ? colors.accent : colors.textSecondary} />
       <Text style={[styles.backText, hovered ? styles.backTextHover : null]}>Back to Inventory</Text>
     </Pressable>
   );
 }
 
-/** Primary navy 'Share' button (mirror `.btn-p`). */
 function ShareButton({ onPress }: { onPress: () => void }): React.JSX.Element {
   return (
     <Pressable onPress={onPress} style={[styles.shareBtn, webOnly({ cursor: 'pointer' })]}>
@@ -423,7 +424,6 @@ function ShareButton({ onPress }: { onPress: () => void }): React.JSX.Element {
   );
 }
 
-/** Outline 'Edit' button — 1.5px #CBD5E1 border on white. */
 function EditButton({ onPress }: { onPress: () => void }): React.JSX.Element {
   return (
     <Pressable onPress={onPress} style={[styles.editBtn, webOnly({ cursor: 'pointer' })]}>
@@ -433,7 +433,6 @@ function EditButton({ onPress }: { onPress: () => void }): React.JSX.Element {
   );
 }
 
-/** ⋯ overflow button — opens the secondary actions sheet. */
 function OverflowButton({ onPress }: { onPress: () => void }): React.JSX.Element {
   return (
     <Pressable onPress={onPress} style={[styles.overflowBtn, webOnly({ cursor: 'pointer' })]} accessibilityLabel="More actions">
@@ -442,25 +441,50 @@ function OverflowButton({ onPress }: { onPress: () => void }): React.JSX.Element
   );
 }
 
-function Stat({ value, label }: { value: number; label: string }): React.JSX.Element {
+/** One cell of the stat row — coloured uppercase label, big value + unit/icon. */
+function StatCell({
+  label,
+  labelColor,
+  value,
+  unit,
+  icon,
+}: {
+  label: string;
+  labelColor: ColorValue;
+  value: number;
+  unit?: string;
+  icon?: IoniconName;
+}): React.JSX.Element {
   return (
-    <View style={styles.statBox}>
-      <Text style={styles.statVal}>{value.toLocaleString()}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
+    <View style={styles.statCell}>
+      <Text style={[styles.statLabel, { color: labelColor }]} numberOfLines={1}>
+        {label}
+      </Text>
+      <View style={styles.statValueRow}>
+        <Text style={styles.statValue}>{value.toLocaleString()}</Text>
+        {unit ? <Text style={styles.statUnit}> {unit}</Text> : null}
+        {icon ? <Ionicons name={icon} size={13} color={colors.accent} style={styles.statIcon} /> : null}
+      </View>
     </View>
   );
 }
 
-function Section({
+/** A titled subsection with a leading icon and a top divider. */
+function SubSection({
+  icon,
   title,
   children,
 }: {
+  icon: IoniconName;
   title: string;
   children: React.ReactNode;
 }): React.JSX.Element {
   return (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+    <View style={styles.subSection}>
+      <View style={styles.subHeader}>
+        <Ionicons name={icon} size={16} color={colors.textSecondary} />
+        <Text style={styles.subTitle}>{title}</Text>
+      </View>
       {children}
     </View>
   );
@@ -490,7 +514,6 @@ function DocumentRow({ doc }: { doc: InventoryDocument }): React.JSX.Element {
   );
 }
 
-/** Reservation History row — dot + 'Vendor — qty @ price' + time + status badge. */
 function ReservationHistoryRow({
   reservation,
   currency,
@@ -499,7 +522,7 @@ function ReservationHistoryRow({
   currency: string;
 }): React.JSX.Element {
   const r = reservation;
-  const price = r.offered_price !== null ? `${currency} ${r.offered_price.toLocaleString()}` : '—';
+  const price = r.offered_price !== null ? money(currency, r.offered_price) : '—';
   return (
     <View style={styles.logRow}>
       <Text style={styles.logDot}>•</Text>
@@ -514,30 +537,10 @@ function ReservationHistoryRow({
   );
 }
 
-/** Activity Log row — bullet + action text + date on the right. */
-function ActivityRow({ share }: { share: ShareActivity }): React.JSX.Element {
-  return (
-    <View style={styles.activityRow}>
-      <Text style={styles.logText} numberOfLines={1}>
-        • Shared with {share.recipient_company ?? 'a vendor'}
-      </Text>
-      <Text style={styles.logTime}>{relativeTime(share.shared_at)}</Text>
-    </View>
-  );
-}
-
-function MenuItem({
-  label,
-  onPress,
-  destructive,
-}: {
-  label: string;
-  onPress: () => void;
-  destructive?: boolean;
-}): React.JSX.Element {
+function MenuItem({ label, onPress }: { label: string; onPress: () => void }): React.JSX.Element {
   return (
     <Pressable style={({ pressed }) => [styles.menuItem, pressed ? styles.menuItemPressed : null]} onPress={onPress}>
-      <Text style={[styles.menuLabel, destructive ? styles.menuLabelDestructive : null]}>{label}</Text>
+      <Text style={styles.menuLabel}>{label}</Text>
     </Pressable>
   );
 }
@@ -548,49 +551,52 @@ const styles = StyleSheet.create({
   retry: { paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.primary, borderRadius: 10 },
   retryText: { color: '#FFFFFF', fontWeight: '700' },
 
-  // Page header (mirror `.ph`) with a multi-line title block.
-  header: {
+  wrap: { width: '100%', maxWidth: 760, alignSelf: 'center' },
+
+  backLink: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 14, alignSelf: 'center' },
+  backText: { fontSize: 14, color: colors.textSecondary, fontWeight: '600' },
+  backTextHover: { color: colors.accent },
+
+  card: {
+    backgroundColor: colors.bgWhite,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 18,
+    overflow: 'hidden',
+  },
+
+  // Header
+  cardHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: 16,
-    paddingLeft: 28,
-    // Extra right padding so the action buttons clear the fixed notification bell.
-    paddingRight: 64,
-    paddingTop: 20,
-    paddingBottom: 16,
-    backgroundColor: colors.bgWhite,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    padding: 22,
   },
   titleBlock: { flexShrink: 1, minWidth: 0 },
-  backLink: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 8 },
-  backText: { fontSize: 13, color: colors.textSecondary },
-  backTextHover: { color: colors.accent },
-  h1: { fontSize: 22, fontWeight: '700', color: colors.textPrimary },
-  subRow: { fontSize: 12, color: colors.textMuted, marginTop: 4 },
-  privacy: { fontSize: 12, color: colors.textMuted, fontStyle: 'italic', marginTop: 4 },
+  h1: { fontSize: 22, fontWeight: '800', color: colors.textPrimary },
+  skuRow: { fontSize: 12, fontWeight: '600', color: colors.textMuted, marginTop: 6, letterSpacing: 0.3 },
+  timeRow: { fontSize: 12, color: colors.textMuted, marginTop: 3 },
+  privacy: { fontSize: 12, color: colors.textMuted, fontStyle: 'italic', marginTop: 8 },
 
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 0 },
-  // `.btn-p` — navy primary.
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' },
   shareBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: colors.primary, // #0F172A
+    backgroundColor: colors.primary,
     paddingVertical: 9,
     paddingHorizontal: 16,
     borderRadius: 10,
   },
   shareBtnText: { color: colors.bgWhite, fontSize: 13, fontWeight: '600' },
-  // Outline edit button — 1.5px #CBD5E1 border.
   editBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     backgroundColor: colors.bgWhite,
     borderWidth: 1.5,
-    borderColor: colors.borderDark, // #CBD5E1
+    borderColor: colors.borderDark,
     paddingVertical: 9,
     paddingHorizontal: 16,
     borderRadius: 10,
@@ -607,90 +613,68 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  // Carousel.
-  carousel: {
-    backgroundColor: colors.bgChip,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
+  // Stat row
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
-  carouselPlaceholder: { fontSize: 64 },
-  dots: { position: 'absolute', bottom: 12, flexDirection: 'row', gap: 6, alignSelf: 'center' },
-  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.6)' },
-  dotActive: { backgroundColor: '#FFFFFF' },
+  statCell: { flex: 1, paddingVertical: 16, paddingHorizontal: 10, alignItems: 'center', gap: 6 },
+  statDivider: { width: 1, backgroundColor: colors.border },
+  statLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 0.4, textTransform: 'uppercase' },
+  statValueRow: { flexDirection: 'row', alignItems: 'center' },
+  statValue: { fontSize: 18, fontWeight: '800', color: colors.textPrimary },
+  statUnit: { fontSize: 12, fontWeight: '600', color: colors.textMuted },
+  statIcon: { marginLeft: 4 },
 
-  priceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 16 },
-  price: { fontSize: 20, fontWeight: '800', color: colors.green },
-  priceUnit: { fontSize: 13, color: colors.textMuted, fontWeight: '600' },
-
-  statRow: { flexDirection: 'row', gap: 8, marginTop: 16 },
-  statBox: {
-    flex: 1,
-    backgroundColor: colors.bgWhite,
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  statVal: { fontSize: 17, fontWeight: '800', color: colors.primary },
-  statLabel: { fontSize: 11, color: colors.textSecondary, marginTop: 2 },
-
-  section: {
-    backgroundColor: colors.bgWhite,
-    borderRadius: 14,
-    padding: 16,
-    marginTop: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  sectionTitle: { fontSize: 13, fontWeight: '800', color: colors.textPrimary, marginBottom: 10 },
-  detailRow: {
+  // Price band
+  priceBand: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 7,
     gap: 12,
+    backgroundColor: colors.greenLight,
+    paddingVertical: 14,
+    paddingHorizontal: 22,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
+  priceLabel: { fontSize: 14, color: colors.textSecondary, flexShrink: 1 },
+  priceValue: { fontSize: 16, fontWeight: '800', color: colors.green },
+  priceUnit: { fontSize: 12, color: colors.textMuted, fontWeight: '600' },
+
+  // Subsections
+  subSection: { paddingHorizontal: 22, paddingVertical: 18, borderTopWidth: 1, borderTopColor: colors.border },
+  subHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+  subTitle: { fontSize: 15, fontWeight: '800', color: colors.textPrimary },
+
+  // Photos
+  photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  photoThumb: { width: 168, height: 168, borderRadius: 12, overflow: 'hidden', backgroundColor: colors.bgChip, borderWidth: 1, borderColor: colors.border },
+  photoImg: { width: '100%', height: '100%' },
+
+  // Detail rows
+  detailRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 7, gap: 12 },
   detailLabel: { fontSize: 13, color: colors.textSecondary, flexShrink: 1 },
   detailValue: { fontSize: 13, fontWeight: '600', color: colors.textPrimary, textAlign: 'right', flexShrink: 1 },
-  description: { fontSize: 13, color: colors.textSecondary, lineHeight: 21 },
-  empty: { fontSize: 13, color: colors.textMuted },
+  description: { fontSize: 14, color: colors.textSecondary, lineHeight: 22 },
 
-  // Reservation History row.
+  // Reservation history
   logRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
   logDot: { fontSize: 16, color: colors.textMuted, lineHeight: 18 },
   logBody: { flex: 1, minWidth: 0 },
   logText: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
   logTime: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
-  // Activity Log row — text left, date right.
-  activityRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-    paddingVertical: 7,
-  },
 
-  // Full-width delete button.
-  deleteBtn: {
-    marginTop: 16,
-    marginBottom: 8,
-    paddingVertical: 13,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: '#FECACA',
-    backgroundColor: colors.redLight, // #FEF2F2
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...webOnly({ cursor: 'pointer' }),
-  },
-  deleteBtnText: { fontSize: 14, fontWeight: '700', color: colors.red },
+  // Activity
+  activityRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingVertical: 8 },
+  activityLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1, minWidth: 0 },
+  activityDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.borderDark },
+  activityLabel: { fontSize: 13, fontWeight: '600', color: colors.textPrimary, flexShrink: 1 },
+  activityDate: { fontSize: 12, color: colors.textMuted },
 
-  // Document rows.
+  // Documents
   docRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -706,24 +690,31 @@ const styles = StyleSheet.create({
   docName: { flex: 1, fontSize: 13, fontWeight: '600', color: colors.textSecondary },
   docOpen: { fontSize: 12, fontWeight: '700', color: colors.accent },
 
-  // ⋯ overflow sheet.
+  // Delete button
+  deleteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    margin: 18,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#FECACA',
+    backgroundColor: colors.redLight,
+  },
+  deleteBtnText: { fontSize: 14, fontWeight: '700', color: colors.red },
+
+  // ⋯ overflow sheet
   overlay: { flex: 1, backgroundColor: 'rgba(15,23,42,0.4)', justifyContent: 'flex-end' },
   sheet: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 28 },
   sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginBottom: 8 },
   menuItem: { paddingVertical: 16, paddingHorizontal: 8, borderRadius: 10 },
   menuItemPressed: { backgroundColor: colors.bgPage },
   menuLabel: { fontSize: 15, fontWeight: '600', color: colors.textPrimary },
-  menuLabelDestructive: { color: colors.red },
 
-  // Delete confirmation modal — centered card.
-  confirmOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(15,23,42,0.45)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-    zIndex: 9999,
-  },
+  // Delete confirmation modal
+  confirmOverlay: { flex: 1, backgroundColor: 'rgba(15,23,42,0.45)', alignItems: 'center', justifyContent: 'center', padding: 24, zIndex: 9999 },
   confirmCard: {
     width: '100%',
     maxWidth: 420,

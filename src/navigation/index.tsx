@@ -36,6 +36,7 @@ import { ProfileScreen } from '../screens/ProfileScreen';
 import { EditProfileScreen } from '../screens/EditProfileScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { NotificationsScreen } from '../screens/NotificationsScreen';
+import { LegalScreen } from '../screens/LegalScreen';
 
 /** Root stack param list (spec §4.1, plus Profile reached from the dashboard). */
 export type RootStackParamList = {
@@ -62,6 +63,7 @@ export type RootStackParamList = {
   EditProfile: undefined;
   Settings: undefined;
   Notifications: undefined;
+  Legal: { page: 'faq' | 'privacy' | 'terms' | 'contact' };
 };
 
 export type MainTabParamList = {
@@ -179,6 +181,7 @@ export function RootNavigator(): React.JSX.Element {
             <Stack.Screen name="EditProfile" component={EditProfileScreen} />
             <Stack.Screen name="Settings" component={SettingsScreen} />
             <Stack.Screen name="Notifications" component={NotificationsScreen} />
+            <Stack.Screen name="Legal" component={LegalScreen} />
           </Stack.Group>
         )}
       </Stack.Navigator>

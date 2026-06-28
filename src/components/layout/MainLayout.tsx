@@ -81,8 +81,16 @@ export function MainLayout({ active, children }: MainLayoutProps): React.JSX.Ele
         return navigation.navigate('Main', { screen: 'Network' });
       case 'settings':
         return navigation.navigate('Settings');
+      case 'faq':
+        return navigation.navigate('Legal', { page: 'faq' });
+      case 'privacy':
+        return navigation.navigate('Legal', { page: 'privacy' });
+      case 'terms':
+        return navigation.navigate('Legal', { page: 'terms' });
+      case 'contact':
+        return navigation.navigate('Legal', { page: 'contact' });
       default:
-        return; // faq / privacy / terms / contact — no route yet
+        return;
     }
   };
 
@@ -93,6 +101,11 @@ export function MainLayout({ active, children }: MainLayoutProps): React.JSX.Ele
           name={data?.vendor.companyName ?? 'MyStokk'}
           email={session?.user?.email ?? ''}
           onPressUser={() => setProfileOpen(true)}
+          onPressLink={(link) =>
+            navigation.navigate('Legal', {
+              page: link.toLowerCase() as 'faq' | 'privacy' | 'terms' | 'contact',
+            })
+          }
         />
       }
     >
@@ -137,6 +150,10 @@ export function MainLayout({ active, children }: MainLayoutProps): React.JSX.Ele
           onNotifications={() => {
             setMenuOpen(false);
             navigation.navigate('Notifications');
+          }}
+          onLegal={(page) => {
+            setMenuOpen(false);
+            navigation.navigate('Legal', { page });
           }}
           onLogout={() => {
             setMenuOpen(false);
