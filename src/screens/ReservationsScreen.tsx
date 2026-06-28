@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useFocusEffect } from '@react-navigation/native';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
@@ -9,8 +9,10 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import type { MainTabParamList, RootStackParamList } from '../navigation';
 import {
+  acceptReservation,
   getIncomingReservations,
   getMyReservations,
+  rejectReservation,
   type IncomingReservation,
   type OutgoingReservation,
 } from '../services/supabase/reservations';
@@ -19,6 +21,7 @@ import { MainLayout, PageBody, PageHeader } from '../components/layout';
 import { ReservationCard } from '../components/reservations/ReservationCard';
 import { NegotiationModal } from '../components/reservations/NegotiationModal';
 import { webOnly } from '../components/layout/web';
+import { toast } from '../stores/toast';
 import { colors, radius, shadows } from '../theme/tokens';
 
 type Props = CompositeScreenProps<
@@ -43,9 +46,31 @@ export function ReservationsScreen({ navigation }: Props): React.JSX.Element {
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   // The reservation whose negotiation popup is open (over the hub — no navigation).
   const [selected, setSelected] = useState<{ side: 'incoming' | 'outgoing'; data: IncomingReservation } | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
+  const queryClient = useQueryClient();
   const incomingQuery = useQuery({ queryKey: ['reservations', 'incoming'], queryFn: getIncomingReservations, staleTime: 20_000 });
   const outgoingQuery = useQuery({ queryKey: ['reservations', 'outgoing'], queryFn: getMyReservations, staleTime: 20_000 });
+
+  // Inline Confirm / Reject straight from a received card (no modal needed).
+  const settle = (): void => {
+    setBusyId(null);
+    void queryClient.invalidateQueries({ queryKey: ['reservations'] });
+    void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    void queryClient.invalidateQueries({ queryKey: ['inventory'] });
+  };
+  const acceptMutation = useMutation({
+    mutationFn: acceptReservation,
+    onSuccess: () => toast.success('Reservation accepted!'),
+    onError: (e) => toast.error(e instanceof Error ? e.message : 'Could not confirm.'),
+    onSettled: settle,
+  });
+  const rejectMutation = useMutation({
+    mutationFn: rejectReservation,
+    onSuccess: () => toast.success('Reservation rejected'),
+    onError: (e) => toast.error(e instanceof Error ? e.message : 'Could not reject.'),
+    onSettled: settle,
+  });
 
   useFocusEffect(
     React.useCallback(() => {
@@ -85,10 +110,11 @@ export function ReservationsScreen({ navigation }: Props): React.JSX.Element {
             <StatusSelect value={statusFilter} onChange={setStatusFilter} />
           </View>
 
-          {/* Tabs */}
+          {/* Tabs — segmented pill control */}
           <View style={styles.tabs}>
             <TabButton
               label="Received"
+              icon="arrow-down"
               count={incoming.length}
               active={tab === 'received'}
               onPress={() => setTab('received')}
@@ -96,6 +122,7 @@ export function ReservationsScreen({ navigation }: Props): React.JSX.Element {
             />
             <TabButton
               label="Sent"
+              icon="arrow-up"
               count={outgoing.length}
               active={tab === 'sent'}
               onPress={() => setTab('sent')}
@@ -139,7 +166,16 @@ export function ReservationsScreen({ navigation }: Props): React.JSX.Element {
                 key={item.reservation_id}
                 item={item}
                 side={tab}
-                onPress={() => openDetail(tab === 'received' ? 'incoming' : 'outgoing', item)}
+                busy={busyId === item.reservation_id}
+                onOpen={() => openDetail(tab === 'received' ? 'incoming' : 'outgoing', item)}
+                onConfirm={() => {
+                  setBusyId(item.reservation_id);
+                  acceptMutation.mutate(item.reservation_id);
+                }}
+                onReject={() => {
+                  setBusyId(item.reservation_id);
+                  rejectMutation.mutate(item.reservation_id);
+                }}
               />
             ))
           )}
@@ -159,15 +195,17 @@ export function ReservationsScreen({ navigation }: Props): React.JSX.Element {
   );
 }
 
-/** Underline tab with a count badge (mirror the design's tab style). */
+/** Segmented pill tab with a leading arrow icon and a count, e.g. "↓ Received (7)". */
 function TabButton({
   label,
+  icon,
   count,
   active,
   onPress,
   testID,
 }: {
   label: string;
+  icon: React.ComponentProps<typeof Ionicons>['name'];
   count: number;
   active: boolean;
   onPress: () => void;
@@ -175,10 +213,10 @@ function TabButton({
 }): React.JSX.Element {
   return (
     <Pressable style={[styles.tab, active ? styles.tabActive : null]} onPress={onPress} testID={testID}>
-      <Text style={[styles.tabText, active ? styles.tabTextActive : null]}>{label}</Text>
-      <View style={[styles.tabBadge, active ? styles.tabBadgeActive : null]}>
-        <Text style={[styles.tabBadgeText, active ? styles.tabBadgeTextActive : null]}>{count}</Text>
-      </View>
+      <Ionicons name={icon} size={14} color={active ? colors.textPrimary : colors.textMuted} />
+      <Text style={[styles.tabText, active ? styles.tabTextActive : null]}>
+        {label} ({count})
+      </Text>
     </Pressable>
   );
 }
@@ -262,36 +300,33 @@ const styles = StyleSheet.create({
   optionText: { fontSize: 13, color: colors.textSecondary },
   optionTextActive: { color: colors.accent, fontWeight: '600' },
 
-  // Tabs — underline style with count badge
+  // Tabs — segmented pill control
   tabs: {
     flexDirection: 'row',
-    gap: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    alignSelf: 'flex-start',
+    gap: 4,
+    padding: 4,
+    backgroundColor: colors.bgChip, // #F1F5F9
+    borderRadius: 999,
     marginBottom: 20,
   },
   tab: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingVertical: 10,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-    marginBottom: -1,
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 999,
+    ...webOnly({ cursor: 'pointer' }),
   },
-  tabActive: { borderBottomColor: colors.accent },
-  tabText: { fontSize: 14, fontWeight: '600', color: colors.textSecondary },
-  tabTextActive: { color: colors.accent },
-  tabBadge: {
-    minWidth: 20,
-    height: 20,
-    borderRadius: 10,
-    paddingHorizontal: 6,
-    backgroundColor: colors.bgChip,
-    alignItems: 'center',
-    justifyContent: 'center',
+  tabActive: {
+    backgroundColor: colors.bgWhite,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
   },
-  tabBadgeActive: { backgroundColor: colors.accentLight },
-  tabBadgeText: { fontSize: 11, fontWeight: '700', color: colors.textSecondary },
-  tabBadgeTextActive: { color: colors.accent },
+  tabText: { fontSize: 13, fontWeight: '600', color: colors.textMuted },
+  tabTextActive: { color: colors.textPrimary, fontWeight: '700' },
 });

@@ -1,4 +1,5 @@
 import { supabase } from './client';
+import { toFullUrl } from './storage';
 
 /**
  * Reservations service. Accept/Reject power the Dashboard inline actions;
@@ -60,6 +61,12 @@ export interface IncomingReservation {
   unit: string;
   /** The reservation's request/remark text. */
   message: string | null;
+  /** Storage path of the item's first photo (for the card thumbnail), or null. */
+  first_photo_path: string | null;
+  /** Counterparty's contact email (for the card's email action), or null. */
+  counterparty_email: string | null;
+  /** Public thumbnail URL derived from first_photo_path (set by the list getters). */
+  thumbUrl?: string | null;
 }
 
 export type OutgoingReservation = Omit<IncomingReservation, 'is_middleman' | 'passthrough_status'>;
@@ -82,18 +89,23 @@ export async function getNegotiationRounds(reservationId: string): Promise<Negot
   return (data ?? []) as NegotiationRound[];
 }
 
+/** Public thumbnail URL for a reservation card from the item's first photo path. */
+function withThumb<T extends { first_photo_path: string | null }>(row: T): T & { thumbUrl: string | null } {
+  return { ...row, thumbUrl: row.first_photo_path ? toFullUrl(row.first_photo_path) : null };
+}
+
 /** Incoming: reservations the current vendor must respond to (pending/negotiating). */
 export async function getIncomingReservations(): Promise<IncomingReservation[]> {
   const { data, error } = await supabase.rpc('get_reservations_incoming');
   if (error) throw error;
-  return (data ?? []) as IncomingReservation[];
+  return ((data ?? []) as IncomingReservation[]).map(withThumb);
 }
 
 /** My Reservations: reservations the current vendor requested (any status). */
 export async function getMyReservations(): Promise<OutgoingReservation[]> {
   const { data, error } = await supabase.rpc('get_reservations_outgoing');
   if (error) throw error;
-  return (data ?? []) as OutgoingReservation[];
+  return ((data ?? []) as OutgoingReservation[]).map(withThumb);
 }
 
 /** Accept a pending/negotiating reservation: confirm + decrement + notify requester. */

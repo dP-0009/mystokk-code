@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 import type { IncomingReservation, OutgoingReservation } from '../../services/supabase/reservations';
+import { ProductImage } from '../shared/ProductImage';
 import { colors, radius } from '../../theme/tokens';
 import { webOnly } from '../layout/web';
 
@@ -9,39 +11,32 @@ type AnyReservation = IncomingReservation | OutgoingReservation;
 
 /** Status → badge colors + label (design spec). Unknown statuses fall back to slate. */
 const BADGE: Record<string, { bg: string; fg: string; label: string }> = {
-  confirmed: { bg: colors.greenLight, fg: colors.green, label: 'Confirmed' }, // #DCFCE7 / #16A34A
-  rejected: { bg: colors.redLight, fg: colors.red, label: 'Rejected' }, // #FEF2F2 / #DC2626
-  pending: { bg: colors.orangeLight, fg: colors.orange, label: 'Pending' }, // #FFF7ED / #F97316
+  confirmed: { bg: colors.greenLight, fg: colors.green, label: 'Confirmed' },
+  rejected: { bg: colors.redLight, fg: colors.red, label: 'Rejected' },
+  pending: { bg: colors.orangeLight, fg: colors.orange, label: 'Pending' },
   negotiating: { bg: colors.accentLight, fg: colors.accent, label: 'Negotiating' },
   passed: { bg: colors.bgChip, fg: colors.slate500, label: 'Passed' },
-  cancelled: { bg: colors.bgChip, fg: colors.slate500, label: 'Cancelled' }, // #F1F5F9 / #64748B
+  cancelled: { bg: colors.bgChip, fg: colors.slate500, label: 'Cancelled' },
 };
 
 function badgeFor(status: string): { bg: string; fg: string; label: string } {
   return BADGE[status] ?? { bg: colors.bgChip, fg: colors.slate500, label: status };
 }
 
-/** Compact relative age for the card timestamp, e.g. "just now", "5m ago", "2d ago". */
-function timeAgo(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  if (Number.isNaN(diff)) return '';
-  const min = Math.round(diff / 60_000);
-  if (min < 1) return 'just now';
-  if (min < 60) return `${min}m ago`;
-  const hr = Math.round(min / 60);
-  if (hr < 24) return `${hr}h ago`;
-  const day = Math.round(hr / 24);
-  if (day < 7) return `${day}d ago`;
-  return `${Math.round(day / 7)}w ago`;
+/** Absolute timestamp, e.g. "07/05/2026, 15:50:48" (mirrors the design). */
+function stamp(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleString();
 }
 
-/** Effective price/unit line, e.g. "450,000/barrels". */
-function priceUnit(r: AnyReservation): string {
+/** Effective offered price/unit, e.g. "150/pcs", or null when none. */
+function offeredLine(r: AnyReservation): string | null {
   const p =
     r.status === 'negotiating' && r.latest_counter_price != null
       ? r.latest_counter_price
-      : r.offered_price ?? r.list_price;
-  if (p === null || p === undefined) return '—';
+      : r.offered_price;
+  if (p === null || p === undefined) return null;
   return `${p.toLocaleString()}/${r.unit}`;
 }
 
@@ -49,47 +44,131 @@ interface ReservationCardProps {
   item: AnyReservation;
   /** 'received' = a request you must respond to; 'sent' = a request you made. */
   side: 'received' | 'sent';
-  onPress: () => void;
+  /** Open the negotiation popup (card click / Negotiate). */
+  onOpen: () => void;
+  /** Confirm (accept) — received pending/negotiating only. */
+  onConfirm?: () => void;
+  /** Reject — received pending/negotiating only. */
+  onReject?: () => void;
+  busy?: boolean;
 }
 
-export function ReservationCard({ item, side, onPress }: ReservationCardProps): React.JSX.Element {
+export function ReservationCard({ item, side, onOpen, onConfirm, onReject, busy }: ReservationCardProps): React.JSX.Element {
   const [hovered, setHovered] = useState(false);
   const badge = badgeFor(item.status);
   const vendor = item.counterparty_company ?? 'a vendor';
   const qtyUnit = `${item.quantity.toLocaleString()} ${item.unit}`;
-  const sentence = side === 'sent' ? `You requested ${qtyUnit} from ${vendor}` : `${vendor} requested ${qtyUnit}`;
-  // Cancelled reservations stay in the list but read as inactive (faded).
+  const offered = offeredLine(item);
   const cancelled = item.status === 'cancelled';
 
-  return (
-    <Pressable
-      style={[styles.card, hovered ? styles.cardHover : null, cancelled ? styles.cardCancelled : null]}
-      onPress={onPress}
-      onHoverIn={() => setHovered(true)}
-      onHoverOut={() => setHovered(false)}
-      testID={`reservation-card-${item.reservation_id}`}
-    >
-      <View style={styles.topRow}>
-        <Text style={styles.name} numberOfLines={1}>
-          {item.item_title}
-        </Text>
-        <View style={[styles.badge, { backgroundColor: badge.bg }]}>
-          <Text style={[styles.badgeText, { color: badge.fg }]}>{badge.label}</Text>
-        </View>
-      </View>
+  // Inline Negotiate / Reject / Confirm only for received requests awaiting a response.
+  const actionable = side === 'received' && (item.status === 'pending' || item.status === 'negotiating');
+  const email = item.counterparty_email;
 
-      <Text style={styles.detail} numberOfLines={1}>
-        {sentence}
-      </Text>
-      <Text style={styles.detail} numberOfLines={1}>
-        {priceUnit(item)}
-      </Text>
-      {item.message ? (
-        <Text style={styles.message} numberOfLines={2}>
-          “{item.message}”
-        </Text>
-      ) : null}
-      <Text style={styles.timestamp}>{timeAgo(item.created_at)}</Text>
+  return (
+    <View style={[styles.card, hovered ? styles.cardHover : null, cancelled ? styles.cardCancelled : null]}>
+      {/* Body — thumbnail + info (clicking opens the negotiation popup) */}
+      <Pressable
+        style={[styles.body, webOnly({ cursor: 'pointer' })]}
+        onPress={onOpen}
+        onHoverIn={() => setHovered(true)}
+        onHoverOut={() => setHovered(false)}
+        testID={`reservation-card-${item.reservation_id}`}
+      >
+        <ProductImage
+          uri={item.thumbUrl ?? null}
+          width={88}
+          height={88}
+          borderRadius={radius.md}
+          fallback={<Ionicons name="cube-outline" size={28} color={colors.textMuted} />}
+        />
+
+        <View style={styles.info}>
+          <View style={styles.titleRow}>
+            <Text style={styles.name} numberOfLines={1}>
+              {item.item_title}
+            </Text>
+            <View style={[styles.badge, { backgroundColor: badge.bg }]}>
+              <Text style={[styles.badgeText, { color: badge.fg }]}>{badge.label}</Text>
+            </View>
+          </View>
+
+          <View style={styles.metaRow}>
+            <Ionicons name="person-outline" size={13} color={colors.textMuted} />
+            <Text style={styles.meta} numberOfLines={1}>
+              {side === 'sent' ? 'You requested ' : `${vendor} requested `}
+              <Text style={styles.metaStrong}>{qtyUnit}</Text>
+              {side === 'sent' ? ` from ${vendor}` : ''}
+            </Text>
+          </View>
+
+          {offered ? <Text style={styles.offered}>Offered: {offered}</Text> : null}
+
+          <View style={styles.metaRow}>
+            <Ionicons name="time-outline" size={13} color={colors.textMuted} />
+            <Text style={styles.timestamp}>{stamp(item.created_at)}</Text>
+          </View>
+        </View>
+      </Pressable>
+
+      {/* Action row — contact icons left, inline actions right */}
+      <View style={styles.actionRow}>
+        <View style={styles.contactIcons}>
+          {item.status === 'negotiating' ? (
+            <ContactIcon name="time-outline" onPress={onOpen} label="History" />
+          ) : null}
+          {email ? (
+            <ContactIcon name="mail-outline" onPress={() => Linking.openURL(`mailto:${email}`)} label="Email" />
+          ) : null}
+        </View>
+
+        {actionable ? (
+          <View style={styles.actions}>
+            <Pressable
+              style={[styles.negotiateBtn, webOnly({ cursor: 'pointer' })]}
+              onPress={onOpen}
+              testID={`reservation-negotiate-${item.reservation_id}`}
+            >
+              <Ionicons name="chatbubble-ellipses-outline" size={14} color={colors.purple} />
+              <Text style={styles.negotiateText}>Negotiate</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.rejectBtn, busy ? styles.btnDisabled : null, webOnly({ cursor: 'pointer' })]}
+              onPress={onReject}
+              disabled={busy}
+              testID={`reservation-reject-${item.reservation_id}`}
+            >
+              <Ionicons name="close" size={16} color={colors.red} />
+            </Pressable>
+            <Pressable
+              style={[styles.confirmBtn, busy ? styles.btnDisabled : null, webOnly({ cursor: 'pointer' })]}
+              onPress={onConfirm}
+              disabled={busy}
+              testID={`reservation-confirm-${item.reservation_id}`}
+            >
+              <Ionicons name="checkmark" size={15} color={colors.bgWhite} />
+              <Text style={styles.confirmText}>Confirm</Text>
+            </Pressable>
+          </View>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+/** Small circular contact/utility icon button. */
+function ContactIcon({
+  name,
+  onPress,
+  label,
+}: {
+  name: React.ComponentProps<typeof Ionicons>['name'];
+  onPress: () => void;
+  label: string;
+}): React.JSX.Element {
+  return (
+    <Pressable style={[styles.contactBtn, webOnly({ cursor: 'pointer' })]} onPress={onPress} accessibilityLabel={label}>
+      <Ionicons name={name} size={15} color={colors.textSecondary} />
     </Pressable>
   );
 }
@@ -103,9 +182,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 20,
     marginBottom: 12,
-    ...webOnly({ cursor: 'pointer' }),
   },
-  // hover — border #CBD5E1 + box-shadow 0 2px 8px rgba(0,0,0,0.08)
   cardHover: {
     borderColor: colors.borderDark,
     shadowColor: '#000000',
@@ -114,17 +191,77 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
-  // Cancelled reservations stay visible but faded.
   cardCancelled: { opacity: 0.75 },
 
-  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  name: { flex: 1, fontSize: 14, fontWeight: '700', color: colors.textPrimary },
+  body: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  info: { flex: 1, minWidth: 0 },
 
-  // Status badge — radius 20, padding 2/9, 11px/600
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  name: { flexShrink: 1, fontSize: 15, fontWeight: '700', color: colors.textPrimary },
   badge: { borderRadius: 20, paddingVertical: 2, paddingHorizontal: 9, flexShrink: 0 },
   badgeText: { fontSize: 11, fontWeight: '600' },
 
-  detail: { fontSize: 12, color: colors.textSecondary, marginTop: 6 },
-  message: { fontSize: 12, color: colors.textMuted, fontStyle: 'italic', marginTop: 6, lineHeight: 17 },
-  timestamp: { fontSize: 11, color: colors.textMuted, marginTop: 8 }, // #94A3B8
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6 },
+  meta: { flexShrink: 1, fontSize: 12, color: colors.textSecondary },
+  metaStrong: { fontWeight: '700', color: colors.textPrimary },
+  offered: { fontSize: 12, fontWeight: '700', color: colors.green, marginTop: 6 },
+  timestamp: { fontSize: 11, color: colors.textMuted },
+
+  // Action row
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginTop: 14,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  contactIcons: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  contactBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.bgWhite,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  actions: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 },
+  negotiateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: colors.purpleLight,
+    backgroundColor: colors.bgWhite,
+    borderRadius: 8,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+  },
+  negotiateText: { fontSize: 13, fontWeight: '600', color: colors.purple },
+  rejectBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    backgroundColor: colors.bgWhite,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.green,
+    borderRadius: 8,
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+  },
+  confirmText: { fontSize: 13, fontWeight: '600', color: colors.bgWhite },
+  btnDisabled: { opacity: 0.5 },
 });
