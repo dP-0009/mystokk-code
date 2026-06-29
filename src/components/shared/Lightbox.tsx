@@ -207,10 +207,11 @@ const CIRCLE = 'rgba(255,255,255,0.15)';
 // contain so the whole photo is visible inside the dark overlay. Plain CSS
 // (not RN style) because this is a real DOM <img>, not an RN <Image>.
 const WEB_IMG_STYLE = {
-  // Fit entirely within the image area (which already reserves room for the
-  // close button + bottom strip) at the image's natural aspect ratio.
-  maxWidth: '100%',
-  maxHeight: '100%',
+  // Bound by viewport units (which always resolve, unlike % inside a flex item)
+  // leaving room for the top close button and the bottom strip, so the whole
+  // image shows at its natural aspect ratio and is never cropped.
+  maxWidth: '92vw',
+  maxHeight: 'calc(100vh - 180px)',
   width: 'auto',
   height: 'auto',
   objectFit: 'contain',

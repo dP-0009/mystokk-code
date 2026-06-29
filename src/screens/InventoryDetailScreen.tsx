@@ -24,7 +24,7 @@ import {
   type InventoryDocument,
   type ItemReservation,
 } from '../services/supabase/inventory';
-import { createPublicLink } from '../services/supabase/shares';
+import { createPublicLink, getItemDirectShares } from '../services/supabase/shares';
 import { copyToClipboard, shareText } from '../utils/clipboard';
 import { StatusChip } from '../components/shared/StatusChip';
 import { ShareModal } from '../components/share/ShareModal';
@@ -100,6 +100,14 @@ export function InventoryDetailScreen({ navigation, route }: Props): React.JSX.E
     queryKey: ['inventoryDetail', inventoryId],
     queryFn: () => getInventoryDetail(inventoryId),
     staleTime: 30_000,
+  });
+
+  // Active direct shares (vendors + public links) — the "Shared With" count
+  // reflects this list, kept in sync with the Manage Shares modal (same cache).
+  const sharesQuery = useQuery({
+    queryKey: ['itemShares', inventoryId],
+    queryFn: () => getItemDirectShares(inventoryId),
+    staleTime: 15_000,
   });
 
   useFocusEffect(
@@ -198,6 +206,9 @@ export function InventoryDetailScreen({ navigation, route }: Props): React.JSX.E
 
   const { item, photoUrls, documents, shareActivity, reservations } = data as InventoryDetail;
   const reserved = Math.max(item.quantity - item.quantity_available, 0);
+  const sharedWithCount = sharesQuery.data
+    ? sharesQuery.data.filter((s) => s.status !== 'revoked').length
+    : item.shared_count;
   const specEntries = Object.entries(item.specs ?? {});
 
   // Activity timeline — newest first, with the item's creation as the base event.
@@ -247,7 +258,7 @@ export function InventoryDetailScreen({ navigation, route }: Props): React.JSX.E
               <StatCell
                 label="SHARED WITH"
                 labelColor={colors.textMuted}
-                value={item.shared_count}
+                value={sharedWithCount}
                 icon="people"
                 onPress={() => setSharesOpen(true)}
               />
