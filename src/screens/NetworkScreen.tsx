@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -32,6 +33,7 @@ import { BulkUploadModal } from '../components/network/BulkUploadModal';
 import { ViewVendorModal } from '../components/network/ViewVendorModal';
 import { VendorAvatar } from '../components/shared/VendorAvatar';
 import { webOnly } from '../components/layout/web';
+import { useIsMobile } from '../hooks/useIsMobile';
 import { colors, radius, shadows } from '../theme/tokens';
 import { openEmail, openWhatsApp } from '../utils/contact';
 import { toast } from '../stores/toast';
@@ -50,6 +52,7 @@ function isManualOnly(v: NetworkVendor): boolean {
 
 export function NetworkScreen({ navigation }: Props): React.JSX.Element {
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
   const [tab, setTab] = useState<Tab>('network');
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
@@ -210,8 +213,11 @@ export function NetworkScreen({ navigation }: Props): React.JSX.Element {
           </View>
         </View>
 
-        {/* Table */}
+        {/* Table — horizontally scrollable on mobile so the columns keep their
+            real widths instead of squishing the company name to one letter. */}
         <View style={styles.tableCard}>
+          <TableScroll mobile={isMobile}>
+            <View style={isMobile ? styles.tableInnerMobile : undefined}>
           <View style={styles.headerRow}>
             <Text style={[styles.th, styles.colCompany]}>Company</Text>
             <Text style={[styles.th, styles.colContact]}>Contact Person</Text>
@@ -263,6 +269,8 @@ export function NetworkScreen({ navigation }: Props): React.JSX.Element {
               />
             ))
           )}
+            </View>
+          </TableScroll>
         </View>
       </PageBody>
 
@@ -309,6 +317,20 @@ export function NetworkScreen({ navigation }: Props): React.JSX.Element {
         </Pressable>
       </Modal>
     </MainLayout>
+  );
+}
+
+/**
+ * On mobile, wrap the table in a horizontal scroller so the columns keep their
+ * real widths (and the row stays readable) instead of being crushed into the
+ * phone width. On desktop it's a passthrough.
+ */
+function TableScroll({ mobile, children }: { mobile: boolean; children: React.ReactNode }): React.JSX.Element {
+  if (!mobile) return <>{children}</>;
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tableInnerMobile}>
+      {children}
+    </ScrollView>
   );
 }
 
@@ -617,8 +639,11 @@ const styles = StyleSheet.create({
   td: { paddingVertical: 14, paddingRight: 12 },
   cellText: { fontSize: 13, color: colors.textPrimary },
 
+  // Min table width on mobile so the horizontal scroller has something to scroll.
+  tableInnerMobile: { minWidth: 820 },
+
   // Column sizing
-  colCompany: { flex: 1, minWidth: 0 },
+  colCompany: { flex: 1, minWidth: 160 },
   colContact: { width: 150 },
   colCountry: { width: 120 },
   colStatus: { width: 120 },

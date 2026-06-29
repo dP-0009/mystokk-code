@@ -94,23 +94,49 @@ async function handleOtp(p: Extract<SendEmailPayload, { type: 'otp' }>): Promise
 async function handleShare(
   p: Extract<SendEmailPayload, { type: 'share_received' }>,
 ): Promise<Response> {
-  // Most recent share of this item to this recipient → token, sender, override price.
-  const { data: share } = await supabase
-    .from('shares')
-    .select('token, source_vendor_id, forward_price, forward_currency')
-    .eq('inventory_id', p.inventoryId)
-    .eq('recipient_id', p.recipientVendorId)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single();
-  if (!share) return json({ error: 'Share not found' }, 404);
+  // Two entry shapes, same item-card email:
+  //   • registered recipient → look the share up by inventory + recipient vendor
+  //     and pull the recipient's email from their vendor row.
+  //   • unregistered recipient → the caller already minted a claimable share and
+  //     passes its token + the raw email; no vendor row exists yet.
+  let share: { token: string; source_vendor_id: string } | null = null;
+  let recipientEmail: string | null = null;
 
-  const [{ data: recipient }, { data: sender }, { data: item }] = await Promise.all([
-    supabase.from('vendors').select('email').eq('id', p.recipientVendorId).single(),
+  if (p.recipientVendorId) {
+    const { data } = await supabase
+      .from('shares')
+      .select('token, source_vendor_id')
+      .eq('inventory_id', p.inventoryId)
+      .eq('recipient_id', p.recipientVendorId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+    share = data;
+    const { data: recipient } = await supabase
+      .from('vendors')
+      .select('email')
+      .eq('id', p.recipientVendorId)
+      .single();
+    recipientEmail = recipient?.email ?? null;
+  } else if (p.token && p.email) {
+    const { data } = await supabase
+      .from('shares')
+      .select('token, source_vendor_id')
+      .eq('token', p.token)
+      .limit(1)
+      .single();
+    share = data;
+    recipientEmail = p.email.trim().toLowerCase();
+  }
+
+  if (!share) return json({ error: 'Share not found' }, 404);
+  if (!recipientEmail) return json({ error: 'Recipient email missing' }, 404);
+
+  const [{ data: sender }, { data: item }] = await Promise.all([
     supabase.from('vendors').select('company_name').eq('id', share.source_vendor_id).single(),
-    supabase.from('inventory').select('title, price, currency, stock_location').eq('inventory_id', p.inventoryId).single(),
+    supabase.from('inventory').select('title, stock_location').eq('inventory_id', p.inventoryId).single(),
   ]);
-  if (!recipient?.email || !item) return json({ error: 'Recipient or item missing' }, 404);
+  if (!item) return json({ error: 'Item missing' }, 404);
 
   // Signed URL for the first photo (private bucket) — fall back to plain text if none.
   let photoUrl: string | null = null;
@@ -131,12 +157,11 @@ async function handleShare(
   const content = buildShareEmail({
     senderCompany: sender?.company_name ?? 'A MyStokk vendor',
     productTitle: item.title,
-    priceLabel: formatPrice(share.forward_price ?? item.price, share.forward_currency ?? item.currency),
     stockLocation: item.stock_location ?? null,
     shareUrl: `${SHARE_BASE}/share/${share.token}`,
     photoUrl,
   });
-  await sendEmail(resendConfig, { to: recipient.email, ...content });
+  await sendEmail(resendConfig, { to: recipientEmail, ...content });
   return json({ ok: true });
 }
 

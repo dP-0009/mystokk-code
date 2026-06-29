@@ -123,18 +123,17 @@ export async function shareSingleEmail(inventoryId: string, email: string): Prom
   if (error) throw error;
   const res = data as { matched: boolean; token: string | null; recipient_id: string | null };
 
-  // Best-effort email delivery.
+  // Best-effort email delivery. Registered or not, the recipient gets the same
+  // item card so they see the actual shared item (not a bare invite). For an
+  // unregistered email we hand the Edge Function the claimable share token.
   try {
     if (res.matched && res.recipient_id) {
       await supabase.functions.invoke('send-email', {
         body: { type: 'share_received', recipientVendorId: res.recipient_id, inventoryId },
       });
-    } else {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+    } else if (res.token) {
       await supabase.functions.invoke('send-email', {
-        body: { type: 'network_invite', inviterVendorId: user?.id, email },
+        body: { type: 'share_received', inventoryId, token: res.token, email },
       });
     }
   } catch {
@@ -267,6 +266,18 @@ export interface DirectShare {
 /** Every direct (chain_depth=0) share the owner created for an item. */
 export async function getItemDirectShares(inventoryId: string): Promise<DirectShare[]> {
   const { data, error } = await supabase.rpc('get_item_direct_shares', { p_inventory_id: inventoryId });
+  if (error) throw error;
+  return (data ?? []) as DirectShare[];
+}
+
+/**
+ * The forwards the CURRENT user made from a received share (downstream of
+ * `parentShareId`). Privacy-scoped server-side to the caller's own forwards, so
+ * a recipient only ever sees who THEY forwarded to — never the upstream owner's
+ * or any other forwarder's recipients. Same row shape as a direct share.
+ */
+export async function getForwardShares(parentShareId: string): Promise<DirectShare[]> {
+  const { data, error } = await supabase.rpc('get_forward_shares', { p_parent_share_id: parentShareId });
   if (error) throw error;
   return (data ?? []) as DirectShare[];
 }

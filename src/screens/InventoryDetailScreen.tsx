@@ -32,6 +32,7 @@ import { ManageSharesModal } from '../components/share/ManageSharesModal';
 import { useLightbox } from '../components/shared/Lightbox';
 import { MainLayout, PageBody } from '../components/layout';
 import { webOnly } from '../components/layout/web';
+import { useIsMobile } from '../hooks/useIsMobile';
 import { useAuthStore, selectCanShare } from '../stores/authStore';
 import { toast } from '../stores/toast';
 import { colors } from '../theme/tokens';
@@ -95,6 +96,7 @@ export function InventoryDetailScreen({ navigation, route }: Props): React.JSX.E
   const [deleteOpen, setDeleteOpen] = useState(false);
   const canShare = useAuthStore(selectCanShare);
   const { open: openLightbox } = useLightbox();
+  const isMobile = useIsMobile();
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['inventoryDetail', inventoryId],
@@ -228,8 +230,9 @@ export function InventoryDetailScreen({ navigation, route }: Props): React.JSX.E
 
         <View style={styles.wrap}>
           <View style={styles.card}>
-            {/* Header */}
-            <View style={styles.cardHeader}>
+            {/* Header — stacks on mobile so the title gets full width and the
+                action buttons drop below it. */}
+            <View style={[styles.cardHeader, isMobile ? styles.cardHeaderMobile : null]}>
               <View style={styles.titleBlock}>
                 <Text style={styles.h1} numberOfLines={2}>
                   {item.title}
@@ -240,27 +243,29 @@ export function InventoryDetailScreen({ navigation, route }: Props): React.JSX.E
                 <Text style={styles.timeRow}>{daysAgo(item.created_at)}</Text>
                 <Text style={styles.privacy}>Shared only with YOUR trusted contacts, not to open market.</Text>
               </View>
-              <View style={styles.headerActions}>
+              <View style={[styles.headerActions, isMobile ? styles.headerActionsMobile : null]}>
                 <ShareButton onPress={onShare} />
                 <EditButton onPress={() => navigation.navigate('InventoryEdit', { inventoryId })} />
                 <OverflowButton onPress={() => setMenuOpen(true)} />
               </View>
             </View>
 
-            {/* Stat row */}
-            <View style={styles.statsRow}>
-              <StatCell label="TOTAL QTY" labelColor={colors.textMuted} value={item.quantity} unit={item.unit} />
-              <View style={styles.statDivider} />
-              <StatCell label="RESERVED" labelColor={colors.orange} value={reserved} unit={item.unit} />
-              <View style={styles.statDivider} />
-              <StatCell label="AVAILABLE" labelColor={colors.green} value={item.quantity_available} unit={item.unit} />
-              <View style={styles.statDivider} />
+            {/* Stat row — 4 columns on desktop; a 2×2 grid on mobile so labels
+                don't truncate. */}
+            <View style={[styles.statsRow, isMobile ? styles.statsRowMobile : null]}>
+              <StatCell label="TOTAL QTY" labelColor={colors.textMuted} value={item.quantity} unit={item.unit} mobile={isMobile} />
+              {isMobile ? null : <View style={styles.statDivider} />}
+              <StatCell label="RESERVED" labelColor={colors.orange} value={reserved} unit={item.unit} mobile={isMobile} />
+              {isMobile ? null : <View style={styles.statDivider} />}
+              <StatCell label="AVAILABLE" labelColor={colors.green} value={item.quantity_available} unit={item.unit} mobile={isMobile} />
+              {isMobile ? null : <View style={styles.statDivider} />}
               <StatCell
                 label="SHARED WITH"
                 labelColor={colors.textMuted}
                 value={sharedWithCount}
                 icon="people"
                 onPress={() => setSharesOpen(true)}
+                mobile={isMobile}
               />
             </View>
 
@@ -477,6 +482,7 @@ function StatCell({
   unit,
   icon,
   onPress,
+  mobile = false,
 }: {
   label: string;
   labelColor: ColorValue;
@@ -484,10 +490,11 @@ function StatCell({
   unit?: string;
   icon?: IoniconName;
   onPress?: () => void;
+  mobile?: boolean;
 }): React.JSX.Element {
   return (
     <Pressable
-      style={[styles.statCell, onPress ? webOnly({ cursor: 'pointer' }) : null]}
+      style={[styles.statCell, mobile ? styles.statCellMobile : null, onPress ? webOnly({ cursor: 'pointer' }) : null]}
       onPress={onPress}
       disabled={!onPress}
     >
@@ -607,6 +614,7 @@ const styles = StyleSheet.create({
     gap: 16,
     padding: 22,
   },
+  cardHeaderMobile: { flexDirection: 'column', alignItems: 'stretch', gap: 14 },
   titleBlock: { flexShrink: 1, minWidth: 0 },
   h1: { fontSize: 22, fontWeight: '800', color: colors.textPrimary },
   skuRow: { fontSize: 12, fontWeight: '600', color: colors.textMuted, marginTop: 6, letterSpacing: 0.3 },
@@ -614,6 +622,7 @@ const styles = StyleSheet.create({
   privacy: { fontSize: 12, color: colors.textMuted, fontStyle: 'italic', marginTop: 8 },
 
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' },
+  headerActionsMobile: { justifyContent: 'flex-start' },
   shareBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -654,7 +663,16 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
+  statsRowMobile: { flexWrap: 'wrap', borderTopWidth: 0 },
   statCell: { flex: 1, paddingVertical: 16, paddingHorizontal: 10, alignItems: 'center', gap: 6 },
+  // 2×2 grid cell on mobile, with grid lines drawn via cell borders.
+  statCellMobile: {
+    flexBasis: '50%',
+    flexGrow: 0,
+    minWidth: 0,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
   statDivider: { width: 1, backgroundColor: colors.border },
   statLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 0.4, textTransform: 'uppercase' },
   statValueRow: { flexDirection: 'row', alignItems: 'center' },

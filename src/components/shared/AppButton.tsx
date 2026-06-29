@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { colors } from '../../theme/tokens';
 
-type Variant = 'emerald' | 'dark' | 'outline' | 'translucent';
+type Variant = 'primary' | 'emerald' | 'dark' | 'outline' | 'translucent';
 
 interface AppButtonProps {
   title: string;
@@ -56,6 +56,7 @@ export function AppButton({
 }
 
 const VARIANT_STYLE: Record<Variant, ViewStyle> = {
+  primary: { backgroundColor: colors.accent },
   emerald: { backgroundColor: colors.emerald },
   dark: { backgroundColor: colors.navy },
   outline: { backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: colors.slate200 },

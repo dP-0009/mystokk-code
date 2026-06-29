@@ -11,6 +11,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuthStore } from '../stores/authStore';
 import { colors } from '../theme/tokens';
 import { initPushHandlers, pushTargetTab } from '../services/push';
+import { claimShare } from '../services/supabase/shares';
+import { toast } from '../stores/toast';
 import { MainTabs } from './MainTabs';
 
 import { LandingScreen } from '../screens/LandingScreen';
@@ -133,13 +135,33 @@ export function RootNavigator(): React.JSX.Element {
     });
   }, []);
 
-  // Once signed in + onboarded, jump to any share captured before auth so the
-  // user can claim it (the ShareLanding screen claims on the action button).
+  // Once signed in + onboarded, resolve any share captured before auth. When a
+  // user logs in FROM a shared inventory link, claim the share for them and land
+  // them straight on that item's Received Inventory detail — not the dashboard,
+  // and not back on the public preview where they'd have to claim manually. This
+  // only affects the share-link login path (pendingShareToken is set solely by
+  // the ShareLanding screen's Login/Signup buttons). Owners go to their own
+  // listing instead; a claim failure falls back to the public preview.
   useEffect(() => {
     if (status === 'signedIn' && vendor?.onboarded && pendingShareToken && navigationRef.isReady()) {
       const token = pendingShareToken;
       setPendingShareToken(null);
-      navigationRef.navigate('ShareLanding', { token });
+      void (async () => {
+        try {
+          const res = await claimShare(token);
+          navigationRef.reset({ index: 0, routes: [{ name: 'Main' }] });
+          if (res.is_owner) {
+            toast('This is your own listing.');
+            navigationRef.navigate('InventoryDetail', { inventoryId: res.inventory_id });
+          } else {
+            navigationRef.navigate('ReceivedDetail', { shareId: res.share_id });
+          }
+        } catch {
+          // Couldn't claim (revoked/invalid link, transient error) — show the
+          // public preview rather than stranding the user on the dashboard.
+          navigationRef.navigate('ShareLanding', { token });
+        }
+      })();
     }
   }, [status, vendor?.onboarded, pendingShareToken, setPendingShareToken]);
 

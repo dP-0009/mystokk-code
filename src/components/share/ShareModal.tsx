@@ -382,7 +382,7 @@ function NetworkTab({
           <ActivityIndicator color={colors.accent} />
         </View>
       ) : (
-        <View style={styles.list}>
+        <ScrollView style={styles.list} nestedScrollEnabled showsVerticalScrollIndicator>
           {vendors.length === 0 ? (
             <Text style={styles.empty} testID="share-network-empty">
               No vendors match. Add vendors in My Network.
@@ -416,7 +416,7 @@ function NetworkTab({
               );
             })
           )}
-        </View>
+        </ScrollView>
       )}
 
       <View style={styles.sharingWith}>

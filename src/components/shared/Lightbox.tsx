@@ -112,16 +112,18 @@ export function Lightbox({
       ) : null}
 
       {/* Image area fills the space above the controls; minHeight:0 lets the
-          flex column actually shrink so a tall image is scaled down whole
-          (contain) instead of overflowing/being clipped. box-none lets clicks
-          on the empty margins reach the backdrop (close). */}
+          flex column actually shrink so the region has a definite, bounded
+          size. box-none lets clicks on the empty margins reach the backdrop. */}
       <View style={styles.imageArea} pointerEvents="box-none">
         <View style={styles.imageWrap} {...pan.panHandlers}>
           {Platform.OS === 'web' ? (
-            // On web, render a real <img>: react-native-web's <Image> is a
-            // background-image <div>, which collapses to 0px when sized
-            // auto/auto. A native <img> with object-fit: contain sizes
-            // correctly. (uri is a full https:// URL — see storage.ts.)
+            // On web, render a real <img>. It's positioned absolute to fill the
+            // image region exactly (a definite, bounded box) so it never enters
+            // the flex sizing game — as a flex *item* the browser drops the
+            // img's aspect ratio under a percentage max-height, and object-fit
+            // then crops like `cover` (landscape cards came out portrait + cut).
+            // Filling the box + object-fit:contain letterboxes the whole photo,
+            // every aspect ratio, no crop. (uri is a full https:// URL.)
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             React.createElement('img' as any, { src: uri, style: WEB_IMG_STYLE, alt: '' })
           ) : (
@@ -207,16 +209,18 @@ const CIRCLE = 'rgba(255,255,255,0.15)';
 // contain so the whole photo is visible inside the dark overlay. Plain CSS
 // (not RN style) because this is a real DOM <img>, not an RN <Image>.
 const WEB_IMG_STYLE = {
-  // Bound by viewport units (which always resolve, unlike % inside a flex item)
-  // leaving room for the top close button and the bottom strip, so the whole
-  // image shows at its natural aspect ratio and is never cropped.
-  maxWidth: '92vw',
-  maxHeight: 'calc(100vh - 180px)',
-  width: 'auto',
-  height: 'auto',
+  // Absolutely fill the (definite, bounded) image region and letterbox with
+  // object-fit:contain. Filling a fixed box — instead of auto width/height with
+  // percentage maxes inside a flex parent — is the only reliable way to keep the
+  // img's aspect ratio: as a flex item the browser drops it and object-fit then
+  // crops like `cover`. This shows the whole photo, every aspect ratio, no crop.
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  width: '100%',
+  height: '100%',
   objectFit: 'contain',
   display: 'block',
-  borderRadius: 8,
 } as const;
 
 const styles = StyleSheet.create({
@@ -276,7 +280,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 8,
   },
-  imageWrap: { flex: 1, minHeight: 0, width: '100%', alignItems: 'center', justifyContent: 'center' },
+  // position:relative + the absolutely-filled web <img> means the photo is
+  // bounded by this region's real (flex-computed) size, never by flaky flex-item
+  // aspect math. overflow:hidden is harmless: object-fit:contain fits inside.
+  imageWrap: { flex: 1, minHeight: 0, width: '100%', position: 'relative', alignItems: 'center', justifyContent: 'center' },
   nativeImage: { width: '100%', height: '100%' },
 
   bottom: {

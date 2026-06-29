@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { colors, radius } from '../../theme/tokens';
 import { NotificationBell } from './NotificationBell';
+import { webOnly } from './web';
 
 type MobileTopBarProps = {
   /** Signed-in company / account name, shown bold next to the logo. */
@@ -46,6 +47,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgWhite,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+    // Lift the whole bar (and its notification dropdown) above the scrolling
+    // content below — otherwise the popup, being an earlier sibling, paints
+    // under the main content and stays invisible.
+    zIndex: 1000,
+    ...webOnly({ position: 'relative' }),
   },
   brand: { flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1, minWidth: 0 },
   logo: {

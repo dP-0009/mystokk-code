@@ -64,6 +64,7 @@ export interface ReceivedShareDetail {
   stock_location: string | null;
   contact_person: string | null;
   shared_by_email: string | null;
+  shared_by_phone: string | null;
   shared_with: number;
   /** Signed thumbnail URLs (owner's photos, readable via the recipient-read policy). */
   photoUrls: string[];

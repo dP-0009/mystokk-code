@@ -3,7 +3,7 @@ import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { getItemDirectShares, revokeShare, type DirectShare } from '../../services/supabase/shares';
+import { getForwardShares, getItemDirectShares, revokeShare, type DirectShare } from '../../services/supabase/shares';
 import { VendorAvatar } from '../shared/VendorAvatar';
 import { webOnly } from '../layout/web';
 import { toast } from '../../stores/toast';
@@ -11,10 +11,17 @@ import { colors } from '../../theme/tokens';
 
 interface ManageSharesModalProps {
   visible: boolean;
-  inventoryId: string;
   onClose: () => void;
-  /** Open the full share flow ("Share with More"). */
+  /** Open the full share / forward flow ("Share with More"). */
   onShareMore: () => void;
+  /** Owner mode — manage the owner's own direct shares of this item. */
+  inventoryId?: string;
+  /**
+   * Forward mode — manage the forwards the CURRENT user made from this received
+   * share. Privacy-scoped server-side, so only the caller's own recipients show
+   * (never the upstream owner's or other forwarders'). Supply this OR inventoryId.
+   */
+  parentShareId?: string;
 }
 
 function fmtDate(iso: string): string {
@@ -30,13 +37,23 @@ function fmtDate(iso: string): string {
  * recipient makes never appear here. Each row can be revoked (cascading to its
  * downstream forwards); "Share with More" opens the full share flow.
  */
-export function ManageSharesModal({ visible, inventoryId, onClose, onShareMore }: ManageSharesModalProps): React.JSX.Element {
+export function ManageSharesModal({
+  visible,
+  inventoryId,
+  parentShareId,
+  onClose,
+  onShareMore,
+}: ManageSharesModalProps): React.JSX.Element {
   const queryClient = useQueryClient();
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
 
+  // Forward mode lists the caller's own forwards from a received share; owner
+  // mode lists the owner's direct shares of an item.
+  const forwardMode = parentShareId != null;
+
   const { data, isLoading } = useQuery({
-    queryKey: ['itemShares', inventoryId],
-    queryFn: () => getItemDirectShares(inventoryId),
+    queryKey: forwardMode ? ['forwardShares', parentShareId] : ['itemShares', inventoryId],
+    queryFn: () => (forwardMode ? getForwardShares(parentShareId) : getItemDirectShares(inventoryId ?? '')),
     staleTime: 15_000,
     enabled: visible,
   });
@@ -46,13 +63,27 @@ export function ManageSharesModal({ visible, inventoryId, onClose, onShareMore }
     mutationFn: revokeShare,
     onSuccess: (count) => {
       setConfirmingId(null);
-      void queryClient.invalidateQueries({ queryKey: ['itemShares', inventoryId] });
-      void queryClient.invalidateQueries({ queryKey: ['inventoryDetail', inventoryId] });
-      void queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      if (forwardMode) {
+        void queryClient.invalidateQueries({ queryKey: ['forwardShares', parentShareId] });
+        void queryClient.invalidateQueries({ queryKey: ['receivedDetail', parentShareId] });
+      } else {
+        void queryClient.invalidateQueries({ queryKey: ['itemShares', inventoryId] });
+        void queryClient.invalidateQueries({ queryKey: ['inventoryDetail', inventoryId] });
+        void queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      }
       toast.success(count > 1 ? `Revoked — ${count} shares pulled (incl. forwards)` : 'Share revoked');
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : 'Could not revoke.'),
   });
+
+  const title = forwardMode ? 'Shared With' : 'Manage Shares';
+  const subtitle = forwardMode
+    ? 'Only the people you forwarded this to. Your upstream network stays private.'
+    : 'Your network remains private. Control who has access.';
+  const emptySub = forwardMode
+    ? "People you forward this item to will appear here."
+    : 'People you share this item with will appear here.';
+  const shareMoreLabel = forwardMode ? 'Forward to More' : 'Share with More';
 
   const onRevoke = (item: DirectShare): void => {
     if (confirmingId === item.share_id) revokeMutation.mutate(item.share_id);
@@ -67,13 +98,13 @@ export function ManageSharesModal({ visible, inventoryId, onClose, onShareMore }
           <View style={styles.header}>
             <View style={styles.headerTitle}>
               <Ionicons name="people-outline" size={20} color={colors.textPrimary} />
-              <Text style={styles.title}>Manage Shares</Text>
+              <Text style={styles.title}>{title}</Text>
             </View>
             <Pressable onPress={onClose} hitSlop={8} style={styles.close}>
               <Ionicons name="close" size={18} color={colors.textSecondary} />
             </Pressable>
           </View>
-          <Text style={styles.subtitle}>Your network remains private. Control who has access.</Text>
+          <Text style={styles.subtitle}>{subtitle}</Text>
 
           {/* List */}
           {isLoading ? (
@@ -81,7 +112,7 @@ export function ManageSharesModal({ visible, inventoryId, onClose, onShareMore }
           ) : shares.length === 0 ? (
             <View style={styles.empty}>
               <Text style={styles.emptyTitle}>Not shared yet</Text>
-              <Text style={styles.emptySub}>People you share this item with will appear here.</Text>
+              <Text style={styles.emptySub}>{emptySub}</Text>
             </View>
           ) : (
             <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
@@ -143,7 +174,7 @@ export function ManageSharesModal({ visible, inventoryId, onClose, onShareMore }
             </Pressable>
             <Pressable style={[styles.btn, styles.btnPrimary, webOnly({ cursor: 'pointer' })]} onPress={onShareMore}>
               <Ionicons name="share-social-outline" size={15} color={colors.bgWhite} />
-              <Text style={styles.btnPrimaryText}>Share with More</Text>
+              <Text style={styles.btnPrimaryText}>{shareMoreLabel}</Text>
             </Pressable>
           </View>
         </Pressable>

@@ -48,7 +48,10 @@ export interface EmailContent {
 /** The discriminated payload the Edge Function accepts. Shared with callers. */
 export type SendEmailPayload =
   | { type: 'otp'; purpose: 'signup' | 'reset'; email: string }
-  | { type: 'share_received'; recipientVendorId: string; inventoryId: string }
+  // Registered recipient → recipientVendorId. Unregistered recipient → token
+  // (the claimable public-forward link) + email. Either way the recipient gets
+  // the same item card, so a non-member sees the actual item, not a bare invite.
+  | { type: 'share_received'; inventoryId: string; recipientVendorId?: string; token?: string; email?: string }
   | { type: 'network_invite'; email: string; inviterVendorId: string }
   | { type: 'reservation_request'; reservationId: string }
   | {
@@ -150,14 +153,13 @@ export function buildOtpEmail(purpose: 'signup' | 'reset', code: string): EmailC
 export interface ShareEmailParams {
   senderCompany: string;
   productTitle: string;
-  priceLabel: string;
   stockLocation?: string | null;
   shareUrl: string;
   photoUrl: string | null;
 }
 
 export function buildShareEmail(params: ShareEmailParams): EmailContent {
-  const { senderCompany, productTitle, priceLabel, stockLocation, shareUrl, photoUrl } = params;
+  const { senderCompany, productTitle, stockLocation, shareUrl, photoUrl } = params;
   const safeTitle = escapeHtml(productTitle);
   const safeCompany = escapeHtml(senderCompany);
 
@@ -177,15 +179,14 @@ export function buildShareEmail(params: ShareEmailParams): EmailContent {
     <p style="margin:0 0 4px;color:${BRAND.slate500};font-size:13px;">${safeCompany} shared an item with you</p>
     ${photoBlock}
     <h1 style="margin:0 0 6px;font-size:20px;color:${BRAND.navy};">${safeTitle}</h1>
-    <p style="margin:0 0 2px;font-size:18px;font-weight:700;color:${BRAND.emerald};">${escapeHtml(priceLabel)}</p>
     ${locationBlock}
     <p style="margin:6px 0 0;color:${BRAND.slate500};font-size:13px;">Shared by ${safeCompany}</p>
-    ${button('View item', shareUrl, BRAND.emerald)}
+    ${button('View details', shareUrl, BRAND.emerald)}
   `);
 
   // Plain-text fallback (also used when there is no photo).
   const locationLine = stockLocation ? `\n${stockLocation}` : '';
-  const text = `${senderCompany} shared an item with you on MyStokk.\n\n${productTitle}\n${priceLabel}${locationLine}\nShared by ${senderCompany}\n\nView it: ${shareUrl}`;
+  const text = `${senderCompany} shared an item with you on MyStokk.\n\n${productTitle}${locationLine}\nShared by ${senderCompany}\n\nView details: ${shareUrl}`;
 
   return { subject: `${senderCompany} shared "${productTitle}" with you`, html, text };
 }

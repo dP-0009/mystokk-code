@@ -9,6 +9,7 @@ import { getReceivedShareDetail } from '../services/supabase/received';
 import { createReservation } from '../services/supabase/reservations';
 import { ShareModal } from '../components/share/ShareModal';
 import { PreShareModal } from '../components/share/PreShareModal';
+import { ManageSharesModal } from '../components/share/ManageSharesModal';
 import { ReserveModal } from '../components/reservations/ReserveModal';
 import { MainLayout, PageBody, PageHeader } from '../components/layout';
 import { webOnly } from '../components/layout/web';
@@ -16,6 +17,7 @@ import type { ForwardContext } from '../services/supabase/shares';
 import { colors, radius } from '../theme/tokens';
 import { toast } from '../stores/toast';
 import { useLightbox } from '../components/shared/Lightbox';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ReceivedDetail'>;
 
@@ -25,6 +27,11 @@ function money(currency: string | null, price: number | null): string {
   if (price === null || price === undefined) return 'Price on request';
   const symbol = currency ? CURRENCY_SYMBOL[currency] ?? `${currency} ` : '';
   return `${symbol}${price.toLocaleString()}`;
+}
+
+/** Digits-only phone for a wa.me link (strips spaces, +, dashes, parens). */
+function waNumber(phone: string | null): string {
+  return (phone ?? '').replace(/[^\d]/g, '');
 }
 
 /** Compact age for the subtitle, e.g. "today", "1d ago", "5d ago". */
@@ -39,10 +46,12 @@ export function ReceivedDetailScreen({ navigation, route }: Props): React.JSX.El
   const { shareId } = route.params;
   const queryClient = useQueryClient();
   const { open: openLightbox } = useLightbox();
+  const isMobile = useIsMobile();
 
   const [preShareOpen, setPreShareOpen] = useState(false);
   const [forwardOpen, setForwardOpen] = useState(false);
   const [forwardCtx, setForwardCtx] = useState<ForwardContext | null>(null);
+  const [sharedWithOpen, setSharedWithOpen] = useState(false);
 
   const [reserveOpen, setReserveOpen] = useState(false);
 
@@ -135,15 +144,16 @@ export function ReceivedDetailScreen({ navigation, route }: Props): React.JSX.El
                 </View>
               </View>
 
-              {/* 4-stat bar */}
-              <View style={styles.statCard}>
-                <StatCol value={data.quantity} label="Total Qty" unit={data.unit} />
+              {/* 4-stat bar — 2×2 grid on mobile so labels don't truncate. */}
+              <View style={[styles.statCard, isMobile ? styles.statCardMobile : null]}>
+                <StatCol value={data.quantity} label="Total Qty" unit={data.unit} mobile={isMobile} />
                 <StatCol
                   value={data.reserved_by_me}
                   label="Reserved by me"
                   unit={data.unit}
                   valueColor={colors.orange}
                   bg={colors.orangeLight}
+                  mobile={isMobile}
                 />
                 <StatCol
                   value={data.available_to_me}
@@ -151,8 +161,16 @@ export function ReceivedDetailScreen({ navigation, route }: Props): React.JSX.El
                   unit={data.unit}
                   valueColor={colors.green}
                   bg={colors.greenLight}
+                  mobile={isMobile}
                 />
-                <StatCol value={data.shared_with} label="Shared With" icon="people-outline" last />
+                <StatCol
+                  value={data.shared_with}
+                  label="Shared With"
+                  icon="people-outline"
+                  last
+                  onPress={() => setSharedWithOpen(true)}
+                  mobile={isMobile}
+                />
               </View>
             </View>
 
@@ -251,21 +269,53 @@ export function ReceivedDetailScreen({ navigation, route }: Props): React.JSX.El
                 </>
               ) : null}
 
-              {data.shared_by_email ? (
+              {data.shared_by_phone || data.shared_by_email ? (
                 <View style={styles.contactRow}>
-                  <Pressable
-                    style={styles.contactBtn}
-                    onPress={() => Linking.openURL(`mailto:${data.shared_by_email}`)}
-                    accessibilityLabel="Email vendor"
-                  >
-                    <Ionicons name="mail-outline" size={16} color={colors.accent} />
-                  </Pressable>
+                  {data.shared_by_phone ? (
+                    <Pressable
+                      style={styles.contactBtn}
+                      onPress={() => Linking.openURL(`tel:${data.shared_by_phone}`)}
+                      accessibilityLabel="Call vendor"
+                    >
+                      <Ionicons name="call-outline" size={16} color={colors.accent} />
+                    </Pressable>
+                  ) : null}
+                  {data.shared_by_phone ? (
+                    <Pressable
+                      style={styles.contactBtn}
+                      onPress={() => Linking.openURL(`https://wa.me/${waNumber(data.shared_by_phone)}`)}
+                      accessibilityLabel="Message vendor on WhatsApp"
+                    >
+                      <Ionicons name="logo-whatsapp" size={16} color={colors.green} />
+                    </Pressable>
+                  ) : null}
+                  {data.shared_by_email ? (
+                    <Pressable
+                      style={styles.contactBtn}
+                      onPress={() => Linking.openURL(`mailto:${data.shared_by_email}`)}
+                      accessibilityLabel="Email vendor"
+                    >
+                      <Ionicons name="mail-outline" size={16} color={colors.accent} />
+                    </Pressable>
+                  ) : null}
                 </View>
               ) : null}
             </View>
           </View>
         </View>
       </PageBody>
+
+      {/* Shared With — the forwards I made from this received share (privacy-scoped
+          to my own recipients). "Forward to More" reopens the forward flow. */}
+      <ManageSharesModal
+        visible={sharedWithOpen}
+        parentShareId={shareId}
+        onClose={() => setSharedWithOpen(false)}
+        onShareMore={() => {
+          setSharedWithOpen(false);
+          setPreShareOpen(true);
+        }}
+      />
 
       {/* Step 1 — Pre-Share / Forward gate (set your own price + remark) */}
       <PreShareModal
@@ -289,7 +339,10 @@ export function ReceivedDetailScreen({ navigation, route }: Props): React.JSX.El
             unit: data.unit,
           }}
           onClose={() => setForwardOpen(false)}
-          onShared={() => queryClient.invalidateQueries({ queryKey: ['receivedDetail', shareId] })}
+          onShared={() => {
+            void queryClient.invalidateQueries({ queryKey: ['receivedDetail', shareId] });
+            void queryClient.invalidateQueries({ queryKey: ['forwardShares', shareId] });
+          }}
         />
       ) : null}
 
@@ -335,6 +388,8 @@ function StatCol({
   bg,
   icon,
   last = false,
+  onPress,
+  mobile = false,
 }: {
   value: number;
   label: string;
@@ -343,16 +398,30 @@ function StatCol({
   bg?: string;
   icon?: React.ComponentProps<typeof Ionicons>['name'];
   last?: boolean;
+  /** When set, the column becomes tappable (e.g. open the Shared With list). */
+  onPress?: () => void;
+  mobile?: boolean;
 }): React.JSX.Element {
+  const Wrap = onPress ? Pressable : View;
   return (
-    <View style={[styles.statCol, bg ? { backgroundColor: bg } : null, last ? null : styles.statColDivider]}>
+    <Wrap
+      onPress={onPress}
+      style={[
+        styles.statCol,
+        mobile ? styles.statColMobile : null,
+        bg ? { backgroundColor: bg } : null,
+        !mobile && !last ? styles.statColDivider : null,
+        onPress ? webOnly({ cursor: 'pointer' }) : null,
+      ]}
+      accessibilityRole={onPress ? 'button' : undefined}
+    >
       <Text style={styles.statLabel}>{label}</Text>
       <View style={styles.statValRow}>
         <Text style={[styles.statVal, valueColor ? { color: valueColor } : null]}>{value.toLocaleString()}</Text>
         {unit ? <Text style={styles.statUnit}>{unit}</Text> : null}
         {icon ? <Ionicons name={icon} size={15} color={colors.accent} /> : null}
       </View>
-    </View>
+    </Wrap>
   );
 }
 
@@ -364,9 +433,11 @@ const styles = StyleSheet.create({
   backText: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
 
   // Two-column grid: main content + Shared By side panel (wraps on narrow screens).
+  // The aside is a fixed, compact rail so the main details column gets the rest
+  // of the width; both still wrap to full-width on narrow viewports.
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 20, alignItems: 'flex-start' },
-  main: { flexGrow: 1, flexBasis: 540, minWidth: 320 },
-  aside: { flexGrow: 1, flexBasis: 300, minWidth: 260 },
+  main: { flexGrow: 1, flexShrink: 1, flexBasis: 500, minWidth: 320 },
+  aside: { flexGrow: 0, flexShrink: 0, flexBasis: 380, minWidth: 340 },
 
   // Header card holding the title block, actions, and the stat bar.
   headCard: {
@@ -460,7 +531,10 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg, // 16
     overflow: 'hidden',
   },
+  statCardMobile: { flexWrap: 'wrap' },
   statCol: { flex: 1, justifyContent: 'center', paddingVertical: 16, paddingHorizontal: 12 },
+  // 2×2 grid cell on mobile with grid lines via top/right borders.
+  statColMobile: { flexBasis: '50%', flexGrow: 0, minWidth: 0, borderTopWidth: 1, borderTopColor: colors.border },
   statColDivider: { borderRightWidth: 1, borderRightColor: colors.border }, // #E2E8F0
   statLabel: {
     fontSize: 10,

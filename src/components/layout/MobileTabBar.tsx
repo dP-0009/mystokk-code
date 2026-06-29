@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, radius, shadows } from '../../theme/tokens';
 import { PulsingDot } from '../shared/PulsingDot';
@@ -43,8 +44,10 @@ export function MobileTabBar({
   onNavigate,
   onOpenMenu,
 }: MobileTabBarProps): React.JSX.Element {
+  const insets = useSafeAreaInsets();
+  // Keep the bar clear of the home indicator / browser chrome at the bottom.
   return (
-    <View style={styles.wrap} pointerEvents="box-none">
+    <View style={[styles.wrap, { paddingBottom: 10 + insets.bottom }]} pointerEvents="box-none">
       <View style={styles.bar}>
         {TABS.map((tab) => {
           const active = !menuActive && tab.id === activeId;
@@ -87,7 +90,8 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     paddingHorizontal: 10,
-    paddingBottom: 10,
+    // paddingBottom is applied inline (base 10 + safe-area inset).
+    zIndex: 900,
   },
   bar: {
     flexDirection: 'row',

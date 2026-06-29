@@ -68,7 +68,7 @@ export function NotificationBell({ count, inline = false }: NotificationBellProp
         ) : null}
       </Pressable>
 
-      {open ? <NotificationPopup onClose={() => setOpen(false)} /> : null}
+      {open ? <NotificationPopup onClose={() => setOpen(false)} inline={inline} /> : null}
     </View>
   );
 }
@@ -78,7 +78,13 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     right: 0,
-    padding: 16,
+    // Extra right padding nudges the bell in from the very edge (clear of the
+    // scrollbar) so it doesn't crowd the corner. Kept in sync with the popup's
+    // `right` inset so the dropdown lines up under the bell with the same gap.
+    paddingTop: 16,
+    paddingRight: 40,
+    paddingBottom: 16,
+    paddingLeft: 16,
     zIndex: 1000,
     ...webOnly({ position: 'fixed' }),
   },

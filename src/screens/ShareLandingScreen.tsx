@@ -15,11 +15,6 @@ import { colors, radius, shadows } from '../theme/tokens';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ShareLanding'>;
 
-function money(currency: string | null, price: number | null): string {
-  if (price === null || price === undefined) return 'On request';
-  return `${currency ?? ''} ${price.toLocaleString()}`.trim();
-}
-
 export function ShareLandingScreen({ navigation, route }: Props): React.JSX.Element {
   const { token } = route.params;
   const status = useAuthStore((s) => s.status);
@@ -190,17 +185,10 @@ function Preview({
             </Text>
           </View>
 
-          {/* Stat grid */}
+          {/* Stat grid — price intentionally omitted from the public landing. */}
           <View style={styles.statGrid}>
             <Stat label="Quantity" value={qty} sub={share.unit} />
             <Stat label="Available" value={qty} sub={share.unit} valueColor={colors.green} />
-            <Stat
-              label="Price"
-              value={money(share.display_currency, share.display_price)}
-              sub={share.display_price !== null ? `/${share.unit}` : ' '}
-              valueColor={colors.green}
-              small
-            />
             <Stat label="Origin" value={share.origin ?? '📍'} sub={share.origin ? ' ' : '—'} last />
           </View>
 

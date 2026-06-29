@@ -39,6 +39,12 @@ export function notificationTargetTab(type: string): keyof MainTabParamList | nu
 interface NotificationPopupProps {
   /** Close the popup (e.g. after navigating or clicking outside). */
   onClose: () => void;
+  /**
+   * True when anchored to the inline (mobile top-bar) bell. The desktop bell is
+   * pinned to the viewport edge and insets the popup to clear the scrollbar;
+   * the inline bell must hug its anchor (right: 0) or it overflows on phones.
+   */
+  inline?: boolean;
 }
 
 /**
@@ -46,7 +52,7 @@ interface NotificationPopupProps {
  * recent notifications with a header + "Mark all read", an empty state, and a
  * footer link to the full page. Rows mark-as-read then deep-link by type.
  */
-export function NotificationPopup({ onClose }: NotificationPopupProps): React.JSX.Element {
+export function NotificationPopup({ onClose, inline = false }: NotificationPopupProps): React.JSX.Element {
   const navigation = useNavigation<Nav>();
   const queryClient = useQueryClient();
 
@@ -88,7 +94,7 @@ export function NotificationPopup({ onClose }: NotificationPopupProps): React.JS
   };
 
   return (
-    <View style={styles.popup}>
+    <View style={[styles.popup, inline ? styles.popupInline : null]}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Notifications</Text>
@@ -144,13 +150,17 @@ const styles = StyleSheet.create({
   popup: {
     position: 'absolute',
     top: '100%',
-    right: 0,
+    // Inset from the viewport edge so the dropdown clears the scrollbar and
+    // lines up under the bell (matches the bell anchor's paddingRight). The
+    // bell's padding doesn't move this — the offset is relative to the anchor's
+    // padding box, whose right edge sits at the viewport edge.
+    right: 40,
     // 8px gap below the bell — i.e. top: calc(100% + 8px).
     marginTop: 8,
-    width: 380,
+    width: 340,
     // Never overflow a narrow (mobile) viewport.
     ...webOnly({ maxWidth: 'calc(100vw - 24px)' }),
-    maxHeight: 480,
+    maxHeight: 420,
     backgroundColor: colors.bgWhite,
     borderRadius: 16,
     borderWidth: 1,
@@ -164,6 +174,8 @@ const styles = StyleSheet.create({
     shadowRadius: 32,
     elevation: 16,
   },
+  // Inline (mobile) bell: hug the anchor so the popup doesn't overflow the screen.
+  popupInline: { right: 0 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

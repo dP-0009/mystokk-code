@@ -189,6 +189,10 @@ export function MainLayout({ active, children }: MainLayoutProps): React.JSX.Ele
 }
 
 const styles = StyleSheet.create({
-  mobileShell: { flex: 1, flexDirection: 'column', backgroundColor: colors.bgPage, ...webOnly({ minHeight: '100vh' }) },
+  // 100dvh (dynamic viewport height) tracks the *visible* area, so the floating
+  // footer sits above the mobile browser's bottom toolbar instead of behind it
+  // (plain 100vh includes the area under the toolbar). Falls back gracefully on
+  // browsers without dvh.
+  mobileShell: { flex: 1, flexDirection: 'column', backgroundColor: colors.bgPage, ...webOnly({ minHeight: '100dvh', height: '100dvh' }) },
   mobileMain: { flex: 1, minHeight: 0 },
 });
