@@ -1,4 +1,5 @@
 import { supabase } from './client';
+import { toFullUrl } from './storage';
 
 export interface DashboardStats {
   inventory: number;
@@ -25,6 +26,10 @@ export interface ReceivedItem {
   display_price: number | null;
   display_currency: string | null;
   created_at: string;
+  /** Storage path of the item's first photo (from the RPC), or null. */
+  first_photo_path: string | null;
+  /** Public thumbnail URL derived from first_photo_path, or null. */
+  thumbUrl: string | null;
 }
 
 export interface DashboardData {
@@ -79,7 +84,10 @@ export async function getDashboardData(): Promise<DashboardData> {
   const received3 = ((recvRes.data ?? []) as ReceivedItem[])
     .slice()
     .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
-    .slice(0, 3);
+    .slice(0, 3)
+    // Public-read inventory-photos bucket → plain object URL (the image-transform
+    // CDN is a paid add-on that 404s when off). Matches the Received list.
+    .map((r) => ({ ...r, thumbUrl: r.first_photo_path ? toFullUrl(r.first_photo_path) : null }));
 
   return {
     vendor: {

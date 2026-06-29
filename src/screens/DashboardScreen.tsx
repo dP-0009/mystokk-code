@@ -19,6 +19,7 @@ import { colors, radius } from '../theme/tokens';
 import { MainLayout, PageBody, PageHeader } from '../components/layout';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { webOnly } from '../components/layout/web';
+import { ProductImage } from '../components/shared/ProductImage';
 import { toast } from '../stores/toast';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -280,9 +281,13 @@ function ReceivedRow({
 }): React.JSX.Element {
   return (
     <Pressable style={styles.row} onPress={onPress}>
-      <View style={styles.thumb}>
-        <Ionicons name="cube-outline" size={24} color={colors.textMuted} />
-      </View>
+      <ProductImage
+        uri={item.thumbUrl}
+        width={56}
+        height={56}
+        borderRadius={radius.md}
+        fallback={<Ionicons name="cube-outline" size={24} color={colors.textMuted} />}
+      />
       <View style={styles.rowInfo}>
         <Text style={styles.rowTitle} numberOfLines={2}>
           {item.title}

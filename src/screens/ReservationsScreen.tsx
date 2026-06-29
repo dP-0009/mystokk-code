@@ -38,6 +38,7 @@ const STATUS_FILTERS: ReadonlyArray<{ label: string; value: string | null }> = [
   { label: 'Negotiating', value: 'negotiating' },
   { label: 'Confirmed', value: 'confirmed' },
   { label: 'Rejected', value: 'rejected' },
+  { label: 'Cancelled', value: 'cancelled' },
   { label: 'Passed', value: 'passed' },
 ];
 

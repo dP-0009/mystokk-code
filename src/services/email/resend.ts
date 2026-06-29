@@ -176,11 +176,10 @@ export function buildShareEmail(params: ShareEmailParams): EmailContent {
     : '';
 
   const html = layout(`
-    <p style="margin:0 0 4px;color:${BRAND.slate500};font-size:13px;">${safeCompany} shared an item with you</p>
     ${photoBlock}
     <h1 style="margin:0 0 6px;font-size:20px;color:${BRAND.navy};">${safeTitle}</h1>
     ${locationBlock}
-    <p style="margin:6px 0 0;color:${BRAND.slate500};font-size:13px;">Shared by ${safeCompany}</p>
+    <p style="margin:6px 0 0;color:${BRAND.slate500};font-size:13px;">Shared by <strong style="color:${BRAND.navy};font-weight:700;">${safeCompany}</strong></p>
     ${button('View details', shareUrl, BRAND.emerald)}
   `);
 

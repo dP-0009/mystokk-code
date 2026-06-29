@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import { create } from 'zustand';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../services/supabase/client';
+import { queryClient } from '../services/queryClient';
 
 /**
  * Web only: after Google's full-page redirect we land back on our origin with
@@ -88,9 +89,29 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ session, status: session ? 'signedIn' : 'signedOut' });
     if (session) await get().refreshVendor();
 
+    // Track the signed-in user so we can detect an identity change below.
+    let lastUserId: string | null = session?.user?.id ?? null;
+
     // React to future sign-in/out. Defer the supabase calls to the next tick —
     // calling supabase-js inside this callback synchronously can deadlock.
-    supabase.auth.onAuthStateChange((_event, newSession) => {
+    supabase.auth.onAuthStateChange((event, newSession) => {
+      const newUserId = newSession?.user?.id ?? null;
+
+      // PRIVACY-CRITICAL: the React Query cache is NOT user-scoped, so when the
+      // signed-in identity changes (log out, or log in as a different account in
+      // the same tab) we MUST wipe it. Otherwise the previous account's cached
+      // data (company name, network, inventory…) is shown to the next user until
+      // a manual refresh — a cross-account data leak.
+      if (newUserId !== lastUserId) {
+        queryClient.clear();
+      } else if (event === 'TOKEN_REFRESHED') {
+        // Same user, fresh access token → re-run any queries that errored while
+        // the old token was expired so the UI recovers automatically instead of
+        // staying stuck on "failed to load".
+        void queryClient.invalidateQueries();
+      }
+      lastUserId = newUserId;
+
       set({ session: newSession, status: newSession ? 'signedIn' : 'signedOut' });
       setTimeout(() => {
         if (newSession) {
@@ -132,6 +153,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (err) {
       console.error('[auth] signOut request failed; clearing session locally:', err);
     } finally {
+      // Drop the previous account's cached query data immediately (don't wait for
+      // the SIGNED_OUT event) so the next login never sees it.
+      queryClient.clear();
       set({ session: null, vendor: null, status: 'signedOut' });
     }
   },

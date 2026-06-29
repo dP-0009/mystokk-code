@@ -90,7 +90,10 @@ export async function getReceivedShares(): Promise<ReceivedListItem[]> {
   // p_vendor_id is ignored server-side (RPC scopes to auth.uid()), passed for signature compat.
   const { data, error } = await supabase.rpc('get_received_shares', { p_vendor_id: user.id });
   if (error) throw error;
-  const rows = (data ?? []) as ReceivedListItem[];
+  // Newest share first (most recently shared with me at the top).
+  const rows = ((data ?? []) as ReceivedListItem[])
+    .slice()
+    .sort((a, b) => (a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : 0));
 
   // The inventory-photos bucket is public-read, so build a resized public
   // thumbnail URL (400px/q75) per item — no signing round-trip needed.

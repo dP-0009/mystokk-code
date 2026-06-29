@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -35,7 +34,7 @@ import { VendorAvatar } from '../components/shared/VendorAvatar';
 import { webOnly } from '../components/layout/web';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { colors, radius, shadows } from '../theme/tokens';
-import { openEmail, openWhatsApp } from '../utils/contact';
+import { openCall, openEmail, openWhatsApp } from '../utils/contact';
 import { toast } from '../stores/toast';
 
 type Props = CompositeScreenProps<
@@ -59,6 +58,8 @@ export function NetworkScreen({ navigation }: Props): React.JSX.Element {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [viewVendor, setViewVendor] = useState<NetworkVendor | null>(null);
   const [deleteVendor, setDeleteVendor] = useState<NetworkVendor | null>(null);
+  // Mobile: the vendor whose action sheet (call/whatsapp/email/view/edit/delete) is open.
+  const [actionVendor, setActionVendor] = useState<NetworkVendor | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
 
@@ -139,7 +140,9 @@ export function NetworkScreen({ navigation }: Props): React.JSX.Element {
   });
 
   const editVendor = (v: NetworkVendor): void =>
-    navigation.navigate('EditVendor', { manualVendorId: v.row_id });
+    v.source === 'manual'
+      ? navigation.navigate('EditVendor', { manualVendorId: v.row_id })
+      : navigation.navigate('EditVendor', { vendorId: v.vendor_id ?? undefined });
 
   const isLoading = networkQuery.isLoading || pendingQuery.isLoading;
   const showPending = tab === 'pending';
@@ -154,27 +157,20 @@ export function NetworkScreen({ navigation }: Props): React.JSX.Element {
       <PageHeader
         title="My Network"
         subtitle={`${network.length} vendor${network.length === 1 ? '' : 's'} in your network`}
-        actions={
-          <>
-            <Pressable
-              style={styles.btnPrimary}
-              onPress={() => setAddOpen(true)}
-              testID="network-add-header"
-            >
-              <Text style={styles.btnPrimaryText}>+ Add</Text>
-            </Pressable>
-            <Pressable
-              style={styles.btnOutline}
-              onPress={() => setBulkOpen(true)}
-              testID="network-bulk-header"
-            >
-              <Text style={styles.btnOutlineText}>↑ Bulk</Text>
-            </Pressable>
-          </>
-        }
       />
 
       <PageBody>
+        {/* Add / Bulk live in the body (right-aligned, below the notification
+            bell) rather than inside the white header bar. */}
+        <View style={styles.headerActions}>
+          <Pressable style={styles.btnPrimary} onPress={() => setAddOpen(true)} testID="network-add-header">
+            <Text style={styles.btnPrimaryText}>+ Add</Text>
+          </Pressable>
+          <Pressable style={styles.btnOutline} onPress={() => setBulkOpen(true)} testID="network-bulk-header">
+            <Text style={styles.btnOutlineText}>↑ Bulk</Text>
+          </Pressable>
+        </View>
+
         {/* Tabs */}
         <View style={styles.tabs}>
           {tabs.map((t) => {
@@ -213,20 +209,9 @@ export function NetworkScreen({ navigation }: Props): React.JSX.Element {
           </View>
         </View>
 
-        {/* Table — horizontally scrollable on mobile so the columns keep their
-            real widths instead of squishing the company name to one letter. */}
-        <View style={styles.tableCard}>
-          <TableScroll mobile={isMobile}>
-            <View style={isMobile ? styles.tableInnerMobile : undefined}>
-          <View style={styles.headerRow}>
-            <Text style={[styles.th, styles.colCompany]}>Company</Text>
-            <Text style={[styles.th, styles.colContact]}>Contact Person</Text>
-            <Text style={[styles.th, styles.colCountry]}>Country</Text>
-            <Text style={[styles.th, styles.colStatus]}>Status</Text>
-            <Text style={[styles.th, styles.colActions]}>Actions</Text>
-          </View>
-
-          {isLoading ? (
+        {isMobile ? (
+          /* Mobile: stacked cards instead of a wide table. */
+          isLoading ? (
             <View style={styles.center}>
               <ActivityIndicator color={colors.accent} size="large" />
             </View>
@@ -237,7 +222,7 @@ export function NetworkScreen({ navigation }: Props): React.JSX.Element {
               </Text>
             ) : (
               filteredPending.map((p) => (
-                <PendingRow
+                <PendingCard
                   key={p.connection_id}
                   item={p}
                   busy={busyId === p.connection_id}
@@ -260,22 +245,157 @@ export function NetworkScreen({ navigation }: Props): React.JSX.Element {
             </Text>
           ) : (
             filteredNetwork.map((v) => (
-              <VendorRow
+              <VendorCard
                 key={`${v.source}-${v.row_id}`}
                 item={v}
-                onView={() => setViewVendor(v)}
-                onEdit={() => editVendor(v)}
-                onDelete={() => setDeleteVendor(v)}
+                onPress={() => setViewVendor(v)}
+                onMenu={() => setActionVendor(v)}
               />
             ))
-          )}
+          )
+        ) : (
+          /* Desktop: table. */
+          <View style={styles.tableCard}>
+            <View style={styles.headerRow}>
+              <Text style={[styles.th, styles.colCompany]}>Company</Text>
+              <Text style={[styles.th, styles.colContact]}>Contact Person</Text>
+              <Text style={[styles.th, styles.colCountry]}>Country</Text>
+              <Text style={[styles.th, styles.colStatus]}>Status</Text>
+              <Text style={[styles.th, styles.colActions]}>Actions</Text>
             </View>
-          </TableScroll>
-        </View>
+
+            {isLoading ? (
+              <View style={styles.center}>
+                <ActivityIndicator color={colors.accent} size="large" />
+              </View>
+            ) : showPending ? (
+              filteredPending.length === 0 ? (
+                <Text style={styles.empty}>
+                  {search ? 'No pending requests match your search.' : 'No pending connection requests.'}
+                </Text>
+              ) : (
+                filteredPending.map((p) => (
+                  <PendingRow
+                    key={p.connection_id}
+                    item={p}
+                    busy={busyId === p.connection_id}
+                    onAccept={() => {
+                      setBusyId(p.connection_id);
+                      acceptMutation.mutate(p.connection_id);
+                    }}
+                    onReject={() => {
+                      setBusyId(p.connection_id);
+                      rejectMutation.mutate(p.connection_id);
+                    }}
+                  />
+                ))
+              )
+            ) : filteredNetwork.length === 0 ? (
+              <Text style={styles.empty}>
+                {search
+                  ? 'No vendors match your search.'
+                  : 'No vendors yet — add a vendor or bulk import a CSV.'}
+              </Text>
+            ) : (
+              filteredNetwork.map((v) => (
+                <VendorRow
+                  key={`${v.source}-${v.row_id}`}
+                  item={v}
+                  onView={() => setViewVendor(v)}
+                  onEdit={() => editVendor(v)}
+                  onDelete={() => setDeleteVendor(v)}
+                />
+              ))
+            )}
+          </View>
+        )}
       </PageBody>
 
       <AddVendorModal visible={addOpen} onClose={() => setAddOpen(false)} />
       <BulkUploadModal visible={bulkOpen} onClose={() => setBulkOpen(false)} />
+
+      {/* Mobile action sheet — the card's ⋮ opens call/whatsapp/email/view/edit/delete. */}
+      <Modal
+        visible={actionVendor !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setActionVendor(null)}
+      >
+        <Pressable style={styles.sheetOverlay} onPress={() => setActionVendor(null)}>
+          <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.sheetHandle} />
+            <Text style={styles.sheetTitle} numberOfLines={1}>
+              {actionVendor?.company_name}
+            </Text>
+            {actionVendor?.mobile_number ? (
+              <SheetItem
+                icon="call-outline"
+                color={colors.accent}
+                label="Call"
+                onPress={() => {
+                  const v = actionVendor;
+                  setActionVendor(null);
+                  openCall(v?.mobile_number ?? null);
+                }}
+              />
+            ) : null}
+            {actionVendor?.mobile_number ? (
+              <SheetItem
+                icon="logo-whatsapp"
+                color="#16A34A"
+                label="WhatsApp"
+                onPress={() => {
+                  const v = actionVendor;
+                  setActionVendor(null);
+                  openWhatsApp(v?.mobile_number ?? null);
+                }}
+              />
+            ) : null}
+            {actionVendor?.email ? (
+              <SheetItem
+                icon="mail-outline"
+                color={colors.accent}
+                label="Email"
+                onPress={() => {
+                  const v = actionVendor;
+                  setActionVendor(null);
+                  openEmail(v?.email ?? null);
+                }}
+              />
+            ) : null}
+            <SheetItem
+              icon="eye-outline"
+              color={colors.textSecondary}
+              label="View"
+              onPress={() => {
+                const v = actionVendor;
+                setActionVendor(null);
+                if (v) setViewVendor(v);
+              }}
+            />
+            <SheetItem
+              icon="pencil-outline"
+              color={colors.amber}
+              label="Edit"
+              onPress={() => {
+                const v = actionVendor;
+                setActionVendor(null);
+                if (v) editVendor(v);
+              }}
+            />
+            <SheetItem
+              icon="trash-outline"
+              color={colors.red}
+              label="Delete"
+              onPress={() => {
+                const v = actionVendor;
+                setActionVendor(null);
+                if (v) setDeleteVendor(v);
+              }}
+            />
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* View Vendor popup */}
       <ViewVendorModal
@@ -320,20 +440,6 @@ export function NetworkScreen({ navigation }: Props): React.JSX.Element {
   );
 }
 
-/**
- * On mobile, wrap the table in a horizontal scroller so the columns keep their
- * real widths (and the row stays readable) instead of being crushed into the
- * phone width. On desktop it's a passthrough.
- */
-function TableScroll({ mobile, children }: { mobile: boolean; children: React.ReactNode }): React.JSX.Element {
-  if (!mobile) return <>{children}</>;
-  return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tableInnerMobile}>
-      {children}
-    </ScrollView>
-  );
-}
-
 /** One connected/manual vendor row, with web hover highlight + inline actions. */
 function VendorRow({
   item,
@@ -367,11 +473,6 @@ function VendorRow({
           <Text style={styles.companyName} numberOfLines={1}>
             {item.company_name}
           </Text>
-          {item.email ? (
-            <Text style={styles.companyEmail} numberOfLines={1}>
-              {item.email}
-            </Text>
-          ) : null}
         </View>
       </View>
       <Text style={[styles.td, styles.cellText, styles.colContact]} numberOfLines={1}>
@@ -408,26 +509,24 @@ function VendorRow({
           onPress={stop(onView)}
           testID={`network-view-${item.row_id}`}
         />
-        {manual ? (
-          <>
-            <ActionIcon
-              icon="pencil-outline"
-              color="#B45309"
-              bg="#FFFBEB"
-              label="Edit"
-              onPress={stop(onEdit)}
-              testID={`network-edit-${item.row_id}`}
-            />
-            <ActionIcon
-              icon="trash-outline"
-              color="#DC2626"
-              bg="#FEF2F2"
-              label="Delete"
-              onPress={stop(onDelete)}
-              testID={`network-delete-${item.row_id}`}
-            />
-          </>
-        ) : null}
+        {/* Edit + Delete on every vendor — manual contacts edit fully, connected
+            vendors edit their group label; delete removes the contact/connection. */}
+        <ActionIcon
+          icon="pencil-outline"
+          color="#B45309"
+          bg="#FFFBEB"
+          label="Edit"
+          onPress={stop(onEdit)}
+          testID={`network-edit-${item.row_id}`}
+        />
+        <ActionIcon
+          icon="trash-outline"
+          color="#DC2626"
+          bg="#FEF2F2"
+          label="Delete"
+          onPress={stop(onDelete)}
+          testID={`network-delete-${item.row_id}`}
+        />
       </View>
     </Pressable>
   );
@@ -517,6 +616,124 @@ function PendingRow({
   );
 }
 
+/** Mobile vendor card: logo + name + status on top, contact + ⋮ menu, country footer. */
+function VendorCard({
+  item,
+  onPress,
+  onMenu,
+}: {
+  item: NetworkVendor;
+  onPress: () => void;
+  onMenu: () => void;
+}): React.JSX.Element {
+  const manual = isManualOnly(item);
+  return (
+    <Pressable style={styles.card} onPress={onPress} testID={`network-card-${item.row_id}`}>
+      {/* Top: avatar + company, status chip + kebab */}
+      <View style={styles.cardTop}>
+        <VendorAvatar name={item.company_name} logoUrl={item.logo_url} email={item.email} size={42} />
+        <View style={styles.cardTitleBlock}>
+          <Text style={styles.cardCompany} numberOfLines={1}>
+            {item.company_name}
+          </Text>
+          {item.contact_person ? (
+            <View style={styles.cardContactRow}>
+              <Ionicons name="person-outline" size={13} color={colors.textMuted} />
+              <Text style={styles.cardContact} numberOfLines={1}>
+                {item.contact_person}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+        <View style={styles.cardTopRight}>
+          <StatusChip kind={manual ? 'manual' : 'connected'} />
+          <Pressable
+            style={styles.kebab}
+            onPress={(e: GestureResponderEvent) => {
+              e.stopPropagation();
+              onMenu();
+            }}
+            hitSlop={8}
+            accessibilityLabel="Actions"
+            testID={`network-menu-${item.row_id}`}
+          >
+            <Ionicons name="ellipsis-vertical" size={18} color={colors.textSecondary} />
+          </Pressable>
+        </View>
+      </View>
+
+      {/* Footer: country */}
+      <View style={styles.cardFooter}>
+        <Ionicons name="location-outline" size={14} color={colors.textMuted} />
+        <Text style={styles.cardCountry} numberOfLines={1}>
+          {item.country || '—'}
+        </Text>
+      </View>
+    </Pressable>
+  );
+}
+
+/** Mobile pending-request card with Accept / Reject. */
+function PendingCard({
+  item,
+  busy,
+  onAccept,
+  onReject,
+}: {
+  item: PendingConnection;
+  busy: boolean;
+  onAccept: () => void;
+  onReject: () => void;
+}): React.JSX.Element {
+  const name = item.company_name ?? 'A vendor';
+  return (
+    <View style={styles.card}>
+      <View style={styles.cardTop}>
+        <VendorAvatar name={name} logoUrl={item.logo_url} size={42} />
+        <View style={styles.cardTitleBlock}>
+          <Text style={styles.cardCompany} numberOfLines={1}>
+            {name}
+          </Text>
+          {item.email ? (
+            <Text style={styles.cardEmail} numberOfLines={1}>
+              {item.email}
+            </Text>
+          ) : null}
+        </View>
+        <StatusChip kind="pending" />
+      </View>
+      <View style={styles.cardPendingActions}>
+        <Pressable style={[styles.pendBtn, styles.acceptBtn]} disabled={busy} onPress={onAccept}>
+          <Text style={[styles.pendBtnText, { color: colors.green }]}>Accept</Text>
+        </Pressable>
+        <Pressable style={[styles.pendBtn, styles.rejectBtn]} disabled={busy} onPress={onReject}>
+          <Text style={[styles.pendBtnText, { color: colors.red }]}>Reject</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+/** A row in the mobile action sheet. */
+function SheetItem({
+  icon,
+  color,
+  label,
+  onPress,
+}: {
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  color: string;
+  label: string;
+  onPress: () => void;
+}): React.JSX.Element {
+  return (
+    <Pressable style={styles.sheetItem} onPress={onPress}>
+      <Ionicons name={icon} size={20} color={color} />
+      <Text style={styles.sheetItemText}>{label}</Text>
+    </Pressable>
+  );
+}
+
 function StatusChip({ kind }: { kind: 'connected' | 'manual' | 'pending' }): React.JSX.Element {
   const map = {
     connected: { label: 'Connected', bg: colors.greenLight, fg: colors.green },
@@ -548,6 +765,58 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   btnOutlineText: { color: colors.textPrimary, fontSize: 13, fontWeight: '600' },
+
+  // Mobile vendor card
+  card: {
+    backgroundColor: colors.bgWhite,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    padding: 14,
+    marginBottom: 12,
+    ...shadows.sm,
+  },
+  cardTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  cardTitleBlock: { flex: 1, minWidth: 0 },
+  cardCompany: { fontSize: 15, fontWeight: '700', color: colors.textPrimary },
+  cardEmail: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+  cardContactRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6 },
+  cardContact: { fontSize: 13, color: colors.textSecondary, flexShrink: 1 },
+  cardTopRight: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 0 },
+  kebab: { width: 30, height: 30, alignItems: 'center', justifyContent: 'center', ...webOnly({ cursor: 'pointer' }) },
+  cardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  cardCountry: { fontSize: 13, color: colors.textSecondary },
+  cardPendingActions: { flexDirection: 'row', gap: 10, marginTop: 12 },
+
+  // Mobile action sheet
+  sheetOverlay: { flex: 1, backgroundColor: 'rgba(15,23,42,0.45)', justifyContent: 'flex-end' },
+  sheet: {
+    backgroundColor: colors.bgWhite,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: 28,
+  },
+  sheetHandle: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, marginBottom: 8 },
+  sheetTitle: { fontSize: 14, fontWeight: '700', color: colors.textPrimary, paddingHorizontal: 12, paddingVertical: 8 },
+  sheetItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    ...webOnly({ cursor: 'pointer' }),
+  },
+  sheetItemText: { fontSize: 15, fontWeight: '600', color: colors.textPrimary },
 
   // `.tabs` / `.ti`
   tabs: {
@@ -638,6 +907,9 @@ const styles = StyleSheet.create({
   rowHover: { backgroundColor: colors.bgPage },
   td: { paddingVertical: 14, paddingRight: 12 },
   cellText: { fontSize: 13, color: colors.textPrimary },
+
+  // Add / Bulk row, right-aligned at the top of the body (below the bell).
+  headerActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 10, marginBottom: 16 },
 
   // Min table width on mobile so the horizontal scroller has something to scroll.
   tableInnerMobile: { minWidth: 820 },

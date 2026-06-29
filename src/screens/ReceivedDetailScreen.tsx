@@ -185,33 +185,42 @@ export function ReceivedDetailScreen({ navigation, route }: Props): React.JSX.El
               </View>
             ) : null}
 
-            {/* Stock location */}
+            {/* Stock Location + Origin — separate sections, right below the price. */}
             {data.stock_location ? (
-              <View style={styles.locationRow}>
-                <Ionicons name="location-outline" size={16} color={colors.textSecondary} />
-                <Text style={styles.locationText}>
-                  <Text style={styles.locationLabel}>Stock Location: </Text>
-                  {data.stock_location}
-                </Text>
+              <View style={styles.card}>
+                <View style={styles.cardTitleRow}>
+                  <Ionicons name="location-outline" size={16} color={colors.textPrimary} />
+                  <Text style={styles.cardTitle}>Stock Location</Text>
+                </View>
+                <Text style={styles.sectionValue}>{data.stock_location}</Text>
+              </View>
+            ) : null}
+            {data.origin ? (
+              <View style={styles.card}>
+                <View style={styles.cardTitleRow}>
+                  <Ionicons name="earth-outline" size={16} color={colors.textPrimary} />
+                  <Text style={styles.cardTitle}>Origin</Text>
+                </View>
+                <Text style={styles.sectionValue}>{data.origin}</Text>
               </View>
             ) : null}
 
-            {/* Photos */}
+            {/* Photos — full-width on mobile. */}
             {data.photoUrls.length > 0 ? (
               <View style={styles.card}>
                 <View style={styles.cardTitleRow}>
                   <Ionicons name="image-outline" size={16} color={colors.textPrimary} />
                   <Text style={styles.cardTitle}>Photos ({data.photoUrls.length})</Text>
                 </View>
-                <View style={styles.photoGrid}>
+                <View style={[styles.photoGrid, isMobile ? styles.photoGridMobile : null]}>
                   {data.photoUrls.map((url, i) => (
                     <Pressable
                       key={url}
                       onPress={() => openLightbox(data.photoUrls, i)}
-                      style={webOnly({ cursor: 'pointer' })}
+                      style={[isMobile ? styles.photoFull : null, webOnly({ cursor: 'pointer' })]}
                       accessibilityLabel={`View photo ${i + 1}`}
                     >
-                      <Image source={{ uri: url }} style={styles.photo} resizeMode="cover" />
+                      <Image source={{ uri: url }} style={[styles.photo, isMobile ? styles.photoMobile : null]} resizeMode="cover" />
                     </Pressable>
                   ))}
                 </View>
@@ -555,7 +564,13 @@ const styles = StyleSheet.create({
 
   // Photos
   photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  photoGridMobile: { flexDirection: 'column' },
   photo: { width: 200, height: 150, borderRadius: radius.md, backgroundColor: colors.bgChip },
+  photoFull: { width: '100%' },
+  photoMobile: { width: '100%', height: 240 },
+
+  // Single-value section body (Stock Location / Origin).
+  sectionValue: { fontSize: 15, fontWeight: '700', color: colors.textPrimary },
 
   // Details text block
   detailsText: { fontSize: 13, color: colors.textSecondary, lineHeight: 22 },

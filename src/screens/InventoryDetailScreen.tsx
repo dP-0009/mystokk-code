@@ -278,15 +278,27 @@ export function InventoryDetailScreen({ navigation, route }: Props): React.JSX.E
               <StatusChip status={item.status} />
             </View>
 
-            {/* Photos — tap to open the carousel lightbox */}
+            {/* Stock Location + Origin — separate sections, right below the price. */}
+            {item.stock_location ? (
+              <SubSection icon="location-outline" title="Stock Location">
+                <Text style={styles.sectionValue}>{item.stock_location}</Text>
+              </SubSection>
+            ) : null}
+            {item.origin ? (
+              <SubSection icon="earth-outline" title="Origin">
+                <Text style={styles.sectionValue}>{item.origin}</Text>
+              </SubSection>
+            ) : null}
+
+            {/* Photos — tap to open the carousel lightbox. Full-width on mobile. */}
             {photoUrls.length > 0 ? (
               <SubSection icon="image-outline" title={`Photos (${photoUrls.length})`}>
-                <View style={styles.photoGrid}>
+                <View style={[styles.photoGrid, isMobile ? styles.photoGridMobile : null]}>
                   {photoUrls.map((url, i) => (
                     <Pressable
                       key={`${i}-${url}`}
                       onPress={() => openLightbox(photoUrls, i)}
-                      style={[styles.photoThumb, webOnly({ cursor: 'pointer' })]}
+                      style={[styles.photoThumb, isMobile ? styles.photoThumbMobile : null, webOnly({ cursor: 'pointer' })]}
                       accessibilityLabel={`View photo ${i + 1}`}
                     >
                       <Image source={{ uri: url }} style={styles.photoImg} resizeMode="cover" />
@@ -300,14 +312,6 @@ export function InventoryDetailScreen({ navigation, route }: Props): React.JSX.E
             {item.description ? (
               <SubSection icon="document-text-outline" title="Description">
                 <Text style={styles.description}>{item.description}</Text>
-              </SubSection>
-            ) : null}
-
-            {/* Details */}
-            {item.origin || item.stock_location ? (
-              <SubSection icon="information-circle-outline" title="Details">
-                {item.origin ? <DetailRow label="Origin" value={item.origin} /> : null}
-                {item.stock_location ? <DetailRow label="Stock Location" value={item.stock_location} /> : null}
               </SubSection>
             ) : null}
 
@@ -703,8 +707,14 @@ const styles = StyleSheet.create({
 
   // Photos
   photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  // Mobile: stack photos full-width, end to end.
+  photoGridMobile: { flexDirection: 'column' },
   photoThumb: { width: 168, height: 168, borderRadius: 12, overflow: 'hidden', backgroundColor: colors.bgChip, borderWidth: 1, borderColor: colors.border },
+  photoThumbMobile: { width: '100%', height: 240 },
   photoImg: { width: '100%', height: '100%' },
+
+  // Single-value section body (Stock Location / Origin).
+  sectionValue: { fontSize: 15, fontWeight: '700', color: colors.textPrimary },
 
   // Detail rows
   detailRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 7, gap: 12 },

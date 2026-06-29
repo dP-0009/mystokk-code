@@ -14,7 +14,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { bulkImportVendors } from '../../services/supabase/network';
-import { buildTemplateCsv, parseCsv } from '../../utils/csv';
+import { buildTemplateXls, parseSpreadsheet, TEMPLATE_FILENAME, TEMPLATE_MIME } from '../../utils/csv';
 import { webOnly } from '../layout/web';
 import { colors, radius, shadows } from '../../theme/tokens';
 import { toast } from '../../stores/toast';
@@ -25,8 +25,6 @@ interface BulkUploadModalProps {
   /** Fired after a successful import (queries are already invalidated). */
   onImported?: () => void;
 }
-
-const TEMPLATE_FILENAME = 'mystokk-vendors-template.csv';
 
 export function BulkUploadModal({ visible, onClose, onImported }: BulkUploadModalProps): React.JSX.Element {
   const queryClient = useQueryClient();
@@ -40,9 +38,9 @@ export function BulkUploadModal({ visible, onClose, onImported }: BulkUploadModa
   };
 
   const downloadTemplate = async (): Promise<void> => {
-    const csv = buildTemplateCsv();
+    const xls = buildTemplateXls();
     if (Platform.OS === 'web') {
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const blob = new Blob([xls], { type: `${TEMPLATE_MIME};charset=utf-8` });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -54,7 +52,7 @@ export function BulkUploadModal({ visible, onClose, onImported }: BulkUploadModa
       return;
     }
     try {
-      await Share.share({ title: TEMPLATE_FILENAME, message: csv });
+      await Share.share({ title: TEMPLATE_FILENAME, message: xls });
     } catch {
       // User dismissed the share sheet — nothing to do.
     }
@@ -64,7 +62,15 @@ export function BulkUploadModal({ visible, onClose, onImported }: BulkUploadModa
   const pickAndImport = async (): Promise<void> => {
     setError(null);
     const res = await DocumentPicker.getDocumentAsync({
-      type: ['text/csv', 'text/comma-separated-values', 'application/vnd.ms-excel', 'text/plain', '*/*'],
+      type: [
+        'text/csv',
+        'text/comma-separated-values',
+        'application/vnd.ms-excel',
+        'application/xml',
+        'text/xml',
+        'text/plain',
+        '*/*',
+      ],
       copyToCacheDirectory: true,
       multiple: false,
     });
@@ -73,7 +79,8 @@ export function BulkUploadModal({ visible, onClose, onImported }: BulkUploadModa
     setImporting(true);
     try {
       const text = await (await fetch(res.assets[0].uri)).text();
-      const rows = parseCsv(text).filter((r) => (r.company_name ?? '').trim() !== '');
+      // Accepts the filled .xls template OR a CSV (e.g. saved-as from Excel).
+      const rows = parseSpreadsheet(text).filter((r) => (r.company_name ?? '').trim() !== '');
       if (rows.length === 0) {
         setError('No vendor rows found. Make sure the file has a company_name column.');
         return;
@@ -106,13 +113,13 @@ export function BulkUploadModal({ visible, onClose, onImported }: BulkUploadModa
           {/* Body */}
           <View style={styles.body}>
             <Text style={styles.desc}>
-              Upload a CSV file to add multiple vendors at once. Download the template to see the required
-              format.
+              Download the Excel template, fill in your vendors, and upload it to add them all at once.
+              Phone columns are pre-formatted as numbers so they never turn into 9.7E+11.
             </Text>
 
             <Pressable style={styles.templateBtn} onPress={() => void downloadTemplate()} testID="bulk-download-template">
               <Ionicons name="download-outline" size={16} color={colors.textPrimary} />
-              <Text style={styles.templateBtnText}>Download CSV Template</Text>
+              <Text style={styles.templateBtnText}>Download Excel Template</Text>
             </Pressable>
 
             {/* THEN divider */}
@@ -137,7 +144,7 @@ export function BulkUploadModal({ visible, onClose, onImported }: BulkUploadModa
               ) : (
                 <>
                   <Ionicons name="cloud-upload-outline" size={24} color={colors.textMuted} />
-                  <Text style={styles.dropText}>Click to upload CSV file</Text>
+                  <Text style={styles.dropText}>Click to upload your filled template (.xls or .csv)</Text>
                 </>
               )}
             </Pressable>
