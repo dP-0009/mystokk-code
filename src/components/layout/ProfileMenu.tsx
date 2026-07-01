@@ -9,10 +9,14 @@ import { webOnly } from './web';
 interface ProfileMenuProps {
   visible: boolean;
   onClose: () => void;
-  /** Navigate to /settings. */
+  /** Open the company-profile / account editor. */
+  onProfile: () => void;
+  /** Open the tabbed Settings page (preferences + policies). */
   onSettings: () => void;
   /** Navigate to /notifications. */
   onNotifications: () => void;
+  /** Open the Contact page. */
+  onContact: () => void;
   /** Sign out (redirects to /login via the navigator). */
   onLogout: () => void;
 }
@@ -27,7 +31,7 @@ interface ProfileMenuProps {
  * renders nothing when closed, and a real full-screen backdrop (inset 0) that
  * closes on press when open — so the screen can never get stuck.
  */
-export function ProfileMenu({ visible, onClose, onSettings, onNotifications, onLogout }: ProfileMenuProps): React.JSX.Element | null {
+export function ProfileMenu({ visible, onClose, onProfile, onSettings, onNotifications, onContact, onLogout }: ProfileMenuProps): React.JSX.Element | null {
   const unread = useUnreadCount();
 
   // Escape closes (web).
@@ -48,6 +52,7 @@ export function ProfileMenu({ visible, onClose, onSettings, onNotifications, onL
       <Pressable style={styles.backdrop} onPress={onClose} testID="profile-menu-backdrop" />
 
       <View style={styles.card} testID="profile-menu">
+        <MenuItem icon="person-outline" label="Profile" onPress={onProfile} testID="profile-menu-profile" />
         <MenuItem icon="settings-outline" label="Settings" onPress={onSettings} testID="profile-menu-settings" />
         <MenuItem
           icon="notifications-outline"
@@ -56,6 +61,7 @@ export function ProfileMenu({ visible, onClose, onSettings, onNotifications, onL
           badge={unread}
           testID="profile-menu-notifications"
         />
+        <MenuItem icon="mail-outline" label="Contact" onPress={onContact} testID="profile-menu-contact" />
         <View style={styles.divider} />
         <MenuItem icon="log-out-outline" label="Log Out" danger onPress={onLogout} testID="profile-menu-logout" />
       </View>

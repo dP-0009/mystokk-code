@@ -7,6 +7,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 
 import { RootNavigator } from './src/navigation';
 import { ToastHost } from './src/components/shared/ToastHost';
+import { ConfirmHost } from './src/components/shared/ConfirmHost';
 import { LightboxProvider } from './src/components/shared/Lightbox';
 import { queryClient } from './src/services/queryClient';
 
@@ -17,6 +18,7 @@ export default function App(): React.JSX.Element {
         <LightboxProvider>
           <RootNavigator />
         </LightboxProvider>
+        <ConfirmHost />
         <ToastHost />
         <StatusBar style="dark" />
       </SafeAreaProvider>

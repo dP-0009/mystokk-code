@@ -117,13 +117,10 @@ export function Lightbox({
       <View style={styles.imageArea} pointerEvents="box-none">
         <View style={styles.imageWrap} {...pan.panHandlers}>
           {Platform.OS === 'web' ? (
-            // On web, render a real <img>. It's positioned absolute to fill the
-            // image region exactly (a definite, bounded box) so it never enters
-            // the flex sizing game — as a flex *item* the browser drops the
-            // img's aspect ratio under a percentage max-height, and object-fit
-            // then crops like `cover` (landscape cards came out portrait + cut).
-            // Filling the box + object-fit:contain letterboxes the whole photo,
-            // every aspect ratio, no crop. (uri is a full https:// URL.)
+            // On web, render a real <img> sized against the viewport with
+            // object-fit:contain (see WEB_IMG_STYLE) so the WHOLE photo always
+            // shows — landscape stays landscape, portrait stays portrait, never
+            // cropped. (uri is a full https:// URL.)
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             React.createElement('img' as any, { src: uri, style: WEB_IMG_STYLE, alt: '' })
           ) : (
@@ -205,20 +202,27 @@ export function useLightbox(): LightboxContextValue {
 
 const CIRCLE = 'rgba(255,255,255,0.15)';
 
-// Web-only <img> sizing: fill the width, keep aspect ratio, cap height, and
-// contain so the whole photo is visible inside the dark overlay. Plain CSS
-// (not RN style) because this is a real DOM <img>, not an RN <Image>.
+// Web-only <img> sizing. Cap the image directly against the VIEWPORT (not the
+// flex parent) so its natural aspect ratio is always preserved and it's never
+// cropped — every aspect ratio, portrait or landscape, shows whole.
+//
+// Why viewport caps instead of absolute-fill-the-box: the flex image region's
+// computed height isn't reliably bounded, so for a portrait photo the box could
+// resolve TALLER than the screen; object-fit:contain then scaled the image to
+// that over-tall height, making it wider than the viewport, and the screen
+// clipped the sides (portrait cards came out cut on the left). Auto width/height
+// + max-width/max-height in viewport units removes all dependence on the parent:
+// the browser sizes the <img> to its own aspect ratio, bounded only by the
+// screen, leaving room for the close button (top) and counter/thumbs (bottom).
 const WEB_IMG_STYLE = {
-  // Absolutely fill the (definite, bounded) image region and letterbox with
-  // object-fit:contain. Filling a fixed box — instead of auto width/height with
-  // percentage maxes inside a flex parent — is the only reliable way to keep the
-  // img's aspect ratio: as a flex item the browser drops it and object-fit then
-  // crops like `cover`. This shows the whole photo, every aspect ratio, no crop.
-  position: 'absolute',
-  top: 0,
-  left: 0,
-  width: '100%',
-  height: '100%',
+  // Give the <img> an explicit box the size of the available viewport area
+  // (full screen minus the close button on top and the counter/thumbs below),
+  // then object-fit:contain fits the WHOLE photo inside it — centred and
+  // letterboxed, never cropped, for every aspect ratio. Explicit viewport units
+  // (not %, not auto) make this independent of the flaky flex parent height AND
+  // let small images scale UP to fill the screen, so every photo reads big.
+  width: 'calc(100vw - 48px)',
+  height: 'calc(100vh - 180px)',
   objectFit: 'contain',
   display: 'block',
 } as const;
@@ -280,10 +284,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 8,
   },
-  // position:relative + the absolutely-filled web <img> means the photo is
-  // bounded by this region's real (flex-computed) size, never by flaky flex-item
-  // aspect math. overflow:hidden is harmless: object-fit:contain fits inside.
-  imageWrap: { flex: 1, minHeight: 0, width: '100%', position: 'relative', alignItems: 'center', justifyContent: 'center' },
+  // Centers the viewport-capped <img>. The image sizes itself against the
+  // viewport (see WEB_IMG_STYLE), so this region just centers it; it no longer
+  // governs the photo's size.
+  imageWrap: { flex: 1, minHeight: 0, width: '100%', alignItems: 'center', justifyContent: 'center' },
   nativeImage: { width: '100%', height: '100%' },
 
   bottom: {

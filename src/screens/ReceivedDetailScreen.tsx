@@ -1,11 +1,20 @@
-import React, { useState } from 'react';
-import { ActivityIndicator, Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Image,
+  Linking,
+  PanResponder,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import type { RootStackParamList } from '../navigation';
-import { getReceivedShareDetail } from '../services/supabase/received';
+import { getReceivedShareDetail, type ReceivedShareDetail } from '../services/supabase/received';
 import { createReservation } from '../services/supabase/reservations';
 import { ShareModal } from '../components/share/ShareModal';
 import { PreShareModal } from '../components/share/PreShareModal';
@@ -46,7 +55,6 @@ export function ReceivedDetailScreen({ navigation, route }: Props): React.JSX.El
   const { shareId } = route.params;
   const queryClient = useQueryClient();
   const { open: openLightbox } = useLightbox();
-  const isMobile = useIsMobile();
 
   const [preShareOpen, setPreShareOpen] = useState(false);
   const [forwardOpen, setForwardOpen] = useState(false);
@@ -107,213 +115,10 @@ export function ReceivedDetailScreen({ navigation, route }: Props): React.JSX.El
     );
   }
 
-  const subtitle = `${data.product_code ?? '—'} | ${data.category ?? 'General'} • ${daysAgo(data.created_at)}`;
+  const subtitle = `${data.product_code ?? '—'} • ${data.category ?? 'General'} • ${daysAgo(data.created_at)}`;
 
-  return (
-    <MainLayout active="received">
-      <PageBody>
-        <BackLink onPress={back} />
-
-        {/* Two-column: main content + Shared By side panel. */}
-        <View style={styles.grid}>
-          {/* MAIN COLUMN */}
-          <View style={styles.main}>
-            {/* Header card — title + actions, then the 4-stat bar */}
-            <View style={styles.headCard}>
-              <View style={styles.headTop}>
-                <View style={styles.titleBlock}>
-                  <Text style={styles.h1} numberOfLines={2}>
-                    {data.title}
-                  </Text>
-                  <Text style={styles.subRow} numberOfLines={1}>
-                    {subtitle}
-                  </Text>
-                  <Text style={styles.privacy}>
-                    Reserve directly here - no need to call. Your network remains private.
-                  </Text>
-                </View>
-                <View style={styles.headerActions}>
-                  <Pressable style={styles.reserveBtn} onPress={() => setReserveOpen(true)}>
-                    <Ionicons name="cube-outline" size={15} color={colors.bgWhite} />
-                    <Text style={styles.reserveBtnText}>Reserve</Text>
-                  </Pressable>
-                  <Pressable style={styles.shareBtn} onPress={() => setPreShareOpen(true)}>
-                    <Ionicons name="share-social-outline" size={15} color={colors.textPrimary} />
-                    <Text style={styles.shareBtnText}>Share</Text>
-                  </Pressable>
-                </View>
-              </View>
-
-              {/* 4-stat bar — 2×2 grid on mobile so labels don't truncate. */}
-              <View style={[styles.statCard, isMobile ? styles.statCardMobile : null]}>
-                <StatCol value={data.quantity} label="Total Qty" unit={data.unit} mobile={isMobile} />
-                <StatCol
-                  value={data.reserved_by_me}
-                  label="Reserved by me"
-                  unit={data.unit}
-                  valueColor={colors.orange}
-                  bg={colors.orangeLight}
-                  mobile={isMobile}
-                />
-                <StatCol
-                  value={data.available_to_me}
-                  label="Available"
-                  unit={data.unit}
-                  valueColor={colors.green}
-                  bg={colors.greenLight}
-                  mobile={isMobile}
-                />
-                <StatCol
-                  value={data.shared_with}
-                  label="Shared With"
-                  icon="people-outline"
-                  last
-                  onPress={() => setSharedWithOpen(true)}
-                  mobile={isMobile}
-                />
-              </View>
-            </View>
-
-            {/* Price + remark */}
-            <Text style={styles.price}>
-              {money(data.display_currency, data.display_price)}
-              {data.display_price !== null ? <Text style={styles.priceUnit}> / {data.unit}</Text> : null}
-            </Text>
-            {data.forward_remark ? (
-              <View style={styles.remark}>
-                <Text style={styles.remarkText}>{data.forward_remark}</Text>
-              </View>
-            ) : null}
-
-            {/* Stock Location + Origin — separate sections, right below the price. */}
-            {data.stock_location ? (
-              <View style={styles.card}>
-                <View style={styles.cardTitleRow}>
-                  <Ionicons name="location-outline" size={16} color={colors.textPrimary} />
-                  <Text style={styles.cardTitle}>Stock Location</Text>
-                </View>
-                <Text style={styles.sectionValue}>{data.stock_location}</Text>
-              </View>
-            ) : null}
-            {data.origin ? (
-              <View style={styles.card}>
-                <View style={styles.cardTitleRow}>
-                  <Ionicons name="earth-outline" size={16} color={colors.textPrimary} />
-                  <Text style={styles.cardTitle}>Origin</Text>
-                </View>
-                <Text style={styles.sectionValue}>{data.origin}</Text>
-              </View>
-            ) : null}
-
-            {/* Photos — full-width on mobile. */}
-            {data.photoUrls.length > 0 ? (
-              <View style={styles.card}>
-                <View style={styles.cardTitleRow}>
-                  <Ionicons name="image-outline" size={16} color={colors.textPrimary} />
-                  <Text style={styles.cardTitle}>Photos ({data.photoUrls.length})</Text>
-                </View>
-                <View style={[styles.photoGrid, isMobile ? styles.photoGridMobile : null]}>
-                  {data.photoUrls.map((url, i) => (
-                    <Pressable
-                      key={url}
-                      onPress={() => openLightbox(data.photoUrls, i)}
-                      style={[isMobile ? styles.photoFull : null, webOnly({ cursor: 'pointer' })]}
-                      accessibilityLabel={`View photo ${i + 1}`}
-                    >
-                      <Image source={{ uri: url }} style={[styles.photo, isMobile ? styles.photoMobile : null]} resizeMode="cover" />
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-            ) : null}
-
-            {/* Details */}
-            {data.description ? (
-              <View style={styles.card}>
-                <Text style={styles.cardTitle}>Details</Text>
-                <Text style={styles.detailsText}>{data.description}</Text>
-              </View>
-            ) : null}
-
-            {/* Packing list / spec sheets */}
-            {data.files.length > 0 ? (
-              <View style={styles.card}>
-                <Text style={styles.cardTitle}>📎 Packing List / Spec Sheets</Text>
-                {data.files.map((file) => (
-                  <Pressable
-                    key={file.url}
-                    style={styles.fileRow}
-                    onPress={() => Linking.openURL(file.url)}
-                    accessibilityLabel={`Open ${file.name}`}
-                  >
-                    <Ionicons name="document-text-outline" size={18} color={colors.textSecondary} />
-                    <Text style={styles.fileName} numberOfLines={1}>
-                      {file.name}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            ) : null}
-          </View>
-
-          {/* SIDE PANEL — Shared By */}
-          <View style={styles.aside}>
-            <View style={styles.sharedPanel}>
-              <View style={styles.sharedHead}>
-                <View style={styles.sharedIcon}>
-                  <Ionicons name="person-outline" size={18} color={colors.accent} />
-                </View>
-                <Text style={styles.sharedTitle}>Shared By</Text>
-              </View>
-
-              <Text style={styles.sharedLabel}>Company</Text>
-              <Text style={styles.sharedValue} numberOfLines={2}>
-                {data.shared_by_company ?? 'A vendor'}
-              </Text>
-
-              {data.contact_person ? (
-                <>
-                  <Text style={[styles.sharedLabel, styles.sharedLabelSpaced]}>Contact Person</Text>
-                  <Text style={styles.sharedValue}>{data.contact_person}</Text>
-                </>
-              ) : null}
-
-              {data.shared_by_phone || data.shared_by_email ? (
-                <View style={styles.contactRow}>
-                  {data.shared_by_phone ? (
-                    <Pressable
-                      style={styles.contactBtn}
-                      onPress={() => Linking.openURL(`tel:${data.shared_by_phone}`)}
-                      accessibilityLabel="Call vendor"
-                    >
-                      <Ionicons name="call-outline" size={16} color={colors.accent} />
-                    </Pressable>
-                  ) : null}
-                  {data.shared_by_phone ? (
-                    <Pressable
-                      style={styles.contactBtn}
-                      onPress={() => Linking.openURL(`https://wa.me/${waNumber(data.shared_by_phone)}`)}
-                      accessibilityLabel="Message vendor on WhatsApp"
-                    >
-                      <Ionicons name="logo-whatsapp" size={16} color={colors.green} />
-                    </Pressable>
-                  ) : null}
-                  {data.shared_by_email ? (
-                    <Pressable
-                      style={styles.contactBtn}
-                      onPress={() => Linking.openURL(`mailto:${data.shared_by_email}`)}
-                      accessibilityLabel="Email vendor"
-                    >
-                      <Ionicons name="mail-outline" size={16} color={colors.accent} />
-                    </Pressable>
-                  ) : null}
-                </View>
-              ) : null}
-            </View>
-          </View>
-        </View>
-      </PageBody>
-
+  const modals = (
+    <>
       {/* Shared With — the forwards I made from this received share (privacy-scoped
           to my own recipients). "Forward to More" reopens the forward flow. */}
       <ManageSharesModal
@@ -368,11 +173,31 @@ export function ReceivedDetailScreen({ navigation, route }: Props): React.JSX.El
           reserveMutation.mutate({ inventoryId: data.inventory_id, qty, price, message })
         }
       />
+    </>
+  );
+
+  // Same redesigned layout on web + mobile; on desktop it's a centred column.
+  return (
+    <MainLayout active="received">
+      <PageBody>
+        <BackLink onPress={back} label="Back to Received" />
+        <View style={styles.detailColumn}>
+          <MobileReceivedBody
+            data={data}
+            subtitle={subtitle}
+            onReserve={() => setReserveOpen(true)}
+            onShare={() => setPreShareOpen(true)}
+            onSharedWith={() => setSharedWithOpen(true)}
+            openLightbox={openLightbox}
+          />
+        </View>
+      </PageBody>
+      {modals}
     </MainLayout>
   );
 }
 
-function BackLink({ onPress }: { onPress: () => void }): React.JSX.Element {
+function BackLink({ onPress, label = 'Back' }: { onPress: () => void; label?: string }): React.JSX.Element {
   const [hovered, setHovered] = useState(false);
   const color = hovered ? colors.accent : colors.textSecondary;
   return (
@@ -384,8 +209,307 @@ function BackLink({ onPress }: { onPress: () => void }): React.JSX.Element {
       hitSlop={6}
     >
       <Ionicons name="arrow-back" size={14} color={color} />
-      <Text style={[styles.backText, { color }]}>Back</Text>
+      <Text style={[styles.backText, { color }]}>{label}</Text>
     </Pressable>
+  );
+}
+
+const HERO_HEIGHT = 240;
+/** Taller hero on wide screens so a contained (uncropped) photo reads at a usable size. */
+const HERO_HEIGHT_WEB = 460;
+
+/** Extension → badge colours for the packing-list file rows. */
+const FILE_BADGE: Record<string, { color: string; bg: string }> = {
+  csv: { color: colors.green, bg: colors.greenLight },
+  xls: { color: colors.green, bg: colors.greenLight },
+  xlsx: { color: colors.green, bg: colors.greenLight },
+  pdf: { color: colors.red, bg: colors.redLight },
+  doc: { color: colors.accent, bg: colors.accentLight },
+  docx: { color: colors.accent, bg: colors.accentLight },
+};
+function fileExt(name: string): string {
+  const m = /\.([a-z0-9]+)$/i.exec(name.trim());
+  return m ? m[1].toLowerCase() : '';
+}
+
+/**
+ * Full-width hero gallery. Index-controlled (not native scroll-paging): shows
+ * ONE fully-contained photo and navigates via prev/next arrows, tappable dots,
+ * or swipe. Avoids react-native-web's flaky `pagingEnabled` snap (images landed
+ * mid-scroll, looking cropped) and unreliable momentum events (dots never
+ * advanced). Every photo shows whole — portrait or landscape.
+ */
+function HeroCarousel({
+  photos,
+  onShare,
+  onOpen,
+}: {
+  photos: string[];
+  onShare: () => void;
+  onOpen: (index: number) => void;
+}): React.JSX.Element {
+  const [idx, setIdx] = useState(0);
+  const isMobile = useIsMobile();
+  const h = isMobile ? HERO_HEIGHT : HERO_HEIGHT_WEB;
+  const count = photos.length;
+  const cur = Math.min(idx, count - 1);
+  const go = (dir: 1 | -1): void => setIdx((c) => (count === 0 ? 0 : (c + dir + count) % count));
+
+  // Swipe left/right on touch devices (web uses the arrows / dots).
+  const pan = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dx) > 12 && Math.abs(g.dx) > Math.abs(g.dy),
+      onPanResponderRelease: (_e, g) => {
+        if (g.dx > 50) go(-1);
+        else if (g.dx < -50) go(1);
+      },
+    }),
+  ).current;
+
+  return (
+    <View>
+      <View style={[styles.hero, { height: h }]} {...pan.panHandlers}>
+        <Pressable
+          style={styles.heroPage}
+          onPress={() => onOpen(cur)}
+          accessibilityLabel={`View photo ${cur + 1}`}
+        >
+          {/* contain so the FULL photo shows (never cropped) — letterboxed on the light frame. */}
+          <Image source={{ uri: photos[cur] }} style={styles.heroImg} resizeMode="contain" />
+        </Pressable>
+
+        {count > 1 ? (
+          <>
+            <Pressable style={[styles.heroNav, styles.heroNavLeft, webOnly({ cursor: 'pointer' })]} onPress={() => go(-1)} accessibilityLabel="Previous photo">
+              <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
+            </Pressable>
+            <Pressable style={[styles.heroNav, styles.heroNavRight, webOnly({ cursor: 'pointer' })]} onPress={() => go(1)} accessibilityLabel="Next photo">
+              <Ionicons name="chevron-forward" size={20} color="#FFFFFF" />
+            </Pressable>
+          </>
+        ) : null}
+        <Pressable style={[styles.heroBtn, styles.heroBtnRight, webOnly({ cursor: 'pointer' })]} onPress={onShare}>
+          <Ionicons name="share-social-outline" size={17} color="#FFFFFF" />
+        </Pressable>
+        <View style={styles.heroBadge}>
+          <Ionicons name="images-outline" size={13} color="#FFFFFF" />
+          <Text style={styles.heroBadgeText}>
+            {count} photo{count === 1 ? '' : 's'}
+          </Text>
+        </View>
+      </View>
+
+      {count > 1 ? (
+        <View style={styles.dots}>
+          {photos.map((_, i) => (
+            <Pressable
+              key={i}
+              onPress={() => setIdx(i)}
+              style={[styles.dot, i === cur ? styles.dotActive : null, webOnly({ cursor: 'pointer' })]}
+              accessibilityLabel={`Go to photo ${i + 1}`}
+            />
+          ))}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+/** A label/value info row in the mobile title card. */
+function MInfoRow({ label, value, valueColor }: { label: string; value: string; valueColor?: string }): React.JSX.Element {
+  return (
+    <View style={styles.mInfoRow}>
+      <Text style={styles.mInfoLabel}>{label}</Text>
+      <Text style={[styles.mInfoValue, valueColor ? { color: valueColor } : null]} numberOfLines={2}>
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+/** One cell in the mobile stat grid. */
+function MStat({
+  label,
+  value,
+  sub,
+  color,
+  onPress,
+  last = false,
+}: {
+  label: string;
+  value: number;
+  sub: string;
+  color?: string;
+  onPress?: () => void;
+  last?: boolean;
+}): React.JSX.Element {
+  const Wrap = onPress ? Pressable : View;
+  return (
+    <Wrap
+      onPress={onPress}
+      style={[styles.mStat, last ? null : styles.mStatBorder, onPress ? webOnly({ cursor: 'pointer' }) : null]}
+    >
+      <Text style={styles.mStatLabel} numberOfLines={2}>
+        {label}
+      </Text>
+      <Text style={[styles.mStatValue, color ? { color } : null]} numberOfLines={1}>
+        {value.toLocaleString()}
+      </Text>
+      <Text style={styles.mStatSub}>{sub}</Text>
+    </Wrap>
+  );
+}
+
+/** Packing-list file row with a coloured type badge. */
+function FileRow({ name, onPress }: { name: string; onPress: () => void }): React.JSX.Element {
+  const ext = fileExt(name);
+  const c = FILE_BADGE[ext] ?? { color: colors.textSecondary, bg: colors.bgChip };
+  return (
+    <Pressable style={[styles.mFileRow, webOnly({ cursor: 'pointer' })]} onPress={onPress} accessibilityLabel={`Open ${name}`}>
+      <View style={[styles.mFileIcon, { backgroundColor: c.bg }]}>
+        <Ionicons name="document-text-outline" size={18} color={c.color} />
+      </View>
+      <Text style={styles.mFileName} numberOfLines={1}>
+        {name}
+      </Text>
+      {ext ? (
+        <Text style={[styles.mFileBadge, { color: c.color }]}>{ext.toUpperCase()}</Text>
+      ) : null}
+    </Pressable>
+  );
+}
+
+/** Mobile redesign of the received-item detail (mirror mockup). */
+function MobileReceivedBody({
+  data,
+  subtitle,
+  onReserve,
+  onShare,
+  onSharedWith,
+  openLightbox,
+}: {
+  data: ReceivedShareDetail;
+  subtitle: string;
+  onReserve: () => void;
+  onShare: () => void;
+  onSharedWith: () => void;
+  openLightbox: (photos: string[], index: number) => void;
+}): React.JSX.Element {
+  const initial = (data.shared_by_company ?? 'V').trim().charAt(0).toUpperCase();
+  const phone = data.shared_by_phone;
+  return (
+    <View>
+      {data.photoUrls.length > 0 ? (
+        <HeroCarousel photos={data.photoUrls} onShare={onShare} onOpen={(i) => openLightbox(data.photoUrls, i)} />
+      ) : null}
+
+      {/* Title + info + stats */}
+      <View style={styles.mCard}>
+        <Text style={styles.mSub} numberOfLines={1}>
+          {subtitle}
+        </Text>
+        <Text style={styles.mTitle}>{data.title}</Text>
+        <View style={styles.mDivider} />
+        <MInfoRow label="Stock location" value={data.stock_location || '—'} />
+        <MInfoRow label="Origin" value={data.origin || '—'} />
+        <MInfoRow
+          label="Price"
+          value={`${money(data.display_currency, data.display_price)}${data.display_price !== null ? ` / ${data.unit}` : ''}`}
+          valueColor={colors.green}
+        />
+
+        <View style={styles.mStatGrid}>
+          <MStat label="Total Qty" value={data.quantity} sub={data.unit} />
+          <MStat label="Available" value={data.available_to_me} sub={data.unit} color={colors.green} />
+          <MStat label="Reserved by me" value={data.reserved_by_me} sub={data.unit} color={colors.orange} />
+          <MStat label="Shared with" value={data.shared_with} sub="contacts" color={colors.purple} onPress={onSharedWith} last />
+        </View>
+      </View>
+
+      {/* Reserve + Share */}
+      <View style={styles.mActions}>
+        <Pressable style={[styles.mReserve, webOnly({ cursor: 'pointer' })]} onPress={onReserve}>
+          <Ionicons name="cube-outline" size={16} color="#FFFFFF" />
+          <Text style={styles.mReserveText}>Reserve</Text>
+        </Pressable>
+        <Pressable style={[styles.mShareBtn, webOnly({ cursor: 'pointer' })]} onPress={onShare}>
+          <Ionicons name="share-social-outline" size={16} color={colors.textPrimary} />
+          <Text style={styles.mShareText}>Share</Text>
+        </Pressable>
+      </View>
+
+      {data.forward_remark ? (
+        <View style={styles.remark}>
+          <Text style={styles.remarkText}>{data.forward_remark}</Text>
+        </View>
+      ) : null}
+
+      {/* Details */}
+      {data.description ? (
+        <View style={styles.mCard}>
+          <View style={styles.mCardHead}>
+            <Ionicons name="reader-outline" size={16} color={colors.textPrimary} />
+            <Text style={styles.mCardTitle}>Details</Text>
+          </View>
+          <Text style={styles.detailsText}>{data.description}</Text>
+        </View>
+      ) : null}
+
+      {/* Packing list */}
+      {data.files.length > 0 ? (
+        <View style={styles.mCard}>
+          <View style={styles.mCardHead}>
+            <Ionicons name="document-outline" size={16} color={colors.textPrimary} />
+            <Text style={styles.mCardTitle}>Packing list and spec sheets</Text>
+          </View>
+          {data.files.map((f) => (
+            <FileRow key={f.url} name={f.name} onPress={() => Linking.openURL(f.url)} />
+          ))}
+        </View>
+      ) : null}
+
+      {/* Shared by */}
+      <View style={styles.mCard}>
+        <View style={styles.mCardHead}>
+          <Ionicons name="person-outline" size={16} color={colors.textPrimary} />
+          <Text style={styles.mCardTitle}>Shared by</Text>
+        </View>
+        <View style={styles.mSharedRow}>
+          <View style={styles.mSharedAvatar}>
+            <Text style={styles.mSharedAvatarText}>{initial}</Text>
+          </View>
+          <View style={styles.mSharedInfo}>
+            <Text style={styles.mSharedName} numberOfLines={1}>
+              {data.shared_by_company ?? 'A vendor'}
+            </Text>
+            {data.contact_person ? (
+              <Text style={styles.mSharedContact} numberOfLines={1}>
+                Contact: {data.contact_person}
+              </Text>
+            ) : null}
+          </View>
+        </View>
+        {phone || data.shared_by_email ? (
+          <View style={styles.mContactBtns}>
+            {phone ? (
+              <Pressable style={[styles.mContactBtn, { backgroundColor: colors.greenLight }]} onPress={() => Linking.openURL(`tel:${phone}`)} accessibilityLabel="Call">
+                <Ionicons name="call-outline" size={18} color={colors.green} />
+              </Pressable>
+            ) : null}
+            {phone ? (
+              <Pressable style={[styles.mContactBtn, { backgroundColor: colors.greenLight }]} onPress={() => Linking.openURL(`https://wa.me/${waNumber(phone)}`)} accessibilityLabel="WhatsApp">
+                <Ionicons name="logo-whatsapp" size={18} color={colors.green} />
+              </Pressable>
+            ) : null}
+            {data.shared_by_email ? (
+              <Pressable style={[styles.mContactBtn, { backgroundColor: colors.accentLight }]} onPress={() => Linking.openURL(`mailto:${data.shared_by_email}`)} accessibilityLabel="Email">
+                <Ionicons name="mail-outline" size={18} color={colors.accent} />
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
+      </View>
+    </View>
   );
 }
 
@@ -437,6 +561,144 @@ function StatCol({
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
   errorText: { color: colors.red, fontSize: 14, fontWeight: '600', textAlign: 'center' },
+
+  // Redesigned detail body — centred column on desktop, full-width on mobile.
+  detailColumn: { width: '100%', maxWidth: 760, alignSelf: 'center' },
+
+  // ---- Mobile redesign ----------------------------------------------------
+  hero: {
+    height: HERO_HEIGHT,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.bgChip, // light frame so a contained photo never blends in
+    marginBottom: 10,
+  },
+  heroPage: { width: '100%', height: '100%' },
+  heroImg: { width: '100%', height: '100%' },
+  heroBtn: {
+    position: 'absolute',
+    top: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(15,23,42,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroBtnRight: { right: 12 },
+  // Prev/next arrows — vertically centred on the frame edges.
+  heroNav: {
+    position: 'absolute',
+    top: '50%',
+    marginTop: -18,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(15,23,42,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroNavLeft: { left: 12 },
+  heroNavRight: { right: 12 },
+  heroBadge: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(15,23,42,0.65)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+  },
+  heroBadgeText: { color: '#FFFFFF', fontSize: 12, fontWeight: '600' },
+  dots: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginBottom: 16 },
+  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.borderDark },
+  dotActive: { width: 18, backgroundColor: colors.accent },
+
+  mCard: {
+    backgroundColor: colors.bgWhite,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    padding: 16,
+    marginBottom: 14,
+  },
+  mSub: { fontSize: 12, fontWeight: '600', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.3 },
+  mTitle: { fontSize: 22, fontWeight: '800', color: colors.textPrimary, marginTop: 6 },
+  mDivider: { height: 1, backgroundColor: colors.border, marginVertical: 14 },
+  mInfoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12 },
+  mInfoLabel: { fontSize: 14, color: colors.textSecondary },
+  mInfoValue: { fontSize: 15, fontWeight: '700', color: colors.textPrimary, flexShrink: 1, textAlign: 'right' },
+
+  mStatGrid: {
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    overflow: 'hidden',
+    marginTop: 6,
+  },
+  mStat: { flex: 1, paddingVertical: 12, paddingHorizontal: 8, justifyContent: 'flex-start' },
+  mStatBorder: { borderRightWidth: 1, borderRightColor: colors.border },
+  mStatLabel: { fontSize: 9, fontWeight: '700', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: 6 },
+  mStatValue: { fontSize: 17, fontWeight: '800', color: colors.textPrimary },
+  mStatSub: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
+
+  mActions: { flexDirection: 'row', gap: 12, marginBottom: 14 },
+  mReserve: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: colors.green,
+    paddingVertical: 14,
+    borderRadius: radius.md,
+  },
+  mReserveText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
+  mShareBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: colors.bgWhite,
+    borderWidth: 1.5,
+    borderColor: colors.borderDark,
+    paddingVertical: 14,
+    paddingHorizontal: 22,
+    borderRadius: radius.md,
+  },
+  mShareText: { color: colors.textPrimary, fontSize: 15, fontWeight: '700' },
+
+  mCardHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+  mCardTitle: { fontSize: 15, fontWeight: '700', color: colors.textPrimary },
+
+  mFileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: colors.bgChip,
+    borderRadius: radius.md,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginBottom: 10,
+  },
+  mFileIcon: { width: 36, height: 36, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  mFileName: { flex: 1, fontSize: 13, color: colors.textPrimary },
+  mFileBadge: { fontSize: 11, fontWeight: '800', letterSpacing: 0.4 },
+
+  mSharedRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  mSharedAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.accentLight, alignItems: 'center', justifyContent: 'center' },
+  mSharedAvatarText: { fontSize: 16, fontWeight: '800', color: colors.accent },
+  mSharedInfo: { flex: 1, minWidth: 0 },
+  mSharedName: { fontSize: 15, fontWeight: '700', color: colors.textPrimary },
+  mSharedContact: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
+  mContactBtns: { flexDirection: 'row', gap: 12, marginTop: 14 },
+  mContactBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', ...webOnly({ cursor: 'pointer' }) },
 
   back: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 16 },
   backText: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },

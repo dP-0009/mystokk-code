@@ -17,6 +17,7 @@ import {
 import type { ColorValue } from '../theme/tokens';
 import { colors, radius } from '../theme/tokens';
 import { MainLayout, PageBody, PageHeader } from '../components/layout';
+import { AddVendorModal } from '../components/network/AddVendorModal';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { webOnly } from '../components/layout/web';
 import { ProductImage } from '../components/shared/ProductImage';
@@ -31,15 +32,11 @@ type Props = CompositeScreenProps<
 
 const DASHBOARD_KEY = ['dashboard'] as const;
 
-function money(currency: string | null, price: number | null): string {
-  if (price === null || price === undefined) return 'N/A';
-  return `${currency ?? ''} ${price}`.trim();
-}
-
 export function DashboardScreen({ navigation }: Props): React.JSX.Element {
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [addVendorOpen, setAddVendorOpen] = useState(false);
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: DASHBOARD_KEY,
@@ -155,7 +152,7 @@ export function DashboardScreen({ navigation }: Props): React.JSX.Element {
                 icon="person-add"
                 color={colors.green}
                 bg={colors.greenLight}
-                onPress={() => navigation.navigate('AddVendor')}
+                onPress={() => setAddVendorOpen(true)}
               />
             </View>
 
@@ -204,6 +201,8 @@ export function DashboardScreen({ navigation }: Props): React.JSX.Element {
           </>
         )}
       </PageBody>
+
+      <AddVendorModal visible={addVendorOpen} onClose={() => setAddVendorOpen(false)} />
     </MainLayout>
   );
 }
@@ -291,10 +290,6 @@ function ReceivedRow({
       <View style={styles.rowInfo}>
         <Text style={styles.rowTitle} numberOfLines={2}>
           {item.title}
-        </Text>
-        {/* Quantity/unit aren't in the get_received_shares RPC yet — show price. */}
-        <Text style={styles.rowDetail} numberOfLines={1}>
-          {money(item.display_currency, item.display_price)}
         </Text>
       </View>
       <View style={styles.rowRight}>
@@ -531,7 +526,6 @@ const styles = StyleSheet.create({
   },
   rowInfo: { flex: 1, minWidth: 0 },
   rowTitle: { fontSize: 14, fontWeight: '700', color: colors.textPrimary },
-  rowDetail: { fontSize: 12, color: colors.textSecondary, marginTop: 4 },
   rowRight: { alignItems: 'flex-end', flexShrink: 0, maxWidth: 200 },
   sharedByLabel: { fontSize: 11, color: colors.textMuted },
   sharedByName: { fontSize: 13, fontWeight: '700', color: colors.textPrimary, textAlign: 'right' },

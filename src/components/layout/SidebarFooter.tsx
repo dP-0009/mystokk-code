@@ -1,41 +1,39 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '../../theme/tokens';
 
-/** The four legal/support links pinned to the sidebar bottom. */
+/** Retained for back-compat with existing imports; the link strip was removed. */
 export type FooterLink = 'Privacy' | 'Terms' | 'Contact' | 'FAQ';
-
-const FOOTER_LINKS: readonly FooterLink[] = ['Privacy', 'Terms', 'Contact', 'FAQ'];
 
 type SidebarFooterProps = {
   /** Company / account display name (mirror shows "ECOZOE"). */
   name: string;
   /** Account email, shown muted + truncated under the name. */
   email: string;
-  /** Tapping the user row (opens the account menu / profile). */
+  /** Company logo URL for the avatar (falls back to the initial). */
+  logoUrl?: string | null;
+  /** Tapping the user row opens the account menu (Profile/Settings/…). */
   onPressUser?: () => void;
-  /** Tapping one of the Privacy | Terms | Contact | FAQ links. */
-  onPressLink?: (link: FooterLink) => void;
 };
 
 /**
- * Sidebar bottom region (mirror `.sb-footer`): the signed-in user row plus the
- * Privacy | Terms | Contact | FAQ link strip.
+ * Sidebar bottom region (`.sb-footer`): just the signed-in user row, which opens
+ * the account menu. The legal/support links that used to sit here now live
+ * inside that menu (Settings → tabs) instead.
  */
-export function SidebarFooter({
-  name,
-  email,
-  onPressUser,
-  onPressLink,
-}: SidebarFooterProps): React.JSX.Element {
+export function SidebarFooter({ name, email, logoUrl, onPressUser }: SidebarFooterProps): React.JSX.Element {
   const initial = (name.trim()[0] ?? '?').toUpperCase();
 
   return (
     <View style={styles.footer}>
       <Pressable style={styles.user} onPress={onPressUser}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{initial}</Text>
+          {logoUrl ? (
+            <Image source={{ uri: logoUrl }} style={styles.avatarImg} resizeMode="cover" />
+          ) : (
+            <Text style={styles.avatarText}>{initial}</Text>
+          )}
         </View>
         <View style={styles.userInfo}>
           <Text style={styles.userName} numberOfLines={1}>
@@ -47,14 +45,6 @@ export function SidebarFooter({
         </View>
         <Text style={styles.chevron}>▾</Text>
       </Pressable>
-
-      <View style={styles.links}>
-        {FOOTER_LINKS.map((link) => (
-          <Pressable key={link} onPress={() => onPressLink?.(link)}>
-            <Text style={styles.linkText}>{link}</Text>
-          </Pressable>
-        ))}
-      </View>
     </View>
   );
 }
@@ -82,7 +72,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
+  avatarImg: { width: '100%', height: '100%' },
   avatarText: { color: colors.bgWhite, fontSize: 13, fontWeight: '700' },
   // `.ui`
   userInfo: { flex: 1, minWidth: 0 },

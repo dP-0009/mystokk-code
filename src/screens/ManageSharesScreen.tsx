@@ -1,11 +1,12 @@
 import React from 'react';
-import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation';
 import { getItemDirectShares, revokeShare, type DirectShare } from '../services/supabase/shares';
 import { ScreenHeader } from '../components/shared/ScreenHeader';
 import { toast } from '../stores/toast';
+import { confirmAction } from '../utils/confirm';
 import { colors } from '../theme/tokens';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ManageShares'>;
@@ -34,19 +35,18 @@ export function ManageSharesScreen({ navigation, route }: Props): React.JSX.Elem
       toast(count > 1 ? `Revoked — ${count} shares pulled (incl. forwards)` : 'Share revoked');
       void refetch();
     },
-    onError: (e) => Alert.alert('Could not revoke', e instanceof Error ? e.message : 'Try again.'),
+    onError: (e) => toast.error(e instanceof Error ? e.message : 'Could not revoke.'),
   });
 
   const confirmRevoke = (item: DirectShare): void => {
     const who = item.recipient_company ?? 'this public link';
-    Alert.alert(
-      'Revoke access?',
-      `${who} will immediately lose access, and any onward forwards from this share are revoked too.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Revoke', style: 'destructive', onPress: () => revokeMutation.mutate(item.share_id) },
-      ],
-    );
+    confirmAction({
+      title: 'Revoke access?',
+      message: `${who} will immediately lose access, and any onward forwards from this share are revoked too.`,
+      confirmLabel: 'Revoke',
+      destructive: true,
+      onConfirm: () => revokeMutation.mutate(item.share_id),
+    });
   };
 
   const renderItem = ({ item }: { item: DirectShare }): React.JSX.Element => {

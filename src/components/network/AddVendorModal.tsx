@@ -71,8 +71,9 @@ export function AddVendorModal({ visible, onClose, onAdded }: AddVendorModalProp
 
   const hasEmail = form.email.trim().length > 0;
   const hasMobile = form.mobileNumber.trim().length > 0;
-  const emailOk = !hasEmail || EMAIL_RE.test(form.email.trim());
-  const canSubmit = emailOk && (hasEmail || hasMobile);
+  const emailValid = EMAIL_RE.test(form.email.trim());
+  // Both email AND mobile are required (and the email must be well-formed).
+  const canSubmit = hasEmail && emailValid && hasMobile;
 
   const reset = (): void => {
     setForm(EMPTY);
@@ -124,7 +125,7 @@ export function AddVendorModal({ visible, onClose, onAdded }: AddVendorModalProp
           {/* Body */}
           <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} keyboardShouldPersistTaps="handled">
             <Text style={styles.note}>
-              Add vendor details. <Text style={styles.noteStrong}>Email or Mobile number is required.</Text> All
+              Add vendor details. <Text style={styles.noteStrong}>Email and Mobile number required.</Text> All
               other fields are optional.
             </Text>
 
@@ -162,7 +163,7 @@ export function AddVendorModal({ visible, onClose, onAdded }: AddVendorModalProp
                 autoCorrect={false}
                 testID="add-vendor-email"
               />
-              {hasEmail && !emailOk ? <Text style={styles.fieldErr}>Enter a valid email.</Text> : null}
+              {hasEmail && !emailValid ? <Text style={styles.fieldErr}>Enter a valid email.</Text> : null}
             </Field>
 
             <Field label="Industry">

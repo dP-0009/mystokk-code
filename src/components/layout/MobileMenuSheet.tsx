@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { colors, radius, shadows } from '../../theme/tokens';
@@ -8,25 +8,25 @@ import { webOnly } from './web';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
-type LegalPage = 'faq' | 'privacy' | 'terms' | 'contact';
-
 interface MobileMenuSheetProps {
   visible: boolean;
   /** Display name + email for the account header. */
   name: string;
   email: string;
+  /** Company logo URL for the account avatar (falls back to the initial). */
+  logoUrl?: string | null;
   onClose: () => void;
   onProfile: () => void;
   onSettings: () => void;
   onNotifications: () => void;
-  onLegal: (page: LegalPage) => void;
+  onContact: () => void;
   onLogout: () => void;
 }
 
 /**
- * Bottom sheet opened by the mobile footer's burger button: account header +
- * Profile / Settings / Notifications / FAQ / Privacy / Terms / Contact, and Log
- * Out. The legal/support links open the public site (or a mail client).
+ * Bottom sheet opened by the mobile top-bar profile button: account header +
+ * Profile / Settings / Notifications / Contact, and Log Out — the same menu as
+ * the desktop ProfileMenu.
  *
  * Like ProfileMenu, this is deliberately NOT a react-native Modal — a
  * transparent Modal overlay on web can trap pointer events. It renders nothing
@@ -36,11 +36,12 @@ export function MobileMenuSheet({
   visible,
   name,
   email,
+  logoUrl,
   onClose,
   onProfile,
   onSettings,
   onNotifications,
-  onLegal,
+  onContact,
   onLogout,
 }: MobileMenuSheetProps): React.JSX.Element | null {
   const unread = useUnreadCount();
@@ -68,7 +69,11 @@ export function MobileMenuSheet({
         {/* Account header */}
         <View style={styles.account}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initial}</Text>
+            {logoUrl ? (
+              <Image source={{ uri: logoUrl }} style={styles.avatarImg} resizeMode="cover" />
+            ) : (
+              <Text style={styles.avatarText}>{initial}</Text>
+            )}
           </View>
           <View style={styles.accountInfo}>
             <Text style={styles.accountName} numberOfLines={1}>
@@ -85,13 +90,7 @@ export function MobileMenuSheet({
         <MenuItem icon="person-outline" label="Profile" onPress={onProfile} />
         <MenuItem icon="settings-outline" label="Settings" onPress={onSettings} />
         <MenuItem icon="notifications-outline" label="Notifications" onPress={onNotifications} badge={unread} />
-
-        <View style={styles.divider} />
-
-        <MenuItem icon="help-circle-outline" label="FAQ" onPress={() => onLegal('faq')} />
-        <MenuItem icon="shield-outline" label="Privacy Policy" onPress={() => onLegal('privacy')} />
-        <MenuItem icon="document-text-outline" label="Terms" onPress={() => onLegal('terms')} />
-        <MenuItem icon="mail-outline" label="Contact" onPress={() => onLegal('contact')} />
+        <MenuItem icon="mail-outline" label="Contact" onPress={onContact} />
 
         <View style={styles.divider} />
 
@@ -152,7 +151,8 @@ const styles = StyleSheet.create({
   handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginVertical: 8 },
 
   account: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 12, paddingVertical: 10 },
-  avatar: { width: 42, height: 42, borderRadius: 21, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
+  avatar: { width: 42, height: 42, borderRadius: 21, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  avatarImg: { width: '100%', height: '100%' },
   avatarText: { color: colors.bgWhite, fontSize: 16, fontWeight: '700' },
   accountInfo: { flex: 1, minWidth: 0 },
   accountName: { fontSize: 15, fontWeight: '700', color: colors.textPrimary },

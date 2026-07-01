@@ -14,6 +14,8 @@ import {
 } from '../services/supabase/network';
 import { AppButton } from '../components/shared/AppButton';
 import { openCall, openEmail, openWhatsApp } from '../utils/contact';
+import { confirmAction } from '../utils/confirm';
+import { toast } from '../stores/toast';
 import { colors } from '../theme/tokens';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'VendorDetail'>;
@@ -148,9 +150,10 @@ export function VendorDetailScreen({ navigation, route }: Props): React.JSX.Elem
     mutationFn: ({ source, id }: { source: 'connection' | 'manual'; id: string }) => removeNetworkVendor(source, id),
     onSuccess: () => {
       invalidate();
+      toast.delete('Removed from your network.');
       navigation.goBack();
     },
-    onError: (e) => Alert.alert('Could not remove', e instanceof Error ? e.message : 'Try again.'),
+    onError: (e) => toast.error(e instanceof Error ? e.message : 'Could not remove vendor.'),
   });
 
   if (isLoading) {
@@ -177,25 +180,20 @@ export function VendorDetailScreen({ navigation, route }: Props): React.JSX.Elem
 
   const confirmRemove = (): void => {
     const isManual = data.mode === 'manual';
-    Alert.alert(
-      isManual ? 'Remove contact?' : 'Remove connection?',
-      isManual
+    confirmAction({
+      title: isManual ? 'Remove contact?' : 'Remove connection?',
+      message: isManual
         ? 'This deletes the manual contact from your network.'
         : 'You will no longer be connected with this vendor.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: () =>
-            removeMutation.mutate(
-              isManual
-                ? { source: 'manual', id: data.manualId ?? '' }
-                : { source: 'connection', id: data.connectionId ?? '' },
-            ),
-        },
-      ],
-    );
+      confirmLabel: 'Remove',
+      destructive: true,
+      onConfirm: () =>
+        removeMutation.mutate(
+          isManual
+            ? { source: 'manual', id: data.manualId ?? '' }
+            : { source: 'connection', id: data.connectionId ?? '' },
+        ),
+    });
   };
 
   const statusChip =

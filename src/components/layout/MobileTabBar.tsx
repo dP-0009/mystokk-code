@@ -21,28 +21,23 @@ const TABS: readonly Tab[] = [
 ];
 
 type MobileTabBarProps = {
-  /** Highlighted destination (null when the menu sheet is the active surface). */
+  /** Highlighted destination. */
   activeId?: SidebarNavId;
   /** Pulsing red dot on Reservation Hub when a reservation awaits a response. */
   reservationAttention?: boolean;
-  /** True while the burger menu sheet is open (highlights the Menu item). */
-  menuActive?: boolean;
   onNavigate?: (id: SidebarNavId) => void;
-  onOpenMenu?: () => void;
 };
 
 /**
  * Floating bottom navigation for mobile viewports — replaces the desktop
- * sidebar. Five tabs plus a burger "Menu" that opens the account/links sheet.
- * Pinned to the bottom with side margins, rounded corners and a soft shadow so
- * it reads as a floating bar.
+ * sidebar. Five primary tabs; the account menu now opens from the profile button
+ * in the top bar (not a burger here). Pinned to the bottom with side margins,
+ * rounded corners and a soft shadow so it reads as a floating bar.
  */
 export function MobileTabBar({
   activeId,
   reservationAttention,
-  menuActive,
   onNavigate,
-  onOpenMenu,
 }: MobileTabBarProps): React.JSX.Element {
   const insets = useSafeAreaInsets();
   // Keep the bar clear of the home indicator / browser chrome at the bottom.
@@ -50,7 +45,7 @@ export function MobileTabBar({
     <View style={[styles.wrap, { paddingBottom: 10 + insets.bottom }]} pointerEvents="box-none">
       <View style={styles.bar}>
         {TABS.map((tab) => {
-          const active = !menuActive && tab.id === activeId;
+          const active = tab.id === activeId;
           return (
             <Pressable key={tab.id} style={styles.item} onPress={() => onNavigate?.(tab.id)} accessibilityRole="button">
               <View style={styles.iconWrap}>
@@ -67,16 +62,6 @@ export function MobileTabBar({
             </Pressable>
           );
         })}
-
-        {/* Burger menu */}
-        <Pressable style={styles.item} onPress={onOpenMenu} accessibilityRole="button" accessibilityLabel="Menu">
-          <View style={styles.iconWrap}>
-            <Ionicons name="menu" size={22} color={menuActive ? colors.accent : colors.textMuted} />
-          </View>
-          <Text style={[styles.label, menuActive ? styles.labelActive : null]} numberOfLines={1}>
-            Menu
-          </Text>
-        </Pressable>
       </View>
     </View>
   );

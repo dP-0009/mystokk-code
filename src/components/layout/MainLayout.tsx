@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import type { MainTabParamList, RootStackParamList } from '../../navigation';
 import { getDashboardData } from '../../services/supabase/dashboard';
+import { getMyVendor } from '../../services/supabase/vendor';
 import { useReservationAttention } from '../../hooks/useReservationAttention';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { useAuthStore } from '../../stores/authStore';
@@ -61,6 +62,15 @@ export function MainLayout({ active, children }: MainLayoutProps): React.JSX.Ele
     staleTime: 60_000,
   });
 
+  // Company logo for the avatar/logo slots — mobile profile button + menu sheet
+  // and the desktop sidebar footer (shares the ['myVendor'] cache with
+  // Profile/Settings; only fetched once per stale window).
+  const { data: myVendor } = useQuery({
+    queryKey: ['myVendor'],
+    queryFn: getMyVendor,
+    staleTime: 30_000,
+  });
+
   // Pulsing red dot on Reservation Hub when a reservation awaits this vendor.
   const reservationAttention = useReservationAttention();
 
@@ -100,12 +110,8 @@ export function MainLayout({ active, children }: MainLayoutProps): React.JSX.Ele
         <SidebarFooter
           name={data?.vendor.companyName ?? 'MyStokk'}
           email={session?.user?.email ?? ''}
+          logoUrl={myVendor?.logo_url}
           onPressUser={() => setProfileOpen(true)}
-          onPressLink={(link) =>
-            navigation.navigate('Legal', {
-              page: link.toLowerCase() as 'faq' | 'privacy' | 'terms' | 'contact',
-            })
-          }
         />
       }
     >
@@ -124,36 +130,39 @@ export function MainLayout({ active, children }: MainLayoutProps): React.JSX.Ele
     return (
       <>
         <View style={styles.mobileShell}>
-          <MobileTopBar company={data?.vendor.companyName ?? 'MyStokk'} />
+          <MobileTopBar
+            company={data?.vendor.companyName ?? 'MyStokk'}
+            logoUrl={myVendor?.logo_url}
+            onProfilePress={() => setMenuOpen(true)}
+          />
           <View style={styles.mobileMain}>{children}</View>
           <MobileTabBar
             activeId={active}
             reservationAttention={reservationAttention > 0}
-            menuActive={menuOpen}
             onNavigate={goTo}
-            onOpenMenu={() => setMenuOpen(true)}
           />
         </View>
         <MobileMenuSheet
           visible={menuOpen}
           name={data?.vendor.companyName ?? 'MyStokk'}
           email={session?.user?.email ?? ''}
+          logoUrl={myVendor?.logo_url}
           onClose={() => setMenuOpen(false)}
           onProfile={() => {
             setMenuOpen(false);
-            navigation.navigate('Profile');
+            navigation.navigate('Settings');
           }}
           onSettings={() => {
             setMenuOpen(false);
-            navigation.navigate('Settings');
+            navigation.navigate('Preferences');
           }}
           onNotifications={() => {
             setMenuOpen(false);
             navigation.navigate('Notifications');
           }}
-          onLegal={(page) => {
+          onContact={() => {
             setMenuOpen(false);
-            navigation.navigate('Legal', { page });
+            navigation.navigate('Legal', { page: 'contact' });
           }}
           onLogout={() => {
             setMenuOpen(false);
@@ -171,13 +180,21 @@ export function MainLayout({ active, children }: MainLayoutProps): React.JSX.Ele
       <ProfileMenu
         visible={profileOpen}
         onClose={() => setProfileOpen(false)}
-        onSettings={() => {
+        onProfile={() => {
           setProfileOpen(false);
           navigation.navigate('Settings');
+        }}
+        onSettings={() => {
+          setProfileOpen(false);
+          navigation.navigate('Preferences');
         }}
         onNotifications={() => {
           setProfileOpen(false);
           navigation.navigate('Notifications');
+        }}
+        onContact={() => {
+          setProfileOpen(false);
+          navigation.navigate('Legal', { page: 'contact' });
         }}
         onLogout={() => {
           setProfileOpen(false);

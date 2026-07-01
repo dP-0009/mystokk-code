@@ -33,9 +33,10 @@ import { useLightbox } from '../components/shared/Lightbox';
 import { MainLayout, PageBody } from '../components/layout';
 import { webOnly } from '../components/layout/web';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { HeroCarousel, InfoRow, StatGrid, DetailCard, FileRow } from '../components/shared/DetailMobile';
 import { useAuthStore, selectCanShare } from '../stores/authStore';
 import { toast } from '../stores/toast';
-import { colors } from '../theme/tokens';
+import { colors, radius } from '../theme/tokens';
 import type { ColorValue } from '../theme/tokens';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'InventoryDetail'>;
@@ -228,6 +229,23 @@ export function InventoryDetailScreen({ navigation, route }: Props): React.JSX.E
         {/* Far-left back link, just beside the sidebar (outside the centered card). */}
         <BackLink onPress={() => navigation.navigate('Main', { screen: 'Inventory' })} />
 
+        <View style={styles.detailColumn}>
+          <MobileInventoryBody
+            item={item}
+            photoUrls={photoUrls}
+            documents={documents}
+            activity={activity}
+            sharedWithCount={sharedWithCount}
+            reserved={reserved}
+            onShare={onShare}
+            onEdit={() => navigation.navigate('InventoryEdit', { inventoryId })}
+            onMenu={() => setMenuOpen(true)}
+            onSharedWith={() => setSharesOpen(true)}
+            onDelete={confirmDelete}
+            openLightbox={openLightbox}
+          />
+        </View>
+        {false ? (
         <View style={styles.wrap}>
           <View style={styles.card}>
             {/* Header — stacks on mobile so the title gets full width and the
@@ -364,6 +382,7 @@ export function InventoryDetailScreen({ navigation, route }: Props): React.JSX.E
             </Pressable>
           </View>
         </View>
+        ) : null}
       </PageBody>
 
       <ShareModal
@@ -433,6 +452,133 @@ export function InventoryDetailScreen({ navigation, route }: Props): React.JSX.E
         </Pressable>
       </Modal>
     </MainLayout>
+  );
+}
+
+/** Mobile redesign of the My Inventory detail (mirror mockup). */
+function MobileInventoryBody({
+  item,
+  photoUrls,
+  documents,
+  activity,
+  sharedWithCount,
+  reserved,
+  onShare,
+  onEdit,
+  onMenu,
+  onSharedWith,
+  onDelete,
+  openLightbox,
+}: {
+  item: InventoryDetail['item'];
+  photoUrls: string[];
+  documents: InventoryDocument[];
+  activity: { label: string; ts: string }[];
+  sharedWithCount: number;
+  reserved: number;
+  onShare: () => void;
+  onEdit: () => void;
+  onMenu: () => void;
+  onSharedWith: () => void;
+  onDelete: () => void;
+  openLightbox: (photos: string[], index: number) => void;
+}): React.JSX.Element {
+  const subtitle = `${item.product_code ?? '—'} • ${item.category ?? 'General'} • ${daysAgo(item.created_at)}`;
+  const specEntries = Object.entries(item.specs ?? {});
+  return (
+    <View>
+      {photoUrls.length > 0 ? (
+        <HeroCarousel photos={photoUrls} onShare={onShare} onOpen={(i) => openLightbox(photoUrls, i)} />
+      ) : null}
+
+      <View style={styles.mCard}>
+        <Text style={styles.mSub} numberOfLines={1}>
+          {subtitle}
+        </Text>
+        <View style={styles.mTitleRow}>
+          <Text style={styles.mTitle}>{item.title}</Text>
+          <StatusChip status={item.status} />
+        </View>
+        <View style={styles.mDivider} />
+        <InfoRow label="Stock location" value={item.stock_location || '—'} />
+        <InfoRow label="Origin" value={item.origin || '—'} />
+        <InfoRow
+          label="Price"
+          value={`${money(item.currency, item.price)}${item.price !== null ? ` / ${item.unit}` : ''}`}
+          valueColor={colors.green}
+        />
+        <StatGrid
+          stats={[
+            { label: 'Total Qty', value: item.quantity, sub: item.unit },
+            { label: 'Available', value: item.quantity_available, sub: item.unit, color: colors.green },
+            { label: 'Reserved', value: reserved, sub: item.unit, color: colors.orange },
+            { label: 'Shared with', value: sharedWithCount, sub: 'contacts', color: colors.purple, onPress: onSharedWith },
+          ]}
+        />
+      </View>
+
+      <View style={styles.mActions}>
+        <Pressable style={[styles.mShareBtn, webOnly({ cursor: 'pointer' })]} onPress={onShare}>
+          <Ionicons name="share-social-outline" size={16} color="#FFFFFF" />
+          <Text style={styles.mShareText}>Share</Text>
+        </Pressable>
+        <Pressable style={[styles.mEditBtn, webOnly({ cursor: 'pointer' })]} onPress={onEdit}>
+          <Ionicons name="create-outline" size={16} color={colors.textPrimary} />
+          <Text style={styles.mEditText}>Edit</Text>
+        </Pressable>
+      </View>
+
+      {item.description ? (
+        <DetailCard icon="document-text-outline" title="Description">
+          <Text style={styles.mBodyText}>{item.description}</Text>
+        </DetailCard>
+      ) : null}
+
+      {specEntries.length > 0 ? (
+        <DetailCard icon="list-outline" title="Specifications">
+          {specEntries.map(([k, v]) => (
+            <View key={k} style={styles.mSpecRow}>
+              <Text style={styles.mSpecLabel}>{k}</Text>
+              <Text style={styles.mSpecValue}>{String(v)}</Text>
+            </View>
+          ))}
+        </DetailCard>
+      ) : null}
+
+      {documents.length > 0 ? (
+        <DetailCard icon="folder-outline" title="Documents">
+          {documents.map((d) => (
+            <FileRow
+              key={d.storage_path}
+              name={d.name}
+              variant="open"
+              onPress={() => {
+                if (d.url) void Linking.openURL(d.url);
+              }}
+            />
+          ))}
+        </DetailCard>
+      ) : null}
+
+      <DetailCard icon="time-outline" title="Activity">
+        {activity.map((a, i) => (
+          <View key={i} style={styles.mActivityRow}>
+            <View style={styles.mActivityLeft}>
+              <View style={styles.mActivityDot} />
+              <Text style={styles.mActivityLabel} numberOfLines={1}>
+                {a.label}
+              </Text>
+            </View>
+            <Text style={styles.mActivityDate}>{shortDate(a.ts)}</Text>
+          </View>
+        ))}
+      </DetailCard>
+
+      <Pressable style={[styles.mDeleteBtn, webOnly({ cursor: 'pointer' })]} onPress={onDelete}>
+        <Ionicons name="trash-outline" size={16} color={colors.red} />
+        <Text style={styles.mDeleteText}>Delete Item</Text>
+      </Pressable>
+    </View>
   );
 }
 
@@ -591,6 +737,83 @@ function MenuItem({ label, onPress }: { label: string; onPress: () => void }): R
 }
 
 const styles = StyleSheet.create({
+  // Redesigned detail body — centred column on desktop, full-width on mobile.
+  detailColumn: { width: '100%', maxWidth: 760, alignSelf: 'center' },
+
+  // ---- Mobile redesign ----------------------------------------------------
+  mCard: {
+    backgroundColor: colors.bgWhite,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    padding: 16,
+    marginBottom: 14,
+  },
+  mSub: { fontSize: 12, fontWeight: '600', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.3 },
+  mTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 6 },
+  mTitle: { flex: 1, fontSize: 22, fontWeight: '800', color: colors.textPrimary },
+  mDivider: { height: 1, backgroundColor: colors.border, marginVertical: 14 },
+
+  mActions: { flexDirection: 'row', gap: 10, marginBottom: 14 },
+  mShareBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: colors.primary,
+    paddingVertical: 14,
+    borderRadius: radius.md,
+  },
+  mShareText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
+  mEditBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: colors.bgWhite,
+    borderWidth: 1.5,
+    borderColor: colors.borderDark,
+    paddingVertical: 14,
+    paddingHorizontal: 22,
+    borderRadius: radius.md,
+  },
+  mEditText: { color: colors.textPrimary, fontSize: 15, fontWeight: '700' },
+  mKebabBtn: {
+    width: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.bgWhite,
+    borderWidth: 1.5,
+    borderColor: colors.borderDark,
+    borderRadius: radius.md,
+  },
+
+  mBodyText: { fontSize: 14, color: colors.textSecondary, lineHeight: 22 },
+  mSpecRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingVertical: 6 },
+  mSpecLabel: { fontSize: 13, color: colors.textSecondary, flexShrink: 1 },
+  mSpecValue: { fontSize: 13, fontWeight: '600', color: colors.textPrimary, textAlign: 'right', flexShrink: 1 },
+
+  mActivityRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingVertical: 8 },
+  mActivityLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1, minWidth: 0 },
+  mActivityDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.borderDark },
+  mActivityLabel: { fontSize: 13, color: colors.textSecondary, flexShrink: 1 },
+  mActivityDate: { fontSize: 12, color: colors.textMuted },
+
+  mDeleteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: colors.redLight,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    paddingVertical: 14,
+    borderRadius: radius.md,
+    marginBottom: 8,
+  },
+  mDeleteText: { color: colors.red, fontSize: 15, fontWeight: '700' },
+
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bgPage, padding: 24 },
   errorText: { color: colors.red, fontSize: 14, fontWeight: '600', marginBottom: 12, textAlign: 'center' },
   retry: { paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.primary, borderRadius: 10 },

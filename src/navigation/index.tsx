@@ -37,6 +37,7 @@ import { ReceivedDetailScreen } from '../screens/ReceivedDetailScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { EditProfileScreen } from '../screens/EditProfileScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
+import { PreferencesScreen } from '../screens/PreferencesScreen';
 import { NotificationsScreen } from '../screens/NotificationsScreen';
 import { LegalScreen } from '../screens/LegalScreen';
 
@@ -64,6 +65,7 @@ export type RootStackParamList = {
   Profile: undefined;
   EditProfile: undefined;
   Settings: undefined;
+  Preferences: undefined;
   Notifications: undefined;
   Legal: { page: 'faq' | 'privacy' | 'terms' | 'contact' };
 };
@@ -202,6 +204,7 @@ export function RootNavigator(): React.JSX.Element {
             <Stack.Screen name="Profile" component={ProfileScreen} />
             <Stack.Screen name="EditProfile" component={EditProfileScreen} />
             <Stack.Screen name="Settings" component={SettingsScreen} />
+            <Stack.Screen name="Preferences" component={PreferencesScreen} />
             <Stack.Screen name="Notifications" component={NotificationsScreen} />
             <Stack.Screen name="Legal" component={LegalScreen} />
           </Stack.Group>

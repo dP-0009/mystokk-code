@@ -26,18 +26,14 @@ type NavEntry = {
   badge?: 'inventory' | 'received';
 };
 
-/** The 10 sidebar items, in the exact order from the UI mirror / build guide. */
+/** Primary sidebar destinations. Account/legal links live in the account menu
+ *  (opened from the footer identity), not the nav rail. */
 const NAV_ITEMS: readonly NavEntry[] = [
   { id: 'dashboard', label: 'Dashboard', icon: 'grid-outline' },
   { id: 'inventory', label: 'My Inventory', icon: 'cube-outline', badge: 'inventory' },
   { id: 'received', label: 'Received Inventory', icon: 'file-tray-outline', badge: 'received' },
   { id: 'reservations', label: 'Reservation Hub', icon: 'calendar-outline' },
   { id: 'network', label: 'My Network', icon: 'people-outline' },
-  { id: 'settings', label: 'Settings', icon: 'settings-outline' },
-  { id: 'faq', label: 'FAQ', icon: 'help-circle-outline' },
-  { id: 'privacy', label: 'Privacy Policy', icon: 'shield-outline' },
-  { id: 'terms', label: 'Terms', icon: 'document-text-outline' },
-  { id: 'contact', label: 'Contact', icon: 'mail-outline' },
 ];
 
 type SidebarNavProps = {

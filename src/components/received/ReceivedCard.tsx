@@ -49,10 +49,6 @@ interface ReceivedCardProps {
 export function ReceivedCard({ item, onPress }: ReceivedCardProps): React.JSX.Element {
   const [hovered, setHovered] = useState(false);
 
-  // "CODE | Category" when a product code exists, else just the category.
-  const category = item.category ?? '—';
-  const codeCategory = item.product_code ? `${item.product_code} | ${category}` : category;
-
   return (
     <Pressable
       style={[styles.card, hovered ? styles.cardHover : null]}
@@ -72,11 +68,9 @@ export function ReceivedCard({ item, onPress }: ReceivedCardProps): React.JSX.El
         />
 
         <View style={styles.info}>
+          {/* Title, then stock location on its own line below it. */}
           <Text style={styles.name} numberOfLines={1}>
             {item.title}
-          </Text>
-          <Text style={styles.codeCategory} numberOfLines={1}>
-            {codeCategory}
           </Text>
           {item.stock_location ? (
             <View style={styles.locationRow}>
@@ -86,14 +80,15 @@ export function ReceivedCard({ item, onPress }: ReceivedCardProps): React.JSX.El
               </Text>
             </View>
           ) : null}
-          <Text style={styles.price} numberOfLines={1}>
-            {formatPrice(item.display_currency, item.display_price, item.unit)}
-          </Text>
           <Text style={styles.qty} numberOfLines={1}>
             <Text style={styles.qtyAvail}>{item.quantity_available.toLocaleString()}</Text>
             <Text style={styles.qtyMuted}>
               /{item.quantity.toLocaleString()} {item.unit}
             </Text>
+          </Text>
+          {/* Price last. */}
+          <Text style={styles.price} numberOfLines={1}>
+            {formatPrice(item.display_currency, item.display_price, item.unit)}
           </Text>
         </View>
       </View>
@@ -133,12 +128,11 @@ const styles = StyleSheet.create({
 
   info: { flex: 1, minWidth: 0 },
   name: { fontSize: 14, fontWeight: '700', color: colors.textPrimary },
-  codeCategory: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
-  // Stock location row (map-pin + value), 12px #475569.
-  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
+  // Stock location, on its own line under the title (map-pin + value), 12px #475569.
+  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
   location: { fontSize: 12, color: colors.textSecondary, flexShrink: 1 },
   price: { fontSize: 14, fontWeight: '700', color: colors.green, marginTop: 4 },
-  qty: { fontSize: 12, marginTop: 2 },
+  qty: { fontSize: 12, marginTop: 8 },
   qtyAvail: { color: colors.textPrimary, fontWeight: '700' },
   qtyMuted: { color: colors.textMuted },
 

@@ -86,9 +86,13 @@ export function InventoryCard({
           <Text style={styles.name} numberOfLines={1}>
             {item.title}
           </Text>
-          <Text style={styles.code} numberOfLines={1}>
-            {item.product_code ?? '—'} | {item.category ?? 'General'}
+          <Text style={styles.qty} numberOfLines={1}>
+            <Text style={styles.qtyAvail}>{item.quantity_available}</Text>
+            <Text style={styles.qtyMuted}>
+              /{item.quantity} {item.unit}
+            </Text>
           </Text>
+          {/* Price last. */}
           {price ? (
             <Text style={styles.price} numberOfLines={1}>
               {price}
@@ -96,12 +100,6 @@ export function InventoryCard({
           ) : (
             <Text style={styles.priceEmpty}>—</Text>
           )}
-          <Text style={styles.qty} numberOfLines={1}>
-            <Text style={styles.qtyAvail}>{item.quantity_available}</Text>
-            <Text style={styles.qtyMuted}>
-              /{item.quantity} {item.unit}
-            </Text>
-          </Text>
         </View>
       </View>
 
@@ -190,11 +188,11 @@ const styles = StyleSheet.create({
   top: { flexDirection: 'row', alignItems: 'center', gap: 14 },
 
   info: { flex: 1, minWidth: 0 },
-  name: { fontSize: 14, fontWeight: '700', color: colors.textPrimary, marginBottom: 3 },
+  name: { fontSize: 14, fontWeight: '700', color: colors.textPrimary, marginBottom: 6 },
   code: { fontSize: 11, color: colors.textMuted, marginBottom: 6 },
-  price: { fontSize: 14, fontWeight: '700', color: colors.green, marginBottom: 3 },
-  priceEmpty: { fontSize: 14, fontWeight: '700', color: colors.textMuted, marginBottom: 3 },
-  qty: { fontSize: 12 },
+  price: { fontSize: 14, fontWeight: '700', color: colors.green },
+  priceEmpty: { fontSize: 14, fontWeight: '700', color: colors.textMuted },
+  qty: { fontSize: 12, marginBottom: 6 },
   qtyAvail: { color: colors.textPrimary, fontWeight: '700' },
   qtyMuted: { color: colors.textMuted },
 
