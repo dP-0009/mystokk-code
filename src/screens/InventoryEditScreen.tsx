@@ -29,9 +29,8 @@ export function InventoryEditScreen({ navigation, route }: Props): React.JSX.Ele
     setError(null);
     setSubmitting(true);
     try {
-      // The edit form no longer collects Category — preserve the item's existing
-      // value rather than clearing it on save.
-      await updateInventory(inventoryId, { ...input, category: data?.item.category ?? null });
+      // The form now collects Industry + Category, so save them as submitted.
+      await updateInventory(inventoryId, input);
       await Promise.all([
         ...photos.map((p) => uploadInventoryPhoto(inventoryId, p)),
         ...docs.map((d) => uploadInventoryDocument(inventoryId, d)),
@@ -95,6 +94,8 @@ function toInitial(item: Awaited<ReturnType<typeof getInventoryDetail>>['item'])
   return {
     title: item.title,
     productCode: item.product_code ?? '',
+    industry: item.industry ?? '',
+    category: item.category ?? '',
     quantity: String(item.quantity),
     unit: item.unit,
     price: item.price !== null ? String(item.price) : '',

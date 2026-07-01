@@ -17,6 +17,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import type { InventoryInput } from '../../services/supabase/inventory';
 import { toFullUrl, type UploadFile } from '../../services/supabase/storage';
 import { CURRENCIES, UNITS } from '../../constants/inventory';
+import { SETTINGS_INDUSTRIES, SETTINGS_INDUSTRY_CATEGORIES } from '../../constants/industries';
 import { colors, radius, shadows } from '../../theme/tokens';
 import { webOnly } from '../layout/web';
 import { useLightbox } from '../shared/Lightbox';
@@ -58,6 +59,8 @@ export interface AddItemFormInitial {
   title?: string;
   quantity?: string;
   unit?: string;
+  industry?: string;
+  category?: string;
   price?: string;
   currency?: string;
   origin?: string;
@@ -96,6 +99,8 @@ export function AddItemForm({
   const [title, setTitle] = useState(initial?.title ?? '');
   const [quantity, setQuantity] = useState(initial?.quantity ?? '');
   const [unit, setUnit] = useState(initial?.unit ?? 'pcs');
+  const [industry, setIndustry] = useState(initial?.industry ?? '');
+  const [category, setCategory] = useState(initial?.category ?? '');
   const [price, setPrice] = useState(initial?.price ?? '');
   const [currency, setCurrency] = useState(initial?.currency ?? 'AED');
   const [origin, setOrigin] = useState(initial?.origin ?? '');
@@ -108,6 +113,15 @@ export function AddItemForm({
   const { open: openLightbox } = useLightbox();
   // Already-saved photos, normalized to full URLs for the shared lightbox.
   const existingFullUrls = (existingPhotoUrls ?? []).map(toFullUrl).filter(Boolean);
+
+  // Category options depend on the chosen industry (same taxonomy as the profile).
+  const categoryOptions = industry ? SETTINGS_INDUSTRY_CATEGORIES[industry] ?? [] : [];
+  const onIndustryChange = (next: string): void => {
+    setIndustry(next);
+    // Drop a category that no longer belongs to the newly-selected industry.
+    const allowed = SETTINGS_INDUSTRY_CATEGORIES[next] ?? [];
+    setCategory((c) => (allowed.includes(c) ? c : ''));
+  };
 
   const pickPhotos = async (): Promise<void> => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -167,6 +181,8 @@ export function AddItemForm({
     const input: InventoryInput = {
       title: title.trim(),
       productCode: productCode.trim() || undefined,
+      industry: industry || null,
+      category: category || null,
       quantity: Number(quantity),
       unit,
       price: price.trim() ? Number(price) : null,
@@ -180,8 +196,8 @@ export function AddItemForm({
 
   return (
     <View>
-      {/* SECTION 1 — Basic Information */}
-      <SectionCard title="Basic Information" z={50}>
+      {/* Single continuous form — no separate section cards. */}
+      <View style={styles.card}>
         <Field label="Product Code">
           <Input value={productCode} onChangeText={setProductCode} placeholder="e.g., SKU-001" autoCapitalize="characters" />
         </Field>
@@ -199,7 +215,7 @@ export function AddItemForm({
           />
         </Field>
 
-        <View style={styles.row}>
+        <View style={[styles.row, styles.z60]}>
           <View style={styles.col}>
             <Field label="Quantity" required error={errors.quantity}>
               <Input
@@ -220,11 +236,31 @@ export function AddItemForm({
             </Field>
           </View>
         </View>
-      </SectionCard>
 
-      {/* SECTION 2 — Pricing & Sourcing */}
-      <SectionCard title="Pricing & Sourcing" z={40}>
-        <View style={styles.row}>
+        {/* Optional taxonomy — same Industry → Category dependency as the profile. */}
+        <View style={styles.z55}>
+          <Field label="Industry (optional)">
+            <Select
+              value={industry}
+              onChange={onIndustryChange}
+              options={SETTINGS_INDUSTRIES}
+              placeholder="Select industry (optional)"
+            />
+          </Field>
+        </View>
+        <View style={styles.z50}>
+          <Field label="Category (optional)">
+            <Select
+              value={category}
+              onChange={setCategory}
+              options={categoryOptions}
+              placeholder={industry ? 'Select category (optional)' : 'Select an industry first'}
+              disabled={!industry}
+            />
+          </Field>
+        </View>
+
+        <View style={[styles.row, styles.z45]}>
           <View style={styles.col}>
             <Field label="Price per Unit" error={errors.price}>
               <Input
@@ -257,10 +293,7 @@ export function AddItemForm({
             autoCapitalize="words"
           />
         </Field>
-      </SectionCard>
 
-      {/* SECTION 3 — Description */}
-      <SectionCard title="Description">
         <Field label="Description">
           <Input
             value={description}
@@ -270,75 +303,73 @@ export function AddItemForm({
             multiline
           />
         </Field>
-      </SectionCard>
 
-      {/* SECTION 4 — Photos */}
-      <SectionCard title="Photos">
-        <UploadZone
-          icon="image-outline"
-          title="Click to upload photos"
-          hint="PNG or JPG, up to 8 images"
-          onPress={pickPhotos}
-        />
-        {existingFullUrls.length > 0 || photos.length > 0 ? (
-          <View style={styles.thumbs}>
-            {existingFullUrls.map((url, i) => (
-              <Pressable
-                key={url}
-                onPress={() => openLightbox(existingFullUrls, i)}
-                style={webOnly({ cursor: 'pointer' })}
-                accessibilityLabel={`View photo ${i + 1}`}
-              >
-                <Image source={{ uri: url }} style={styles.thumb} />
-              </Pressable>
-            ))}
-            {photos.map((p, i) => (
-              <View key={`${p.uri}-${i}`} style={styles.thumbWrap}>
-                <Image source={{ uri: p.uri }} style={styles.thumb} />
+        <Field label="Photos">
+          <UploadZone
+            icon="image-outline"
+            title="Click to upload photos"
+            hint="PNG or JPG, up to 8 images"
+            onPress={pickPhotos}
+          />
+          {existingFullUrls.length > 0 || photos.length > 0 ? (
+            <View style={styles.thumbs}>
+              {existingFullUrls.map((url, i) => (
                 <Pressable
-                  style={styles.thumbRemove}
-                  onPress={() => removePhoto(i)}
-                  hitSlop={6}
-                  accessibilityLabel={`Remove photo ${i + 1}`}
+                  key={url}
+                  onPress={() => openLightbox(existingFullUrls, i)}
+                  style={webOnly({ cursor: 'pointer' })}
+                  accessibilityLabel={`View photo ${i + 1}`}
                 >
-                  <Ionicons name="close" size={11} color={colors.bgWhite} />
+                  <Image source={{ uri: url }} style={styles.thumb} />
                 </Pressable>
-              </View>
-            ))}
-          </View>
-        ) : null}
-      </SectionCard>
+              ))}
+              {photos.map((p, i) => (
+                <View key={`${p.uri}-${i}`} style={styles.thumbWrap}>
+                  <Image source={{ uri: p.uri }} style={styles.thumb} />
+                  <Pressable
+                    style={styles.thumbRemove}
+                    onPress={() => removePhoto(i)}
+                    hitSlop={6}
+                    accessibilityLabel={`Remove photo ${i + 1}`}
+                  >
+                    <Ionicons name="close" size={11} color={colors.bgWhite} />
+                  </Pressable>
+                </View>
+              ))}
+            </View>
+          ) : null}
+        </Field>
 
-      {/* SECTION 5 — Documents */}
-      <SectionCard title="Documents">
-        <UploadZone
-          icon="document-text-outline"
-          title="Click to upload documents"
-          hint="PDF, Word, Excel, CSV"
-          onPress={pickDocs}
-        />
-        {(existingDocs ?? []).map((d, i) => (
-          <View key={`existing-${i}-${d.name}`} style={styles.docRow}>
-            <Ionicons name="document-text-outline" size={18} color={colors.textSecondary} />
-            <Text style={styles.docName} numberOfLines={1}>
-              {d.name}
-            </Text>
-            <Text style={styles.docSaved}>Saved</Text>
-          </View>
-        ))}
-        {docs.map((d, i) => (
-          <View key={`${d.uri}-${i}`} style={styles.docRow}>
-            <Ionicons name="document-text-outline" size={18} color={colors.textSecondary} />
-            <Text style={styles.docName} numberOfLines={1}>
-              {d.name}
-            </Text>
-            {formatSize(d.size) ? <Text style={styles.docSize}>{formatSize(d.size)}</Text> : null}
-            <Pressable onPress={() => removeDoc(i)} hitSlop={8} accessibilityLabel={`Remove ${d.name}`}>
-              <Ionicons name="close" size={16} color={colors.textMuted} />
-            </Pressable>
-          </View>
-        ))}
-      </SectionCard>
+        <Field label="Documents">
+          <UploadZone
+            icon="document-text-outline"
+            title="Click to upload documents"
+            hint="PDF, Word, Excel, CSV"
+            onPress={pickDocs}
+          />
+          {(existingDocs ?? []).map((d, i) => (
+            <View key={`existing-${i}-${d.name}`} style={styles.docRow}>
+              <Ionicons name="document-text-outline" size={18} color={colors.textSecondary} />
+              <Text style={styles.docName} numberOfLines={1}>
+                {d.name}
+              </Text>
+              <Text style={styles.docSaved}>Saved</Text>
+            </View>
+          ))}
+          {docs.map((d, i) => (
+            <View key={`${d.uri}-${i}`} style={styles.docRow}>
+              <Ionicons name="document-text-outline" size={18} color={colors.textSecondary} />
+              <Text style={styles.docName} numberOfLines={1}>
+                {d.name}
+              </Text>
+              {formatSize(d.size) ? <Text style={styles.docSize}>{formatSize(d.size)}</Text> : null}
+              <Pressable onPress={() => removeDoc(i)} hitSlop={8} accessibilityLabel={`Remove ${d.name}`}>
+                <Ionicons name="close" size={16} color={colors.textMuted} />
+              </Pressable>
+            </View>
+          ))}
+        </Field>
+      </View>
 
       {error ? <Text style={styles.formError}>{error}</Text> : null}
 
@@ -355,28 +386,6 @@ export function AddItemForm({
           <Text style={styles.btnPrimaryText}>{submitting ? 'Saving…' : submitLabel}</Text>
         </Pressable>
       </View>
-    </View>
-  );
-}
-
-/* ------------------------------------------------------------------ *
- * Section card — mirror `.section`
- * ------------------------------------------------------------------ */
-function SectionCard({
-  title,
-  children,
-  z,
-}: {
-  title: string;
-  children: ReactNode;
-  /** Stacking order — earlier cards get a higher value so their select
-   *  dropdowns overlay the cards below them rather than being painted over. */
-  z?: number;
-}): React.JSX.Element {
-  return (
-    <View style={[styles.card, z !== undefined ? { zIndex: z } : null]}>
-      <Text style={styles.cardTitle}>{title}</Text>
-      {children}
     </View>
   );
 }
@@ -560,10 +569,8 @@ function UploadZone({
 }
 
 const styles = StyleSheet.create({
-  // Section card — mirror `.section`
+  // Single form card holding every field (no separate sections).
   card: {
-    // position:relative is REQUIRED for the SectionCard zIndex to take effect —
-    // without it an open select's dropdown is painted over by the card below.
     position: 'relative',
     backgroundColor: colors.bgWhite,
     borderWidth: 1,
@@ -573,17 +580,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     marginBottom: 16,
   },
-  cardTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-    color: colors.textPrimary,
-    paddingBottom: 14,
-    marginBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
+
+  // Descending stacking layers so an open dropdown's panel (which extends
+  // downward) overlays the fields below it rather than being painted over.
+  z60: { position: 'relative', zIndex: 60 },
+  z55: { position: 'relative', zIndex: 55 },
+  z50: { position: 'relative', zIndex: 50 },
+  z45: { position: 'relative', zIndex: 45 },
 
   // 2-column rows. position:relative + zIndex lift the whole row (and any open
   // select dropdown inside it) above the sibling fields that follow it in the

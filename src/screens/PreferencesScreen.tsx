@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -6,9 +6,9 @@ import type { RootStackParamList } from '../navigation';
 import { MainLayout, PageBody, PageHeader } from '../components/layout';
 import { webOnly } from '../components/layout/web';
 import { LegalContent, type LegalPage } from '../components/shared/LegalContent';
-import { requestPushPermissionAndRegister } from '../services/push';
 import { colors, radius } from '../theme/tokens';
 import { toast } from '../stores/toast';
+import { usePushStore } from '../stores/pushStore';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Preferences'>;
 
@@ -61,25 +61,27 @@ export function PreferencesScreen({ navigation }: Props): React.JSX.Element {
   );
 }
 
-/** Notification-preferences tab — a push on/off toggle (mobile only). */
+/** Notification-preferences tab — a push on/off toggle backed by the shared store. */
 function NotificationPreferences(): React.JSX.Element {
-  const [push, setPush] = useState(false);
+  const enabled = usePushStore((s) => s.enabled);
+  const busy = usePushStore((s) => s.busy);
+  const hydrate = usePushStore((s) => s.hydrate);
+  const setEnabled = usePushStore((s) => s.setEnabled);
+
+  useEffect(() => {
+    void hydrate();
+  }, [hydrate]);
 
   const onToggle = async (next: boolean): Promise<void> => {
-    if (!next) {
-      setPush(false);
-      return;
-    }
-    if (Platform.OS === 'web') {
-      toast('Push notifications are available in the MyStokk mobile app.');
-      return;
-    }
     try {
-      await requestPushPermissionAndRegister();
-      setPush(true);
-      toast('Notifications enabled.');
+      await setEnabled(next);
+      if (Platform.OS === 'web' && next) {
+        toast('Notifications on. Push delivery is available in the MyStokk mobile app.');
+      } else {
+        toast(next ? 'Notifications enabled.' : 'Notifications disabled.');
+      }
     } catch {
-      toast('Could not enable notifications.');
+      toast('Could not update notifications.');
     }
   };
 
@@ -93,7 +95,8 @@ function NotificationPreferences(): React.JSX.Element {
           </Text>
         </View>
         <Switch
-          value={push}
+          value={enabled}
+          disabled={busy}
           onValueChange={(v) => void onToggle(v)}
           trackColor={{ true: colors.accent, false: colors.border }}
         />

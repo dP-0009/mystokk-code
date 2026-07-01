@@ -32,8 +32,8 @@ import {
 } from '../services/supabase/vendor';
 import { uploadCompanyLogo, type UploadFile } from '../services/supabase/storage';
 import { changePassword } from '../services/supabase/auth';
-import { requestPushPermissionAndRegister } from '../services/push';
 import { useAuthStore } from '../stores/authStore';
+import { usePushStore } from '../stores/pushStore';
 import { COUNTRIES, SETTINGS_INDUSTRIES, SETTINGS_INDUSTRY_CATEGORIES } from '../constants/industries';
 import { webOnly } from '../components/layout/web';
 import { colors, radius, shadows } from '../theme/tokens';
@@ -113,22 +113,32 @@ export function SettingsScreen({ navigation: _navigation }: Props): React.JSX.El
   const pwValid = pw.length >= 8 && pw === pw2;
   const delValid = delText.trim().toUpperCase() === 'DELETE';
 
-  const enablePush = async (): Promise<void> => {
-    if (Platform.OS === 'web') {
-      toast('Push notifications are available in the MyStokk mobile app.');
-      return;
-    }
+  // Push preference — shared with the Settings → Notification Preferences toggle.
+  const pushEnabled = usePushStore((s) => s.enabled);
+  const pushBusy = usePushStore((s) => s.busy);
+  const hydratePush = usePushStore((s) => s.hydrate);
+  const setPushEnabled = usePushStore((s) => s.setEnabled);
+  useEffect(() => {
+    void hydratePush();
+  }, [hydratePush]);
+
+  const togglePush = async (): Promise<void> => {
+    const next = !pushEnabled;
     try {
-      await requestPushPermissionAndRegister();
-      toast('Notifications enabled.');
+      await setPushEnabled(next);
+      if (Platform.OS === 'web' && next) {
+        toast('Notifications on. Push delivery is available in the MyStokk mobile app.');
+      } else {
+        toast(next ? 'Notifications enabled.' : 'Notifications disabled.');
+      }
     } catch {
-      toast('Could not enable notifications.');
+      toast('Could not update notifications.');
     }
   };
 
   return (
     <MainLayout active="settings">
-      <PageHeader title="Settings" subtitle="Manage your account and company profile" />
+      <PageHeader title="Profile" subtitle="Manage your account and company profile" />
 
       <PageBody contentContainerStyle={styles.column}>
         {/* Account — read-only email / role / verification (no "Hi …" greeting) */}
@@ -181,8 +191,15 @@ export function SettingsScreen({ navigation: _navigation }: Props): React.JSX.El
             <Text style={styles.nbSub}>Get instant alerts for reservations and messages</Text>
             <Text style={styles.nbHint}>Enable to never miss a reservation request</Text>
           </View>
-          <Pressable style={styles.btnAccent} onPress={() => void enablePush()} testID="settings-enable-push">
-            <Text style={styles.btnAccentText}>Enable Notifications</Text>
+          <Pressable
+            style={[styles.btnAccent, pushEnabled ? styles.btnAccentOn : null, pushBusy ? styles.btnAccentBusy : null]}
+            onPress={() => void togglePush()}
+            disabled={pushBusy}
+            testID="settings-enable-push"
+          >
+            <Text style={styles.btnAccentText}>
+              {pushEnabled ? 'Notifications On' : 'Enable Notifications'}
+            </Text>
           </Pressable>
         </View>
 
@@ -615,6 +632,8 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     ...webOnly({ cursor: 'pointer' }),
   },
+  btnAccentOn: { backgroundColor: colors.green },
+  btnAccentBusy: { opacity: 0.6 },
   btnAccentText: { color: colors.bgWhite, fontSize: 13, fontWeight: '600' },
 
   // Security actions

@@ -28,6 +28,7 @@ export interface InventoryItem {
   title: string;
   product_code: string | null;
   category: string | null;
+  industry: string | null;
   description: string | null;
   quantity: number;
   quantity_available: number;
@@ -74,8 +75,9 @@ export interface InventoryDetail {
 export interface InventoryInput {
   title: string;
   productCode?: string;
-  /** Optional — the create form no longer collects a category; the edit form still does. */
+  /** Optional — Industry + Category are optional taxonomy fields on the item form. */
   category?: string | null;
+  industry?: string | null;
   quantity: number;
   unit: string;
   price?: number | null;
@@ -220,6 +222,7 @@ export async function createInventory(input: InventoryInput): Promise<string> {
       title: input.title.trim(),
       product_code: input.productCode?.trim() || null,
       category: input.category ?? null,
+      industry: input.industry ?? null,
       description: input.description?.trim() || null,
       quantity: input.quantity,
       quantity_available: input.quantity,
@@ -257,6 +260,7 @@ export async function updateInventory(inventoryId: string, input: InventoryInput
       title: input.title.trim(),
       product_code: input.productCode?.trim() || null,
       category: input.category ?? null,
+      industry: input.industry ?? null,
       description: input.description?.trim() || null,
       quantity: input.quantity,
       quantity_available: newAvailable,
