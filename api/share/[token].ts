@@ -100,12 +100,17 @@ function buildDescription(share: PublicShare | null): string {
 }
 
 /**
- * og:title carries the company name (og:description is plain text, so the
- * company emphasis lives here): "{item_title} — {company_name}".
+ * og:description shown under the title. A leading blank line adds visual spacing
+ * between the (product-only) title and the company/location line — crawlers that
+ * honour newlines in og:description (WhatsApp, Telegram, …) render the gap.
  */
+function buildOgDescription(share: PublicShare | null): string {
+  return `\n${buildDescription(share)}`;
+}
+
+/** og:title is the product name only — the company appears below in the description. */
 function buildTitle(share: PublicShare | null): string {
-  const title = share?.title ?? 'Shared item on MyStokk';
-  return share?.shared_by_company ? `${title} — ${share.shared_by_company}` : title;
+  return share?.title ?? 'Shared item on MyStokk';
 }
 
 /** No product photo on the item → branded placeholder card. */
@@ -133,6 +138,8 @@ function resolveOgImage(share: PublicShare | null): string {
 function renderOgHtml(share: PublicShare | null, canonical: string, imageUrl: string): string {
   const title = escapeHtml(buildTitle(share));
   const description = escapeHtml(buildDescription(share));
+  // Spaced variant for the social preview (leading blank line under the title).
+  const ogDescription = escapeHtml(buildOgDescription(share));
   const image = escapeHtml(imageUrl);
   const url = escapeHtml(canonical);
 
@@ -145,7 +152,7 @@ function renderOgHtml(share: PublicShare | null, canonical: string, imageUrl: st
 <meta name="description" content="${description}" />
 <meta property="og:type" content="website" />
 <meta property="og:title" content="${title}" />
-<meta property="og:description" content="${description}" />
+<meta property="og:description" content="${ogDescription}" />
 <meta property="og:image" content="${image}" />
 <meta property="og:image:width" content="600" />
 <meta property="og:image:height" content="600" />
@@ -153,7 +160,7 @@ function renderOgHtml(share: PublicShare | null, canonical: string, imageUrl: st
 <meta property="og:site_name" content="MyStokk" />
 <meta name="twitter:card" content="summary" />
 <meta name="twitter:title" content="${title}" />
-<meta name="twitter:description" content="${description}" />
+<meta name="twitter:description" content="${ogDescription}" />
 <meta name="twitter:image" content="${image}" />
 <link rel="canonical" href="${url}" />
 <!-- Meta refresh as fallback for humans who land here -->
