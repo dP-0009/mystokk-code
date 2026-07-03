@@ -21,5 +21,7 @@ export default async function handler(req: ShareReq, res: ShareRes): Promise<voi
     redirectHome(res);
     return;
   }
-  await respondForToken(req, res, token);
+  // Not cacheable: humans and bots share this URL, and Vercel's CDN doesn't vary
+  // on User-Agent — caching the bot OG page would serve it to humans too.
+  await respondForToken(req, res, token, false);
 }

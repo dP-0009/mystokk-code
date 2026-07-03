@@ -184,19 +184,31 @@ function renderOgHtml(share: PublicShare | null, canonical: string, imageUrl: st
 /**
  * Full unfurl response for a KNOWN token: bot → OG HTML, human → 302 to the SPA
  * share landing. `token` must be non-empty (wrappers handle the missing case).
+ *
+ * `cacheable` controls the bot HTML's Cache-Control. It MUST be false for any
+ * URL that both bots AND humans hit (e.g. /s/:code): Vercel's CDN keys only on
+ * the URL (not User-Agent), so a cached 200 OG page would otherwise be served
+ * to humans instead of their 302. When only bots reach the URL (/api/share via
+ * the UA-conditional rewrite), caching is safe and worthwhile.
  */
-export async function respondForToken(req: ShareReq, res: ShareRes, token: string): Promise<void> {
+export async function respondForToken(
+  req: ShareReq,
+  res: ShareRes,
+  token: string,
+  cacheable = true,
+): Promise<void> {
   const ua = String(req.headers['user-agent'] ?? '').toLowerCase();
   const isBot = BOT_KEYWORDS.some((keyword) => ua.includes(keyword));
   const isHead = (req.method ?? 'GET').toUpperCase() === 'HEAD';
   const humanUrl = `${APP_BASE}/share/${encodeURIComponent(token)}`;
+  const botCache = cacheable ? 'public, max-age=86400' : 'no-store';
 
   // Crawlers issue a HEAD before the GET — mirror the GET's status/headers, no body.
   if (isHead) {
     if (isBot) {
       res.statusCode = 200;
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      res.setHeader('Cache-Control', 'public, max-age=86400');
+      res.setHeader('Cache-Control', botCache);
     } else {
       res.statusCode = 302;
       res.setHeader('Location', humanUrl);
@@ -218,7 +230,7 @@ export async function respondForToken(req: ShareReq, res: ShareRes, token: strin
   const imageUrl = resolveOgImage(share);
   res.statusCode = 200;
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.setHeader('Cache-Control', botCache);
   res.end(renderOgHtml(share, humanUrl, imageUrl));
 }
 
