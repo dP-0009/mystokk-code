@@ -185,25 +185,28 @@ export function SettingsScreen({ navigation: _navigation }: Props): React.JSX.El
           <CompanyProfileForm key={`${focusNonce}-${profileFingerprint(vendor)}`} vendor={vendor} />
         )}
 
-        {/* Push Notifications */}
-        <Text style={styles.sectionTitle}>Push Notifications</Text>
-        <View style={styles.nbBox}>
-          <View style={styles.nbText}>
-            <Text style={styles.nbTitle}>Push Notifications</Text>
-            <Text style={styles.nbSub}>Get instant alerts for reservations and messages</Text>
-            <Text style={styles.nbHint}>Enable to never miss a reservation request</Text>
-          </View>
-          <Pressable
-            style={[styles.btnAccent, pushEnabled ? styles.btnAccentOn : null, pushBusy ? styles.btnAccentBusy : null]}
-            onPress={() => void togglePush()}
-            disabled={pushBusy}
-            testID="settings-enable-push"
-          >
-            <Text style={styles.btnAccentText}>
-              {pushEnabled ? 'Notifications On' : 'Enable Notifications'}
-            </Text>
-          </Pressable>
-        </View>
+        {/* Push Notifications — hidden once enabled (via this button or the
+            Settings → Notification Preferences toggle, same shared state). */}
+        {!pushEnabled ? (
+          <>
+            <Text style={styles.sectionTitle}>Push Notifications</Text>
+            <View style={styles.nbBox}>
+              <View style={styles.nbText}>
+                <Text style={styles.nbTitle}>Push Notifications</Text>
+                <Text style={styles.nbSub}>Get instant alerts for reservations and messages</Text>
+                <Text style={styles.nbHint}>Enable to never miss a reservation request</Text>
+              </View>
+              <Pressable
+                style={[styles.btnAccent, pushBusy ? styles.btnAccentBusy : null]}
+                onPress={() => void togglePush()}
+                disabled={pushBusy}
+                testID="settings-enable-push"
+              >
+                <Text style={styles.btnAccentText}>Enable Notifications</Text>
+              </Pressable>
+            </View>
+          </>
+        ) : null}
 
         {/* Account security (preserved) */}
         <View style={styles.securityRow}>

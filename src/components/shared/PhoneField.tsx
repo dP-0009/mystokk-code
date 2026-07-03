@@ -12,46 +12,62 @@ import { colors } from '../../theme/tokens';
 import { DIAL_OPTIONS, dialFromOption, dialForCountry, splitPhone } from '../../constants/countries';
 import { webOnly } from '../layout/web';
 
-interface PhoneFieldProps<T extends FieldValues> {
-  control: Control<T>;
-  name: Path<T>;
+/** Default dial code for empty phone fields (MyStokk's primary market, UAE). */
+const DEFAULT_DIAL = '+971';
+
+/* ------------------------------------------------------------------ *
+ * PhoneInput — controlled (value / onChange). Used directly by plain-state
+ * forms, and wrapped by PhoneField for react-hook-form.
+ * ------------------------------------------------------------------ */
+
+export interface PhoneInputProps {
+  value: string;
+  onChange: (v: string) => void;
   label: string;
+  required?: boolean;
   /** When this country name changes, the dial code auto-fills to match it. */
   countryName?: string | null;
-  rules?: RegisterOptions<T, Path<T>>;
   placeholder?: string;
+  error?: string;
   testID?: string;
 }
 
 /**
- * Phone input with a SEPARATE country-code picker (all world dial codes) and a
- * number box. The stored value is the combined E.164 string ("+971526630872").
+ * Phone input with a SEPARATE country-code picker (all world dial codes, in an
+ * anchored searchable dropdown) and a number box. The value is the combined
+ * E.164 string ("+971526630872"), empty when there's no number.
  *
- *  • Tapping the code opens an anchored dropdown with a search bar.
  *  • Leading zeros typed in the number box are stripped automatically.
  *  • Picking a Country elsewhere in the form auto-fills the dial code here.
  */
-export function PhoneField<T extends FieldValues>({
-  control,
-  name,
+export function PhoneInput({
+  value,
+  onChange,
   label,
+  required = false,
   countryName,
-  rules,
   placeholder = 'Phone number',
+  error,
   testID,
-}: PhoneFieldProps<T>): React.JSX.Element {
-  const { field, fieldState } = useController({ control, name, rules });
-  const error = fieldState.error;
-
-  // Local state is the UI source of truth so the dial survives an empty number.
-  const initial = splitPhone(field.value as string | undefined);
-  const [dial, setDial] = useState(initial.dial);
+}: PhoneInputProps): React.JSX.Element {
+  const initial = splitPhone(value);
+  const [dial, setDial] = useState(initial.dial || DEFAULT_DIAL);
   const [number, setNumber] = useState(initial.number);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
 
-  // Combined value stored in the form (empty when there's no number).
-  const push = (d: string, n: string): void => field.onChange(n ? `${d}${n}` : '');
+  const combine = (d: string, n: string): string => (n ? `${d}${n}` : '');
+  const push = (d: string, n: string): void => onChange(combine(d, n));
+
+  // Re-sync from an EXTERNAL value change (form reset / initial load); our own
+  // edits already keep value === combine(dial, number), so this is a no-op then.
+  useEffect(() => {
+    if (value === combine(dial, number)) return;
+    const p = splitPhone(value);
+    setDial(p.dial || DEFAULT_DIAL);
+    setNumber(p.number);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
 
   const onNumber = (raw: string): void => {
     const n = raw.replace(/[^\d]/g, '').replace(/^0+/, ''); // digits only, no leading zeros
@@ -92,7 +108,7 @@ export function PhoneField<T extends FieldValues>({
     <View style={[styles.group, open ? styles.groupOpen : null]}>
       <Text style={styles.label}>
         {label}
-        {rules?.required ? <Text style={styles.required}> *</Text> : null}
+        {required ? <Text style={styles.required}> *</Text> : null}
       </Text>
 
       <View style={styles.row}>
@@ -100,7 +116,7 @@ export function PhoneField<T extends FieldValues>({
           <Pressable
             style={[styles.codeBtn, error ? styles.errBorder : null, open ? styles.codeBtnOpen : null]}
             onPress={() => setOpen((o) => !o)}
-            testID={testID ? `${testID}-code` : `phone-code-${String(name)}`}
+            testID={testID ? `${testID}-code` : 'phone-code'}
           >
             <Text style={dial ? styles.codeText : styles.codePlaceholder}>{dial || 'Code'}</Text>
             <Text style={styles.chevron}>{open ? '▴' : '▾'}</Text>
@@ -155,13 +171,51 @@ export function PhoneField<T extends FieldValues>({
             placeholderTextColor={colors.slate400}
             keyboardType="phone-pad"
             autoCorrect={false}
-            testID={testID ?? `phone-${String(name)}`}
+            testID={testID ?? 'phone-number'}
           />
         </View>
       </View>
 
-      {error ? <Text style={styles.error}>{error.message}</Text> : null}
+      {error ? <Text style={styles.error}>{error}</Text> : null}
     </View>
+  );
+}
+
+/* ------------------------------------------------------------------ *
+ * PhoneField — react-hook-form Controller wrapper around PhoneInput.
+ * ------------------------------------------------------------------ */
+
+interface PhoneFieldProps<T extends FieldValues> {
+  control: Control<T>;
+  name: Path<T>;
+  label: string;
+  countryName?: string | null;
+  rules?: RegisterOptions<T, Path<T>>;
+  placeholder?: string;
+  testID?: string;
+}
+
+export function PhoneField<T extends FieldValues>({
+  control,
+  name,
+  label,
+  countryName,
+  rules,
+  placeholder,
+  testID,
+}: PhoneFieldProps<T>): React.JSX.Element {
+  const { field, fieldState } = useController({ control, name, rules });
+  return (
+    <PhoneInput
+      value={(field.value as string | undefined) ?? ''}
+      onChange={field.onChange}
+      label={label}
+      required={Boolean(rules?.required)}
+      countryName={countryName}
+      placeholder={placeholder}
+      error={fieldState.error?.message}
+      testID={testID ?? `phone-${String(name)}`}
+    />
   );
 }
 

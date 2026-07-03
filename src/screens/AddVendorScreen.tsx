@@ -5,6 +5,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation';
 import { ScreenHeader } from '../components/shared/ScreenHeader';
 import { FormTextField } from '../components/shared/FormTextField';
+import { PhoneField } from '../components/shared/PhoneField';
 import { SelectField } from '../components/shared/SelectField';
 import { AppButton } from '../components/shared/AppButton';
 import { addManualVendor } from '../services/supabase/network';
@@ -29,7 +30,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export function AddVendorScreen({ navigation }: Props): React.JSX.Element {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { control, handleSubmit } = useForm<FormShape>({
+  const { control, handleSubmit, watch } = useForm<FormShape>({
     defaultValues: {
       companyName: '',
       contactPerson: '',
@@ -41,6 +42,7 @@ export function AddVendorScreen({ navigation }: Props): React.JSX.Element {
       groupName: '',
     },
   });
+  const country = watch('country');
 
   const submit = handleSubmit(async (v) => {
     setError(null);
@@ -99,7 +101,7 @@ export function AddVendorScreen({ navigation }: Props): React.JSX.Element {
             pattern: { value: EMAIL_RE, message: 'Enter a valid email' },
           }}
         />
-        <FormTextField control={control} name="mobileNumber" label="Mobile Number" placeholder="+971 50 000 0000" keyboardType="phone-pad" />
+        <PhoneField control={control} name="mobileNumber" label="Mobile Number" countryName={country} placeholder="Phone number" />
         <SelectField control={control} name="industry" label="Industry" placeholder="Select industry" options={INDUSTRIES} />
         <SelectField control={control} name="country" label="Country" placeholder="Select country" options={COUNTRIES} />
         <FormTextField control={control} name="city" label="City" placeholder="e.g. Dubai" autoCapitalize="words" />

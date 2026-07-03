@@ -13,6 +13,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { addManualVendor } from '../../services/supabase/network';
 import { COUNTRIES, INDUSTRIES } from '../../constants/industries';
+import { PhoneInput } from '../shared/PhoneField';
 import { webOnly } from '../layout/web';
 import { colors, radius, shadows } from '../../theme/tokens';
 import { toast } from '../../stores/toast';
@@ -24,9 +25,6 @@ interface AddVendorModalProps {
   onAdded?: () => void;
 }
 
-/** Dial codes for the Tel / Mobile country-code selects (mirror `.fse`). */
-const DIAL_CODES = ['+971', '+1', '+91', '+44', '+86', '+966', '+974', '+965', '+973', '+968', '+92', '+880', '+65', '+60', '+90', '+20'] as const;
-
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 interface FormState {
@@ -34,10 +32,8 @@ interface FormState {
   contactPerson: string;
   email: string;
   industry: string;
-  telCode: string;
-  telNumber: string;
-  mobileCode: string;
-  mobileNumber: string;
+  telNumber: string; // combined "+<code><number>"
+  mobileNumber: string; // combined "+<code><number>"
   city: string;
   country: string;
   address: string;
@@ -49,9 +45,7 @@ const EMPTY: FormState = {
   contactPerson: '',
   email: '',
   industry: '',
-  telCode: '+1',
   telNumber: '',
-  mobileCode: '+971',
   mobileNumber: '',
   city: '',
   country: '',
@@ -91,7 +85,7 @@ export function AddVendorModal({ visible, onClose, onAdded }: AddVendorModalProp
         companyName: form.companyName,
         contactPerson: form.contactPerson,
         email: form.email.trim(),
-        mobileNumber: hasMobile ? `${form.mobileCode} ${form.mobileNumber.trim()}` : undefined,
+        mobileNumber: hasMobile ? form.mobileNumber.trim() : undefined,
         industry: form.industry || undefined,
         country: form.country || undefined,
         city: form.city || undefined,
@@ -170,40 +164,23 @@ export function AddVendorModal({ visible, onClose, onAdded }: AddVendorModalProp
               <SelectBox value={form.industry} placeholder="Select industry" options={INDUSTRIES} onChange={set('industry')} />
             </Field>
 
-            {/* Tel */}
-            <View style={styles.fieldRow}>
-              <Field label="Code (Tel)" style={styles.codeCol}>
-                <SelectBox value={form.telCode} options={DIAL_CODES} onChange={set('telCode')} compact />
-              </Field>
-              <Field label="Tel Number" style={styles.flex1}>
-                <TextInput
-                  style={styles.input}
-                  value={form.telNumber}
-                  onChangeText={set('telNumber')}
-                  placeholder="1234567890"
-                  placeholderTextColor={colors.textMuted}
-                  keyboardType="phone-pad"
-                />
-              </Field>
-            </View>
-
-            {/* Mobile */}
-            <View style={styles.fieldRow}>
-              <Field label="Code (Mobile)" style={styles.codeCol}>
-                <SelectBox value={form.mobileCode} options={DIAL_CODES} onChange={set('mobileCode')} compact />
-              </Field>
-              <Field label="Mobile" required style={styles.flex1}>
-                <TextInput
-                  style={styles.input}
-                  value={form.mobileNumber}
-                  onChangeText={set('mobileNumber')}
-                  placeholder="9876543210"
-                  placeholderTextColor={colors.textMuted}
-                  keyboardType="phone-pad"
-                  testID="add-vendor-mobile"
-                />
-              </Field>
-            </View>
+            {/* Mobile (required) + Tel — full country-code pickers */}
+            <PhoneInput
+              label="Mobile"
+              required
+              value={form.mobileNumber}
+              onChange={set('mobileNumber')}
+              countryName={form.country}
+              placeholder="Mobile number"
+              testID="add-vendor-mobile"
+            />
+            <PhoneInput
+              label="Tel Number"
+              value={form.telNumber}
+              onChange={set('telNumber')}
+              countryName={form.country}
+              placeholder="Telephone"
+            />
 
             {/* City / Country */}
             <View style={styles.fieldRow}>
