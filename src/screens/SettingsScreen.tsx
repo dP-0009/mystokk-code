@@ -21,6 +21,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation';
 import { MainLayout, PageBody, PageHeader } from '../components/layout';
 import { FormTextField } from '../components/shared/FormTextField';
+import { PhoneField } from '../components/shared/PhoneField';
 import { SelectField } from '../components/shared/SelectField';
 import { DropdownSelectField } from '../components/shared/DropdownSelectField';
 import { AppButton } from '../components/shared/AppButton';
@@ -326,6 +327,8 @@ function CompanyProfileForm({ vendor }: { vendor: VendorProfile }): React.JSX.El
   // Categories shown depend on the chosen industry.
   const industry = watch('industry');
   const categoryOptions = SETTINGS_INDUSTRY_CATEGORIES[industry] ?? [];
+  // Selected country drives the phone dial-code auto-fill.
+  const country = watch('country');
 
   // When the user CHANGES industry, drop any selected categories that no longer
   // belong to it. Skip the initial render so saved categories aren't wiped.
@@ -470,26 +473,21 @@ function CompanyProfileForm({ vendor }: { vendor: VendorProfile }): React.JSX.El
         </View>
       </View>
 
-      <View style={styles.fieldRow}>
-        <View style={styles.flex1}>
-          <FormTextField
-            control={control}
-            name="mobileNumber"
-            label="Mobile/WhatsApp *"
-            keyboardType="phone-pad"
-            rules={{ required: 'Mobile is required' }}
-          />
-        </View>
-        <View style={styles.flex1}>
-          <FormTextField
-            control={control}
-            name="telNumber"
-            label="Tel Number"
-            placeholder="Optional"
-            keyboardType="phone-pad"
-          />
-        </View>
-      </View>
+      <PhoneField
+        control={control}
+        name="mobileNumber"
+        label="Mobile/WhatsApp *"
+        countryName={country}
+        placeholder="Phone number"
+        rules={{ required: 'Mobile is required' }}
+      />
+      <FormTextField
+        control={control}
+        name="telNumber"
+        label="Tel Number"
+        placeholder="Optional"
+        keyboardType="phone-pad"
+      />
 
       <FormTextField control={control} name="address" label="Address" autoCapitalize="words" />
       <FormTextField control={control} name="description" label="Description" autoCapitalize="sentences" multiline />

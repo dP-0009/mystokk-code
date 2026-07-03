@@ -237,27 +237,29 @@ export function AddItemForm({
           </View>
         </View>
 
-        {/* Optional taxonomy — same Industry → Category dependency as the profile. */}
-        <View style={styles.z55}>
-          <Field label="Industry (optional)">
-            <Select
-              value={industry}
-              onChange={onIndustryChange}
-              options={SETTINGS_INDUSTRIES}
-              placeholder="Select industry (optional)"
-            />
-          </Field>
-        </View>
-        <View style={styles.z50}>
-          <Field label="Category (optional)">
-            <Select
-              value={category}
-              onChange={setCategory}
-              options={categoryOptions}
-              placeholder={industry ? 'Select category (optional)' : 'Select an industry first'}
-              disabled={!industry}
-            />
-          </Field>
+        {/* Optional taxonomy — Industry + Category side by side (same dependency as the profile). */}
+        <View style={[styles.row, styles.z55]}>
+          <View style={[styles.col, styles.colSelect]}>
+            <Field label="Industry (optional)">
+              <Select
+                value={industry}
+                onChange={onIndustryChange}
+                options={SETTINGS_INDUSTRIES}
+                placeholder="Select industry (optional)"
+              />
+            </Field>
+          </View>
+          <View style={[styles.col, styles.colSelect]}>
+            <Field label="Category (optional)">
+              <Select
+                value={category}
+                onChange={setCategory}
+                options={categoryOptions}
+                placeholder={industry ? 'Select category (optional)' : 'Select an industry first'}
+                disabled={!industry}
+              />
+            </Field>
+          </View>
         </View>
 
         <View style={[styles.row, styles.z45]}>

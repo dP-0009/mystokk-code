@@ -15,6 +15,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation';
 import { ScreenHeader } from '../components/shared/ScreenHeader';
 import { FormTextField } from '../components/shared/FormTextField';
+import { PhoneField } from '../components/shared/PhoneField';
 import { SelectField } from '../components/shared/SelectField';
 import { AppButton } from '../components/shared/AppButton';
 import { onboardVendor } from '../services/supabase/vendor';
@@ -47,7 +48,7 @@ export function OnboardingScreen(_props: Props): React.JSX.Element {
   const userId = useAuthStore((s) => s.session?.user.id);
   const refreshVendor = useAuthStore((s) => s.refreshVendor);
 
-  const { control, handleSubmit, trigger } = useForm<OnboardingForm>({
+  const { control, handleSubmit, trigger, watch } = useForm<OnboardingForm>({
     defaultValues: {
       companyName: '',
       contactPerson: '',
@@ -67,6 +68,8 @@ export function OnboardingScreen(_props: Props): React.JSX.Element {
   const [logo, setLogo] = useState<UploadFile | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // Selected country drives the phone dial-code auto-fill.
+  const country = watch('country');
 
   const onNext = async (): Promise<void> => {
     const fields = step === 1 ? STEP1_FIELDS : STEP2_FIELDS;
@@ -226,12 +229,12 @@ export function OnboardingScreen(_props: Props): React.JSX.Element {
                 placeholder="Street address, building, area"
                 autoCapitalize="words"
               />
-              <FormTextField
+              <PhoneField
                 control={control}
                 name="mobileNumber"
                 label="Mobile Number *"
-                placeholder="+971 50 000 0000"
-                keyboardType="phone-pad"
+                countryName={country}
+                placeholder="50 000 0000"
                 rules={{ required: 'Mobile number is required' }}
               />
               <View style={styles.telRow}>
