@@ -47,6 +47,7 @@ yarn-error.*
 # secrets / credentials — never commit
 client_secret*.json
 *.apps.googleusercontent.com.json
+mystokk-release-key.jks
 
 # logs
 *.log
