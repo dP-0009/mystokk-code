@@ -27,6 +27,15 @@ export function shareUrl(token: string): string {
   return `${SHARE_BASE}/api/share/${token}`;
 }
 
+/**
+ * Compact share link — `${SHARE_BASE}/s/<code>`. The /s endpoint resolves the
+ * code to its token and serves the same rich OG preview (bots) / SPA redirect
+ * (humans) as `shareUrl`, just far shorter for emails and messages.
+ */
+export function shortUrl(code: string): string {
+  return `${SHARE_BASE}/s/${code}`;
+}
+
 export interface PublicShare {
   token: string;
   chain_depth: number;
@@ -142,8 +151,8 @@ export async function shareSingleEmail(inventoryId: string, email: string): Prom
   return { matched: res.matched };
 }
 
-/** Create a public-forward link (recipient_id = null) and return its token + URL. */
-export async function createPublicLink(inventoryId: string): Promise<{ token: string; url: string }> {
+/** Create a public-forward link (recipient_id = null) and return its short URL. */
+export async function createPublicLink(inventoryId: string): Promise<{ url: string }> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -159,11 +168,11 @@ export async function createPublicLink(inventoryId: string): Promise<{ token: st
       parent_share_id: null,
       chain_depth: 0,
     })
-    .select('token')
+    .select('short_code')
     .single();
   if (error || !data) throw error ?? new Error('Could not create link.');
-  const token = (data as { token: string }).token;
-  return { token, url: shareUrl(token) };
+  const { short_code } = data as { short_code: string };
+  return { url: shortUrl(short_code) };
 }
 
 /** Login-free preview of a share by token (anon-safe; never exposes the owner). */
@@ -232,7 +241,7 @@ export async function forwardByEmail(ctx: ForwardContext, email: string): Promis
 }
 
 /** Create a public forward link carrying the forwarder's price/remark. */
-export async function createForwardLink(ctx: ForwardContext): Promise<{ token: string; url: string }> {
+export async function createForwardLink(ctx: ForwardContext): Promise<{ url: string }> {
   const { data, error } = await supabase.rpc('create_forward_link', {
     p_parent_share_id: ctx.parentShareId,
     p_forward_price: ctx.price,
@@ -240,8 +249,9 @@ export async function createForwardLink(ctx: ForwardContext): Promise<{ token: s
     p_forward_remark: ctx.remark,
   });
   if (error) throw error;
-  const token = data as string;
-  return { token, url: shareUrl(token) };
+  // The RPC now returns the share's short_code (see migration 047).
+  const code = data as string;
+  return { url: shortUrl(code) };
 }
 
 /** Signed-in resolution: claims a public link (recipient → me) or flags ownership. */

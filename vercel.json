@@ -18,6 +18,10 @@
       "destination": "/api/public-files?path=$1"
     },
     {
+      "source": "/s/:code",
+      "destination": "/api/s/:code"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
