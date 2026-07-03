@@ -118,12 +118,19 @@ function escapeHtml(value: string): string {
     .replace(/'/g, '&#39;');
 }
 
-/** "{company} • {city} • {country} • Powered by MyStokk" — parts omitted when absent. Never includes price. */
+/**
+ * Two lines under the product title:
+ *   Shared by {company}
+ *   {city}, {country}
+ * Parts omitted when absent. Never includes price.
+ */
 function buildDescription(share: PublicShare | null): string {
   if (!share) return 'View this shared item on MyStokk.';
-  return [share.shared_by_company, share.shared_by_city, share.shared_by_country, 'Powered by MyStokk']
-    .filter(Boolean)
-    .join(' • ');
+  const location = [share.shared_by_city, share.shared_by_country].filter(Boolean).join(', ');
+  const lines: string[] = [];
+  lines.push(share.shared_by_company ? `Shared by ${share.shared_by_company}` : 'Shared on MyStokk');
+  if (location) lines.push(location);
+  return lines.join('\n');
 }
 
 /** Spaced variant (leading blank line under the title) for the social preview. */

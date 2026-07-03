@@ -66,25 +66,21 @@ function shareable(v: NetworkVendor): boolean {
  * "\r\n" is honored as a real line break.
  */
 function buildEmailBody(
-  company: string | null | undefined,
   card: ShareCard | undefined,
   link: string,
   city: string | null | undefined,
   country: string | null | undefined,
 ): string {
   const location = [city, country].filter(Boolean).join(', ');
-  const seller = company ?? 'A MyStokk vendor';
 
-  const lines: string[] = [];
-  if (card?.title) lines.push(card.title); // title first (own line)
+  const lines: string[] = ['We are pleased to share:', ''];
+  if (card?.title) lines.push(card.title); // title on its own line
   lines.push('');
   if (card) lines.push(`Quantity: ${card.quantityAvailable}/${card.quantityTotal} ${card.unit}`);
   if (location) lines.push(`Location: ${location}`);
   lines.push('');
   lines.push('View details:');
   lines.push(link);
-  lines.push('');
-  lines.push(`Shared by ${seller} via MyStokk`);
 
   return lines.join('\r\n');
 }
@@ -200,7 +196,7 @@ export function ShareModal({ visible, inventoryId, onClose, onShared, forward, c
       me?.company_name && card?.title
         ? `${me.company_name} shared "${card.title}" with you`
         : card?.title ?? 'Shared item on MyStokk';
-    const body = buildEmailBody(me?.company_name, card, link, me?.city, me?.country);
+    const body = buildEmailBody(card, link, me?.city, me?.country);
     void Linking.openURL(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
   };
   const onCopy = async (): Promise<void> => {
