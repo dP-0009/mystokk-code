@@ -187,11 +187,7 @@ export interface ForwardContext {
 }
 
 /** Forward a received share to selected network vendors (+ email invites). */
-export async function forwardToNetwork(
-  ctx: ForwardContext,
-  vendors: NetworkVendor[],
-  inventoryId?: string,
-): Promise<ShareResult> {
+export async function forwardToNetwork(ctx: ForwardContext, vendors: NetworkVendor[]): Promise<ShareResult> {
   const registeredIds = vendors.map((v) => v.vendor_id).filter((id): id is string => Boolean(id));
 
   let created = 0;
@@ -213,7 +209,7 @@ export async function forwardToNetwork(
   let invited = 0;
   for (const email of inviteEmails) {
     try {
-      await forwardByEmail(ctx, email, inventoryId);
+      await forwardByEmail(ctx, email);
       invited += 1;
     } catch {
       // skip a failed invite
@@ -222,17 +218,8 @@ export async function forwardToNetwork(
   return { created, invited };
 }
 
-/**
- * Forward a received share to a single email address. Also fires the branded
- * "share_received" notification email (same rich card a direct share sends), so
- * emailing a contact never falls back to a plain client-composed message. The
- * email is best-effort and needs the item's `inventoryId` to build the card.
- */
-export async function forwardByEmail(
-  ctx: ForwardContext,
-  email: string,
-  inventoryId?: string,
-): Promise<{ matched: boolean }> {
+/** Forward a received share to a single email address. */
+export async function forwardByEmail(ctx: ForwardContext, email: string): Promise<{ matched: boolean }> {
   const { data, error } = await supabase.rpc('forward_by_email', {
     p_parent_share_id: ctx.parentShareId,
     p_email: email,
@@ -241,19 +228,7 @@ export async function forwardByEmail(
     p_forward_remark: ctx.remark,
   });
   if (error) throw error;
-  const res = data as { matched: boolean; token: string | null };
-
-  // Branded email via the same Edge Function path as a direct share (non-critical).
-  try {
-    if (inventoryId && res.token) {
-      await supabase.functions.invoke('send-email', {
-        body: { type: 'share_received', inventoryId, token: res.token, email },
-      });
-    }
-  } catch {
-    // notification email is non-critical
-  }
-  return { matched: res.matched };
+  return { matched: (data as { matched: boolean }).matched };
 }
 
 /** Create a public forward link carrying the forwarder's price/remark. */

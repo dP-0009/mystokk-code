@@ -14,12 +14,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { getNetwork, getNetworkFacets, type NetworkVendor } from '../../services/supabase/network';
+import { getMyVendor } from '../../services/supabase/vendor';
 import {
   createForwardLink,
   createPublicLink,
-  forwardByEmail,
   forwardToNetwork,
-  shareSingleEmail,
   shareToNetwork,
   type ForwardContext,
 } from '../../services/supabase/shares';
@@ -57,8 +56,34 @@ function shareable(v: NetworkVendor): boolean {
   return Boolean(v.vendor_id) || Boolean(v.email);
 }
 
-/** Basic email shape check for the New Contact send-by-email field. */
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+/**
+ * Prefilled body for the seller's mail client (opened via mailto:). Plain text
+ * only — mailto bodies can't carry HTML/links, so the URL is presented cleanly
+ * under a "View details:" label (mail apps auto-link the raw URL).
+ */
+function buildEmailBody(
+  company: string | null | undefined,
+  card: ShareCard | undefined,
+  link: string,
+  city: string | null | undefined,
+  country: string | null | undefined,
+): string {
+  const location = [city, country].filter(Boolean).join(', ');
+  const seller = company ?? 'We';
+
+  const lines: string[] = [
+    'Hello,',
+    '',
+    `${seller} would like to share the following item with you on MyStokk:`,
+    '',
+  ];
+  if (card?.title) lines.push(card.title);
+  if (card) lines.push(`Quantity: ${card.quantityAvailable}/${card.quantityTotal} ${card.unit}`);
+  if (location) lines.push(`Location: ${location}`);
+  lines.push('', 'View details:', link, '', '— Sent via MyStokk');
+
+  return lines.join('\n');
+}
 
 export function ShareModal({ visible, inventoryId, onClose, onShared, forward, card }: ShareModalProps): React.JSX.Element {
   const queryClient = useQueryClient();
@@ -72,8 +97,6 @@ export function ShareModal({ visible, inventoryId, onClose, onShared, forward, c
   // New Contact tab state — a public/forward link, lazily created on first visit.
   const [link, setLink] = useState<string | null>(null);
   const [linkLoading, setLinkLoading] = useState(false);
-  // New Contact → send the branded email server-side (uniform with network shares).
-  const [email, setEmail] = useState('');
 
   const networkQuery = useQuery({ queryKey: ['network'], queryFn: getNetwork, enabled: visible, staleTime: 30_000 });
   const network = networkQuery.data ?? [];
@@ -81,6 +104,10 @@ export function ShareModal({ visible, inventoryId, onClose, onShared, forward, c
   // Distinct Industry / Country / Group values for the filter dropdowns.
   const facetsQuery = useQuery({ queryKey: ['network', 'facets'], queryFn: getNetworkFacets, enabled: visible, staleTime: 60_000 });
   const facets = facetsQuery.data ?? { industries: [], countries: [], groups: [] };
+
+  // The sender's own identity for the WhatsApp/Email message (B5).
+  const meQuery = useQuery({ queryKey: ['myVendor'], queryFn: getMyVendor, enabled: visible, staleTime: 5 * 60_000 });
+  const me = meQuery.data;
 
   const filtered = useMemo(() => {
     let rows = network;
@@ -103,7 +130,6 @@ export function ShareModal({ visible, inventoryId, onClose, onShared, forward, c
     setSelected({});
     setFacet({});
     setLink(null);
-    setEmail('');
   };
   const close = (): void => {
     reset();
@@ -134,8 +160,7 @@ export function ShareModal({ visible, inventoryId, onClose, onShared, forward, c
   };
 
   const networkMutation = useMutation({
-    mutationFn: () =>
-      forward ? forwardToNetwork(forward, selectedList, inventoryId) : shareToNetwork(inventoryId, selectedList),
+    mutationFn: () => (forward ? forwardToNetwork(forward, selectedList) : shareToNetwork(inventoryId, selectedList)),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['inventoryDetail', inventoryId] });
       void queryClient.invalidateQueries({ queryKey: ['inventory'] });
@@ -144,24 +169,6 @@ export function ShareModal({ visible, inventoryId, onClose, onShared, forward, c
       close();
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : 'Could not share.'),
-  });
-
-  // New Contact → send the SAME branded MyStokk email a network share sends
-  // (server-side via Resend), instead of opening the user's mail client.
-  const emailValid = EMAIL_RE.test(email.trim());
-  const emailMutation = useMutation({
-    mutationFn: () => {
-      const addr = email.trim();
-      return forward ? forwardByEmail(forward, addr, inventoryId) : shareSingleEmail(inventoryId, addr);
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['inventoryDetail', inventoryId] });
-      void queryClient.invalidateQueries({ queryKey: ['inventory'] });
-      onShared?.();
-      toast.success('Email sent!');
-      setEmail('');
-    },
-    onError: (e) => toast.error(e instanceof Error ? e.message : 'Could not send email.'),
   });
 
   // Create the public/forward link the first time the New Contact tab opens.
@@ -182,6 +189,15 @@ export function ShareModal({ visible, inventoryId, onClose, onShared, forward, c
   const onWhatsApp = (): void => {
     if (!link) return;
     void Linking.openURL(`https://wa.me/?text=${encodeURIComponent(link)}`);
+  };
+  const onEmail = (): void => {
+    if (!link) return;
+    const subject =
+      me?.company_name && card?.title
+        ? `${me.company_name} shared "${card.title}" with you`
+        : card?.title ?? 'Shared item on MyStokk';
+    const body = buildEmailBody(me?.company_name, card, link, me?.city, me?.country);
+    void Linking.openURL(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
   };
   const onCopy = async (): Promise<void> => {
     if (!link) return;
@@ -253,12 +269,8 @@ export function ShareModal({ visible, inventoryId, onClose, onShared, forward, c
                 loading={linkLoading}
                 ready={Boolean(link)}
                 onWhatsApp={onWhatsApp}
+                onEmail={onEmail}
                 onCopy={() => void onCopy()}
-                email={email}
-                onEmailChange={setEmail}
-                emailValid={emailValid}
-                emailSending={emailMutation.isPending}
-                onEmailSend={() => emailMutation.mutate()}
               />
             )}
           </ScrollView>
@@ -486,25 +498,16 @@ function NewContactTab({
   loading,
   ready,
   onWhatsApp,
+  onEmail,
   onCopy,
-  email,
-  onEmailChange,
-  emailValid,
-  emailSending,
-  onEmailSend,
 }: {
   loading: boolean;
   ready: boolean;
   onWhatsApp: () => void;
+  onEmail: () => void;
   onCopy: () => void;
-  email: string;
-  onEmailChange: (v: string) => void;
-  emailValid: boolean;
-  emailSending: boolean;
-  onEmailSend: () => void;
 }): React.JSX.Element {
   const disabled = !ready;
-  const emailDisabled = !emailValid || emailSending;
   return (
     <View>
       <Text style={styles.subtitle}>Share directly with anyone outside your network.</Text>
@@ -526,38 +529,15 @@ function NewContactTab({
         <Text style={styles.smbWaText}>WhatsApp</Text>
       </Pressable>
 
-      {/* Email — sends the same branded MyStokk card the platform sends, to the
-          address entered here (not the user's own mail client). */}
-      <View style={styles.emailRow}>
-        <View style={styles.emailInputWrap}>
-          <Ionicons name="mail-outline" size={16} color={colors.textMuted} style={styles.emailIcon} />
-          <TextInput
-            style={styles.emailInput}
-            placeholder="Recipient email"
-            placeholderTextColor={colors.textMuted}
-            value={email}
-            onChangeText={onEmailChange}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            inputMode="email"
-            onSubmitEditing={() => !emailDisabled && onEmailSend()}
-            testID="share-new-email-input"
-          />
-        </View>
-        <Pressable
-          style={[styles.emailBtn, emailDisabled ? styles.btnDisabled : null]}
-          onPress={onEmailSend}
-          disabled={emailDisabled}
-          testID="share-new-email"
-        >
-          {emailSending ? (
-            <ActivityIndicator color="#FFFFFF" size="small" />
-          ) : (
-            <Text style={styles.emailBtnText}>Send</Text>
-          )}
-        </Pressable>
-      </View>
+      <Pressable
+        style={[styles.smb, disabled ? styles.btnDisabled : null]}
+        onPress={onEmail}
+        disabled={disabled}
+        testID="share-new-email"
+      >
+        <Ionicons name="mail-outline" size={18} color={colors.textPrimary} />
+        <Text style={styles.smbText}>Email</Text>
+      </Pressable>
 
       <Pressable
         style={[styles.smb, disabled ? styles.btnDisabled : null]}
@@ -570,8 +550,8 @@ function NewContactTab({
       </Pressable>
 
       <Text style={styles.infoNote}>
-        Emailed and shared links carry a rich MyStokk card (image, title, company). When someone views and signs
-        up, they're automatically added to your network.
+        Shared links include a rich card preview (image, title, company) on WhatsApp and social platforms. When
+        someone views and signs up, they're automatically added to your network.
       </Text>
     </View>
   );
@@ -654,34 +634,6 @@ const styles = StyleSheet.create({
   // `.smb.wa`
   smbWa: { backgroundColor: '#25D366', borderColor: '#25D366' },
   smbWaText: { fontSize: 14, fontWeight: '600', color: '#FFFFFF' },
-
-  // Email row — input + Send button (sends the branded email server-side).
-  emailRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
-  emailInputWrap: { flex: 1, justifyContent: 'center' },
-  emailIcon: { position: 'absolute', left: 12, zIndex: 1 },
-  emailInput: {
-    width: '100%',
-    paddingTop: 12,
-    paddingBottom: 12,
-    paddingLeft: 36,
-    paddingRight: 12,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    fontSize: 14,
-    color: colors.textPrimary,
-    backgroundColor: colors.bgWhite,
-  },
-  emailBtn: {
-    paddingVertical: 13,
-    paddingHorizontal: 20,
-    borderRadius: radius.md,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 76,
-  },
-  emailBtnText: { fontSize: 14, fontWeight: '600', color: '#FFFFFF' },
   infoNote: {
     fontSize: 11,
     color: colors.textMuted,
