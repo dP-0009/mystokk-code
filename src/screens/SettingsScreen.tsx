@@ -54,6 +54,7 @@ function profileFingerprint(v: VendorProfile): string {
     v.city,
     v.address,
     v.mobile_number,
+    v.tel_country_code,
     v.tel_number,
     v.description,
     v.logo_url,
@@ -319,7 +320,10 @@ function CompanyProfileForm({ vendor }: { vendor: VendorProfile }): React.JSX.El
       city: vendor.city ?? '',
       address: vendor.address ?? '',
       mobileNumber: vendor.mobile_number ?? '',
-      telNumber: vendor.tel_number ?? '',
+      // Combine the legacy split tel columns so PhoneField shows the dial code too.
+      telNumber: vendor.tel_country_code
+        ? `${vendor.tel_country_code}${vendor.tel_number ?? ''}`
+        : vendor.tel_number ?? '',
       description: vendor.description ?? '',
     },
   });
@@ -481,12 +485,12 @@ function CompanyProfileForm({ vendor }: { vendor: VendorProfile }): React.JSX.El
         placeholder="Phone number"
         rules={{ required: 'Mobile is required' }}
       />
-      <FormTextField
+      <PhoneField
         control={control}
         name="telNumber"
         label="Tel Number"
-        placeholder="Optional"
-        keyboardType="phone-pad"
+        countryName={country}
+        placeholder="Telephone (optional)"
       />
 
       <FormTextField control={control} name="address" label="Address" autoCapitalize="words" />

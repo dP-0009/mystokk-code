@@ -237,26 +237,13 @@ export function OnboardingScreen(_props: Props): React.JSX.Element {
                 placeholder="50 000 0000"
                 rules={{ required: 'Mobile number is required' }}
               />
-              <View style={styles.telRow}>
-                <View style={styles.telCode}>
-                  <FormTextField
-                    control={control}
-                    name="telCountryCode"
-                    label="Tel. Code"
-                    placeholder="+971"
-                    keyboardType="phone-pad"
-                  />
-                </View>
-                <View style={styles.telNumber}>
-                  <FormTextField
-                    control={control}
-                    name="telNumber"
-                    label="Telephone (optional)"
-                    placeholder="4 000 0000"
-                    keyboardType="phone-pad"
-                  />
-                </View>
-              </View>
+              <PhoneField
+                control={control}
+                name="telNumber"
+                label="Telephone (optional)"
+                countryName={country}
+                placeholder="Telephone (optional)"
+              />
             </>
           ) : null}
 
