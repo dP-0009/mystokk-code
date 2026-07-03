@@ -119,9 +119,10 @@ function escapeHtml(value: string): string {
 }
 
 /**
- * Two lines under the product title:
+ * Lines under the product title:
  *   Shared by {company}
  *   {city}, {country}
+ *   Powered by MyStokk
  * Parts omitted when absent. Never includes price.
  */
 function buildDescription(share: PublicShare | null): string {
@@ -130,6 +131,7 @@ function buildDescription(share: PublicShare | null): string {
   const lines: string[] = [];
   lines.push(share.shared_by_company ? `Shared by ${share.shared_by_company}` : 'Shared on MyStokk');
   if (location) lines.push(location);
+  lines.push('Powered by MyStokk');
   return lines.join('\n');
 }
 
