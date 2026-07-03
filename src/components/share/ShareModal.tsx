@@ -58,8 +58,12 @@ function shareable(v: NetworkVendor): boolean {
 
 /**
  * Prefilled body for the seller's mail client (opened via mailto:). Plain text
- * only — mailto bodies can't carry HTML/links, so the URL is presented cleanly
- * under a "View details:" label (mail apps auto-link the raw URL).
+ * only — mailto bodies can't carry HTML (no bold / buttons / hidden links), so
+ * the short URL is shown under a "View details:" label (mail apps auto-link it).
+ *
+ * Lines are joined with CRLF: several mail clients (iOS Mail / Gmail) collapse a
+ * bare "\n" from a mailto body into spaces, running everything into one blob;
+ * "\r\n" is honored as a real line break.
  */
 function buildEmailBody(
   company: string | null | undefined,
@@ -69,20 +73,20 @@ function buildEmailBody(
   country: string | null | undefined,
 ): string {
   const location = [city, country].filter(Boolean).join(', ');
-  const seller = company ?? 'We';
+  const seller = company ?? 'A MyStokk vendor';
 
-  const lines: string[] = [
-    'Hello,',
-    '',
-    `${seller} would like to share the following item with you on MyStokk:`,
-    '',
-  ];
-  if (card?.title) lines.push(card.title);
+  const lines: string[] = [];
+  if (card?.title) lines.push(card.title); // title first (own line)
+  lines.push('');
   if (card) lines.push(`Quantity: ${card.quantityAvailable}/${card.quantityTotal} ${card.unit}`);
   if (location) lines.push(`Location: ${location}`);
-  lines.push('', 'View details:', link, '', '— Sent via MyStokk');
+  lines.push('');
+  lines.push('View details:');
+  lines.push(link);
+  lines.push('');
+  lines.push(`Shared by ${seller} via MyStokk`);
 
-  return lines.join('\n');
+  return lines.join('\r\n');
 }
 
 export function ShareModal({ visible, inventoryId, onClose, onShared, forward, card }: ShareModalProps): React.JSX.Element {
