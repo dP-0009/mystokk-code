@@ -7,8 +7,9 @@ import { AuthShell } from '../components/shared/AuthShell';
 import { FormTextField } from '../components/shared/FormTextField';
 import { AppButton } from '../components/shared/AppButton';
 import { GoogleButton } from '../components/shared/GoogleButton';
+import { AppleSignInButton } from '../components/shared/AppleButton';
 import { AuthDivider } from '../components/shared/AuthDivider';
-import { requestSignupOtp, signInWithGoogle } from '../services/supabase/auth';
+import { requestSignupOtp, signInWithApple, signInWithGoogle } from '../services/supabase/auth';
 import { setSignupDraft } from '../stores/signupDraft';
 import { EMAIL_PATTERN, MIN_PASSWORD_LENGTH } from '../utils/validation';
 import { webOnly } from '../components/layout/web';
@@ -55,6 +56,16 @@ export function SignupScreen({ navigation }: Props): React.JSX.Element {
       setFormError(err instanceof Error ? err.message : 'Google sign-in failed.');
     } finally {
       setGoogleLoading(false);
+    }
+  };
+
+  const onApple = async (): Promise<void> => {
+    setFormError(null);
+    try {
+      await signInWithApple();
+    } catch (err) {
+      if ((err as { code?: string })?.code === 'ERR_REQUEST_CANCELED') return;
+      setFormError(err instanceof Error ? err.message : 'Apple sign-in failed.');
     }
   };
 
@@ -118,6 +129,7 @@ export function SignupScreen({ navigation }: Props): React.JSX.Element {
       <AuthDivider />
 
       <GoogleButton title="Sign up with Google" onPress={onGoogle} loading={googleLoading} />
+      <AppleSignInButton onPress={() => void onApple()} />
     </AuthShell>
   );
 }

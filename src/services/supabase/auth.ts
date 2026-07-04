@@ -1,5 +1,6 @@
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from './client';
 import { Platform } from 'react-native';
@@ -133,6 +134,56 @@ export async function signInWithGoogle(): Promise<void> {
       .from('vendors')
       .update({ auth_provider: 'google' })
       .eq('id', user.id);
+    if (updateError) throw updateError;
+  }
+}
+
+/** True only where the native Sign in with Apple flow is available (iOS). */
+export function isAppleSignInAvailable(): boolean {
+  return Platform.OS === 'ios';
+}
+
+/**
+ * Sign in with Apple (iOS only, required by App Store guideline 4.8 when we also
+ * offer Google). Gets an Apple identity token natively and exchanges it with
+ * Supabase Auth (Apple provider must be enabled in the Supabase dashboard).
+ * Apple returns the user's name only on the FIRST sign-in, so we capture it then.
+ */
+export async function signInWithApple(): Promise<void> {
+  if (Platform.OS !== 'ios') throw new Error('Sign in with Apple is only available on iOS.');
+
+  const credential = await AppleAuthentication.signInAsync({
+    requestedScopes: [
+      AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+      AppleAuthentication.AppleAuthenticationScope.EMAIL,
+    ],
+  });
+  if (!credential.identityToken) throw new Error('Apple sign-in did not return an identity token.');
+
+  const { error } = await supabase.auth.signInWithIdToken({
+    provider: 'apple',
+    token: credential.identityToken,
+  });
+  if (error) throw error;
+
+  const fullName = credential.fullName
+    ? [credential.fullName.givenName, credential.fullName.familyName].filter(Boolean).join(' ').trim()
+    : '';
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user) {
+    // Set auth_provider; seed contact_person from Apple's name only if empty.
+    const { data: vendor } = await supabase
+      .from('vendors')
+      .select('contact_person')
+      .eq('id', user.id)
+      .single();
+    const patch: Record<string, unknown> = { auth_provider: 'apple' };
+    if (fullName && !(vendor as { contact_person: string | null } | null)?.contact_person) {
+      patch.contact_person = fullName;
+    }
+    const { error: updateError } = await supabase.from('vendors').update(patch).eq('id', user.id);
     if (updateError) throw updateError;
   }
 }

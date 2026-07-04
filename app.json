@@ -11,13 +11,20 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.ecozoe.mystokk",
       "buildNumber": "1",
+      "usesAppleSignIn": true,
+      "googleServicesFile": "./GoogleService-Info.plist",
       "associatedDomains": [
         "applinks:mystokk.vercel.app"
-      ]
+      ],
+      "infoPlist": {
+        "UIBackgroundModes": ["remote-notification"]
+      }
     },
     "android": {
       "package": "com.ecozoe.mystokk",
       "versionCode": 1,
+      "googleServicesFile": "./google-services.json",
+      "permissions": ["POST_NOTIFICATIONS"],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -30,10 +37,21 @@
           "action": "VIEW",
           "autoVerify": true,
           "data": [
-            { "scheme": "https", "host": "mystokk.vercel.app", "pathPrefix": "/share" },
-            { "scheme": "https", "host": "mystokk.vercel.app", "pathPrefix": "/s" }
+            {
+              "scheme": "https",
+              "host": "mystokk.vercel.app",
+              "pathPrefix": "/share"
+            },
+            {
+              "scheme": "https",
+              "host": "mystokk.vercel.app",
+              "pathPrefix": "/s"
+            }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -43,6 +61,7 @@
     "plugins": [
       "expo-web-browser",
       "expo-secure-store",
+      "expo-apple-authentication",
       [
         "expo-image-picker",
         {
@@ -58,6 +77,13 @@
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#FFFFFF"
+        }
+      ],
+      "@react-native-firebase/app",
+      [
+        "expo-build-properties",
+        {
+          "ios": { "useFrameworks": "static" }
         }
       ]
     ]
