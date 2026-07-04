@@ -775,15 +775,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
   },
   mEditText: { color: colors.textPrimary, fontSize: 15, fontWeight: '700' },
-  mKebabBtn: {
-    width: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.bgWhite,
-    borderWidth: 1.5,
-    borderColor: colors.borderDark,
-    borderRadius: radius.md,
-  },
 
   mBodyText: { fontSize: 14, color: colors.textSecondary, lineHeight: 22 },
   mSpecRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingVertical: 6 },
@@ -810,10 +801,6 @@ const styles = StyleSheet.create({
   },
   mDeleteText: { color: colors.red, fontSize: 15, fontWeight: '700' },
 
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bgPage, padding: 24 },
-  errorText: { color: colors.red, fontSize: 14, fontWeight: '600', marginBottom: 12, textAlign: 'center' },
-  retry: { paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.primary, borderRadius: 10 },
-  retryText: { color: '#FFFFFF', fontWeight: '700' },
 
   wrap: { width: '100%', maxWidth: 760, alignSelf: 'center' },
 

@@ -113,8 +113,6 @@ export function ManageSharesScreen({ navigation, route }: Props): React.JSX.Elem
 
 const styles = StyleSheet.create({
   fill: { flex: 1, backgroundColor: colors.slate50 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
-  errorText: { color: colors.red, fontSize: 14, fontWeight: '600', textAlign: 'center' },
   listContent: { padding: 16 },
   hint: { fontSize: 12, color: colors.slate500, marginBottom: 12 },
   row: {
@@ -136,6 +134,4 @@ const styles = StyleSheet.create({
   revokeText: { color: colors.red, fontWeight: '700', fontSize: 13 },
   revokedChip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, backgroundColor: colors.slate100 },
   revokedChipText: { fontSize: 11, fontWeight: '700', color: colors.slate500 },
-  emptyTitle: { fontSize: 16, fontWeight: '700', color: colors.slate900, marginBottom: 6 },
-  emptySub: { fontSize: 13, color: colors.slate500, textAlign: 'center' },
 });

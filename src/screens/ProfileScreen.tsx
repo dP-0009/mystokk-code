@@ -143,7 +143,6 @@ const styles = StyleSheet.create({
   sideRight: { width: 34, alignItems: 'flex-end' },
   headerIcon: { color: '#FFFFFF', fontSize: 22, fontWeight: '600' },
   headerTitle: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
 
   identity: { backgroundColor: '#FFFFFF', alignItems: 'center', paddingVertical: 26, paddingHorizontal: 18, borderBottomWidth: 1, borderBottomColor: colors.slate100 },
   avatar: { width: 72, height: 72, borderRadius: 20, backgroundColor: colors.emerald, alignItems: 'center', justifyContent: 'center', marginBottom: 12, overflow: 'hidden' },

@@ -186,7 +186,6 @@ function ReadOnly({ label, value }: { label: string; value: string | null }): Re
 
 const styles = StyleSheet.create({
   fill: { flex: 1, backgroundColor: colors.slate50 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
   body: { padding: 20, paddingBottom: 40 },
   note: { fontSize: 12.5, color: colors.slate500, marginBottom: 16, lineHeight: 18 },
   roGroup: { marginBottom: 16 },

@@ -263,7 +263,6 @@ function StatusSelect({
 
 const styles = StyleSheet.create({
   container: { width: '100%', maxWidth: 860, alignSelf: 'center' },
-  center: { alignItems: 'center', justifyContent: 'center', paddingVertical: 80 },
 
   // Status filter (left-aligned)
   filterRow: { flexDirection: 'row', marginBottom: 14, zIndex: 30 },

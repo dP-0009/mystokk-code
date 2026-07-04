@@ -354,7 +354,6 @@ function QuickAction({
 }
 
 const styles = StyleSheet.create({
-  center: { alignItems: 'center', justifyContent: 'center', paddingVertical: 80, gap: 12 },
 
   // Section labels (mirror "OVERVIEW" / "QUICK ACTIONS")
   sectionLabel: {
@@ -399,26 +398,11 @@ const styles = StyleSheet.create({
   quickIcon: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center' },
   quickLabel: { fontSize: 13, fontWeight: '700', color: colors.textPrimary },
 
-  errorText: { color: colors.red, fontSize: 14, fontWeight: '600', textAlign: 'center' },
-  retry: { paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.primary, borderRadius: radius.md },
-  retryText: { color: colors.bgWhite, fontWeight: '700' },
 
   // Body action row — right-aligned, lines up under the fixed bell icon.
-  actionRow: { alignItems: 'flex-end', marginBottom: 16 },
   // `.btn-p` — dark navy primary button.
-  addBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#0F172A',
-    paddingVertical: 9,
-    paddingHorizontal: 18,
-    borderRadius: 10,
-  },
-  addBtnText: { color: colors.bgWhite, fontSize: 13, fontWeight: '600' },
 
   // `.stat-grid`
-  statGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginBottom: 28 },
 
   // Team Invitation section
   pendingSection: { marginBottom: 18, gap: 16 },
@@ -510,15 +494,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   // `.ith`
-  thumb: {
-    width: 56,
-    height: 56,
-    borderRadius: radius.md,
-    backgroundColor: colors.bgChip,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
   rowInfo: { flex: 1, minWidth: 0 },
   rowTitle: { fontSize: 14, fontWeight: '700', color: colors.textPrimary },
   rowRight: { alignItems: 'flex-end', flexShrink: 0, maxWidth: 200 },

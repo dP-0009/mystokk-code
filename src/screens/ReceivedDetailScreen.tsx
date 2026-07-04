@@ -509,54 +509,7 @@ function MobileReceivedBody({
   );
 }
 
-function StatCol({
-  value,
-  label,
-  unit,
-  valueColor,
-  bg,
-  icon,
-  last = false,
-  onPress,
-  mobile = false,
-}: {
-  value: number;
-  label: string;
-  unit?: string;
-  valueColor?: string;
-  bg?: string;
-  icon?: React.ComponentProps<typeof Ionicons>['name'];
-  last?: boolean;
-  /** When set, the column becomes tappable (e.g. open the Shared With list). */
-  onPress?: () => void;
-  mobile?: boolean;
-}): React.JSX.Element {
-  const Wrap = onPress ? Pressable : View;
-  return (
-    <Wrap
-      onPress={onPress}
-      style={[
-        styles.statCol,
-        mobile ? styles.statColMobile : null,
-        bg ? { backgroundColor: bg } : null,
-        !mobile && !last ? styles.statColDivider : null,
-        onPress ? webOnly({ cursor: 'pointer' }) : null,
-      ]}
-      accessibilityRole={onPress ? 'button' : undefined}
-    >
-      <Text style={styles.statLabel}>{label}</Text>
-      <View style={styles.statValRow}>
-        <Text style={[styles.statVal, valueColor ? { color: valueColor } : null]}>{value.toLocaleString()}</Text>
-        {unit ? <Text style={styles.statUnit}>{unit}</Text> : null}
-        {icon ? <Ionicons name={icon} size={15} color={colors.accent} /> : null}
-      </View>
-    </Wrap>
-  );
-}
-
 const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
-  errorText: { color: colors.red, fontSize: 14, fontWeight: '600', textAlign: 'center' },
 
   // Redesigned detail body — centred column on desktop, full-width on mobile.
   detailColumn: { width: '100%', maxWidth: 760, alignSelf: 'center' },
@@ -702,82 +655,14 @@ const styles = StyleSheet.create({
   // Two-column grid: main content + Shared By side panel (wraps on narrow screens).
   // The aside is a fixed, compact rail so the main details column gets the rest
   // of the width; both still wrap to full-width on narrow viewports.
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 20, alignItems: 'flex-start' },
-  main: { flexGrow: 1, flexShrink: 1, flexBasis: 500, minWidth: 320 },
-  aside: { flexGrow: 0, flexShrink: 0, flexBasis: 380, minWidth: 340 },
 
   // Header card holding the title block, actions, and the stat bar.
-  headCard: {
-    backgroundColor: colors.bgWhite,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.lg, // 16
-    padding: 20,
-    marginBottom: 16,
-  },
-  headTop: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 16,
-    flexWrap: 'wrap',
-    marginBottom: 18,
-  },
-  titleBlock: { flexShrink: 1, minWidth: 0 },
-  h1: { fontSize: 22, fontWeight: '700', color: colors.textPrimary },
-  subRow: { fontSize: 12, color: colors.textMuted, marginTop: 4 },
-  privacy: { fontSize: 12, color: colors.textSecondary, fontStyle: 'italic', marginTop: 6, lineHeight: 17 },
 
-  // Header actions
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 0 },
-  reserveBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: colors.green, // #16A34A
-    paddingVertical: 9,
-    paddingHorizontal: 16,
-    borderRadius: radius.md, // 10
-    ...webOnly({ cursor: 'pointer' }),
-  },
-  reserveBtnText: { color: colors.bgWhite, fontSize: 13, fontWeight: '600' },
-  shareBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: colors.bgWhite,
-    borderWidth: 1.5,
-    borderColor: colors.borderDark, // #CBD5E1
-    paddingVertical: 9,
-    paddingHorizontal: 16,
-    borderRadius: radius.md,
-    ...webOnly({ cursor: 'pointer' }),
-  },
-  shareBtnText: { color: colors.textPrimary, fontSize: 13, fontWeight: '600' }, // #0F172A
+  // Header actions // #0F172A
 
   // Cards — padding 16px 20px, radius 16
-  card: {
-    backgroundColor: colors.bgWhite,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.lg, // 16
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    marginBottom: 16,
-  },
-  cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
-  cardTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-    color: colors.textPrimary,
-    marginBottom: 14,
-  },
 
   // Price
-  price: { fontSize: 20, fontWeight: '800', color: colors.accent, marginBottom: 4 },
-  priceUnit: { fontSize: 13, color: colors.textMuted, fontWeight: '600' },
   remark: {
     backgroundColor: colors.yellowLight,
     borderWidth: 1,
@@ -790,100 +675,18 @@ const styles = StyleSheet.create({
   remarkText: { fontSize: 13, color: colors.amber },
 
   // 4-stat row — single card, columns split by a right border (overflow hidden)
-  statCard: {
-    flexDirection: 'row',
-    backgroundColor: colors.bgWhite,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.lg, // 16
-    overflow: 'hidden',
-  },
-  statCardMobile: { flexWrap: 'wrap' },
-  statCol: { flex: 1, justifyContent: 'center', paddingVertical: 16, paddingHorizontal: 12 },
-  // 2×2 grid cell on mobile with grid lines via top/right borders.
-  statColMobile: { flexBasis: '50%', flexGrow: 0, minWidth: 0, borderTopWidth: 1, borderTopColor: colors.border },
-  statColDivider: { borderRightWidth: 1, borderRightColor: colors.border }, // #E2E8F0
-  statLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: colors.textMuted, // #94A3B8
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-    marginBottom: 6,
-  },
-  statValRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 4 },
-  statVal: { fontSize: 20, fontWeight: '800', color: colors.primary },
-  statUnit: { fontSize: 12, color: colors.textMuted, marginBottom: 2 },
+  // 2×2 grid cell on mobile with grid lines via top/right borders. // #E2E8F0
 
   // Stock location
-  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 16 },
-  locationText: { fontSize: 13, color: colors.textSecondary, flexShrink: 1 },
-  locationLabel: { fontWeight: '700' },
 
   // Photos
-  photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  photoGridMobile: { flexDirection: 'column' },
-  photo: { width: 200, height: 150, borderRadius: radius.md, backgroundColor: colors.bgChip },
-  photoFull: { width: '100%' },
-  photoMobile: { width: '100%', height: 240 },
 
   // Single-value section body (Stock Location / Origin).
-  sectionValue: { fontSize: 15, fontWeight: '700', color: colors.textPrimary },
 
   // Details text block
   detailsText: { fontSize: 13, color: colors.textSecondary, lineHeight: 22 },
 
   // Files
-  fileRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: colors.bgChip, // #F1F5F9
-    borderRadius: radius.md, // 10
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    marginTop: 8,
-  },
-  fileName: { flex: 1, fontSize: 13, color: colors.textPrimary },
 
   // Shared By side panel (light blue).
-  sharedPanel: {
-    backgroundColor: colors.accentLight, // #EFF6FF
-    borderWidth: 1,
-    borderColor: colors.accentMid, // #DBEAFE
-    borderRadius: radius.lg,
-    padding: 20,
-  },
-  sharedHead: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 },
-  sharedIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: colors.accentMid,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sharedTitle: { fontSize: 16, fontWeight: '700', color: colors.textPrimary },
-  sharedLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.accent,
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-    marginBottom: 4,
-  },
-  sharedLabelSpaced: { marginTop: 16 },
-  sharedValue: { fontSize: 15, fontWeight: '700', color: colors.textPrimary },
-  contactRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 18 },
-  contactBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: colors.bgWhite,
-    borderWidth: 1,
-    borderColor: colors.accentMid,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...webOnly({ cursor: 'pointer' }),
-  },
 });

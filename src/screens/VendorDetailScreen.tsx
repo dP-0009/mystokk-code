@@ -350,8 +350,6 @@ function DetailRow({ label, value }: { label: string; value: string }): React.JS
 
 const styles = StyleSheet.create({
   fill: { flex: 1, backgroundColor: colors.slate50 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  errorText: { color: colors.red, fontSize: 14, fontWeight: '600', textAlign: 'center' },
 
   headerSafe: { backgroundColor: colors.navy },
   headerRow: {

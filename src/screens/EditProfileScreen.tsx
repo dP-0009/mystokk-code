@@ -150,7 +150,6 @@ function ProfileForm({ vendor, onDone }: { vendor: VendorProfile; onDone: () => 
 
 const styles = StyleSheet.create({
   fill: { flex: 1, backgroundColor: colors.slate50 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
   body: { padding: 20, paddingBottom: 40 },
   logoBox: { alignSelf: 'center', width: 96, height: 96, borderRadius: 22, backgroundColor: colors.emerald, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   logoImg: { width: '100%', height: '100%' },

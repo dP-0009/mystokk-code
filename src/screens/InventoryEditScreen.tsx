@@ -106,8 +106,4 @@ const styles = StyleSheet.create({
   container: { width: '100%', maxWidth: 720, alignSelf: 'center' },
   back: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 6 },
   backText: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
-  center: { alignItems: 'center', justifyContent: 'center', paddingVertical: 80 },
-  errorText: { color: colors.red, fontSize: 14, fontWeight: '600', marginBottom: 12, textAlign: 'center' },
-  retry: { paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.primary, borderRadius: 10 },
-  retryText: { color: '#FFFFFF', fontWeight: '700' },
 });

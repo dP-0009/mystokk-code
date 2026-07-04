@@ -193,7 +193,4 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
 
-  center: { alignItems: 'center', justifyContent: 'center', paddingVertical: 80, gap: 12 },
-  errorText: { color: colors.red, fontSize: 14, fontWeight: '600', textAlign: 'center' },
-  emptyText: { fontSize: 14, color: colors.textMuted },
 });

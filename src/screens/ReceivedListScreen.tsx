@@ -124,6 +124,4 @@ const styles = StyleSheet.create({
   // collapsing to 2 / 1 as the viewport narrows (min card width 320).
   list: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
 
-  center: { alignItems: 'center', justifyContent: 'center', paddingVertical: 80 },
-  errorText: { color: colors.red, fontSize: 14, fontWeight: '600', textAlign: 'center' },
 });

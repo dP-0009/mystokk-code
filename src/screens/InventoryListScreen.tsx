@@ -212,9 +212,6 @@ function StatusSelect({
 }
 
 const styles = StyleSheet.create({
-  center: { alignItems: 'center', justifyContent: 'center', paddingVertical: 80 },
-  errorText: { color: colors.red, fontSize: 14, fontWeight: '600', textAlign: 'center' },
-  empty: { color: colors.textMuted, fontSize: 13, paddingVertical: 8 },
 
   // Body action row — right-aligned, lines up under the fixed bell icon.
   actionRow: { alignItems: 'flex-end', marginBottom: 16 },

@@ -908,7 +908,6 @@ const styles = StyleSheet.create({
   headerActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 10, marginBottom: 16 },
 
   // Min table width on mobile so the horizontal scroller has something to scroll.
-  tableInnerMobile: { minWidth: 820 },
 
   // Column sizing
   colCompany: { flex: 1, minWidth: 160 },
@@ -945,7 +944,6 @@ const styles = StyleSheet.create({
   acceptBtn: { backgroundColor: colors.greenLight },
   rejectBtn: { backgroundColor: colors.redLight },
 
-  center: { alignItems: 'center', justifyContent: 'center', paddingVertical: 64 },
   empty: { color: colors.textMuted, fontSize: 13, paddingVertical: 28, textAlign: 'center' },
 
   // Delete confirmation modal — centered card.
