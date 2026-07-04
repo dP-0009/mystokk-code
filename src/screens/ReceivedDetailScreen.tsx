@@ -21,6 +21,7 @@ import { PreShareModal } from '../components/share/PreShareModal';
 import { ManageSharesModal } from '../components/share/ManageSharesModal';
 import { ReserveModal } from '../components/reservations/ReserveModal';
 import { MainLayout, PageBody, PageHeader } from '../components/layout';
+import { ErrorState, LoadingState } from '../components/shared/StateView';
 import { webOnly } from '../components/layout/web';
 import type { ForwardContext } from '../services/supabase/shares';
 import { colors, radius } from '../theme/tokens';
@@ -98,9 +99,7 @@ export function ReceivedDetailScreen({ navigation, route }: Props): React.JSX.El
     return (
       <MainLayout active="received">
         <PageHeader title="Shared Item" leading={<BackLink onPress={back} />} />
-        <View style={styles.center}>
-          <ActivityIndicator color={colors.accent} size="large" />
-        </View>
+        <LoadingState />
       </MainLayout>
     );
   }
@@ -108,9 +107,7 @@ export function ReceivedDetailScreen({ navigation, route }: Props): React.JSX.El
     return (
       <MainLayout active="received">
         <PageHeader title="Shared Item" leading={<BackLink onPress={back} />} />
-        <View style={styles.center}>
-          <Text style={styles.errorText}>{error instanceof Error ? error.message : 'Failed to load.'}</Text>
-        </View>
+        <ErrorState message={error instanceof Error ? error.message : 'Failed to load.'} />
       </MainLayout>
     );
   }

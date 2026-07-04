@@ -16,6 +16,8 @@ import { UNREAD_COUNT_KEY } from '../hooks/useUnreadCount';
 import { NotificationRow } from '../components/notifications/NotificationRow';
 import { notificationTargetTab } from '../components/notifications/NotificationPopup';
 import { MainLayout, PageBody } from '../components/layout';
+import { EmptyState } from '../components/shared/EmptyState';
+import { ErrorState, LoadingState } from '../components/shared/StateView';
 import { webOnly } from '../components/layout/web';
 import { colors } from '../theme/tokens';
 import { toast } from '../stores/toast';
@@ -99,20 +101,18 @@ export function NotificationsScreen({ navigation }: Props): React.JSX.Element {
         </View>
 
         {isLoading ? (
-          <View style={styles.center}>
-            <ActivityIndicator color={colors.accent} size="large" />
-          </View>
+          <LoadingState />
         ) : isError ? (
-          <View style={styles.center}>
-            <Text style={styles.errorText}>{error instanceof Error ? error.message : 'Failed to load.'}</Text>
-          </View>
+          <ErrorState
+            message={error instanceof Error ? error.message : 'Failed to load.'}
+            onRetry={() => void refetch()}
+          />
         ) : items.length === 0 ? (
-          <View style={styles.center}>
-            <Ionicons name="notifications-outline" size={40} color={colors.textMuted} />
-            <Text style={styles.emptyText}>
-              {tab === 'unread' ? 'No unread notifications' : 'No notifications yet'}
-            </Text>
-          </View>
+          <EmptyState
+            icon="🔔"
+            title={tab === 'unread' ? 'No unread notifications' : 'No notifications yet'}
+            message="Alerts about shares, reservations, and your network show up here."
+          />
         ) : (
           <View style={styles.card}>
             {items.map((n, i) => (

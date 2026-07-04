@@ -13,6 +13,7 @@ import {
   type VendorProfile,
 } from '../services/supabase/network';
 import { AppButton } from '../components/shared/AppButton';
+import { ErrorState, LoadingState } from '../components/shared/StateView';
 import { openCall, openEmail, openWhatsApp } from '../utils/contact';
 import { confirmAction } from '../utils/confirm';
 import { toast } from '../stores/toast';
@@ -160,9 +161,7 @@ export function VendorDetailScreen({ navigation, route }: Props): React.JSX.Elem
     return (
       <View style={styles.fill}>
         <Header onBack={() => navigation.goBack()} />
-        <View style={styles.center}>
-          <ActivityIndicator color={colors.emerald} size="large" />
-        </View>
+        <LoadingState />
       </View>
     );
   }
@@ -171,9 +170,10 @@ export function VendorDetailScreen({ navigation, route }: Props): React.JSX.Elem
     return (
       <View style={styles.fill}>
         <Header onBack={() => navigation.goBack()} />
-        <View style={styles.center}>
-          <Text style={styles.errorText}>{error instanceof Error ? error.message : 'Failed to load.'}</Text>
-        </View>
+        <ErrorState
+          message={error instanceof Error ? error.message : 'Failed to load.'}
+          onRetry={() => void refetch()}
+        />
       </View>
     );
   }

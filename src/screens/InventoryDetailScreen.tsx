@@ -30,6 +30,7 @@ import { StatusChip } from '../components/shared/StatusChip';
 import { ShareModal } from '../components/share/ShareModal';
 import { ManageSharesModal } from '../components/share/ManageSharesModal';
 import { useLightbox } from '../components/shared/Lightbox';
+import { ErrorState, LoadingState } from '../components/shared/StateView';
 import { MainLayout, PageBody } from '../components/layout';
 import { webOnly } from '../components/layout/web';
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -187,9 +188,7 @@ export function InventoryDetailScreen({ navigation, route }: Props): React.JSX.E
   if (isLoading) {
     return (
       <MainLayout active="inventory">
-        <View style={styles.center}>
-          <ActivityIndicator color={colors.accent} size="large" />
-        </View>
+        <LoadingState />
       </MainLayout>
     );
   }
@@ -197,12 +196,10 @@ export function InventoryDetailScreen({ navigation, route }: Props): React.JSX.E
   if (isError || !data) {
     return (
       <MainLayout active="inventory">
-        <View style={styles.center}>
-          <Text style={styles.errorText}>{error instanceof Error ? error.message : 'Failed to load.'}</Text>
-          <Pressable onPress={() => void refetch()} style={styles.retry}>
-            <Text style={styles.retryText}>Retry</Text>
-          </Pressable>
-        </View>
+        <ErrorState
+          message={error instanceof Error ? error.message : 'Failed to load.'}
+          onRetry={() => void refetch()}
+        />
       </MainLayout>
     );
   }

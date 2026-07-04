@@ -1,12 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useFocusEffect } from '@react-navigation/native';
@@ -19,6 +12,8 @@ import { deleteInventory, listInventory, type InventoryListItem } from '../servi
 import { INVENTORY_FILTERS, type InventoryStatus } from '../constants/inventory';
 import { colors, radius, shadows } from '../theme/tokens';
 import { MainLayout, PageBody, PageHeader } from '../components/layout';
+import { ErrorState, LoadingState } from '../components/shared/StateView';
+import { EmptyState } from '../components/shared/EmptyState';
 import { InventoryCard } from '../components/inventory/InventoryCard';
 import { ShareModal } from '../components/share/ShareModal';
 import { confirmAction } from '../utils/confirm';
@@ -114,19 +109,22 @@ export function InventoryListScreen({ navigation }: Props): React.JSX.Element {
 
         {/* Grid */}
         {isLoading ? (
-          <View style={styles.center}>
-            <ActivityIndicator color={colors.accent} size="large" />
-          </View>
+          <LoadingState />
         ) : isError ? (
-          <View style={styles.center}>
-            <Text style={styles.errorText}>
-              {error instanceof Error ? error.message : 'Failed to load.'}
-            </Text>
-          </View>
+          <ErrorState
+            message={error instanceof Error ? error.message : 'Failed to load.'}
+            onRetry={() => void refetch()}
+          />
         ) : items.length === 0 ? (
-          <Text style={styles.empty}>
-            {search ? 'No items match your search.' : 'No items yet — add your first item.'}
-          </Text>
+          <EmptyState
+            icon="📦"
+            title={search ? 'No matches' : 'No items yet'}
+            message={
+              search ? 'No items match your search.' : 'Add your first inventory item to get started.'
+            }
+            ctaLabel={search ? undefined : 'Add Item'}
+            onCta={search ? undefined : () => navigation.navigate('InventoryCreate')}
+          />
         ) : (
           <View style={styles.list}>
             {items.map((item) => (

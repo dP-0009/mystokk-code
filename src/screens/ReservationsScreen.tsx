@@ -17,6 +17,7 @@ import {
   type OutgoingReservation,
 } from '../services/supabase/reservations';
 import { EmptyState } from '../components/shared/EmptyState';
+import { LoadingState } from '../components/shared/StateView';
 import { MainLayout, PageBody, PageHeader } from '../components/layout';
 import { ReservationCard } from '../components/reservations/ReservationCard';
 import { NegotiationModal } from '../components/reservations/NegotiationModal';
@@ -132,9 +133,7 @@ export function ReservationsScreen({ navigation }: Props): React.JSX.Element {
           </View>
 
           {loading ? (
-            <View style={styles.center}>
-              <ActivityIndicator color={colors.accent} size="large" />
-            </View>
+            <LoadingState />
           ) : list.length === 0 ? (
             tab === 'received' ? (
               <EmptyState

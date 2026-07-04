@@ -10,6 +10,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useUnreadCount } from '../hooks/useUnreadCount';
 import { clearPushToken } from '../services/push';
 import { confirmAction } from '../utils/confirm';
+import { LoadingState } from '../components/shared/StateView';
 import { colors } from '../theme/tokens';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Profile'>;
@@ -75,9 +76,7 @@ export function ProfileScreen({ navigation }: Props): React.JSX.Element {
       </SafeAreaView>
 
       {isLoading || !vendor ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={colors.emerald} size="large" />
-        </View>
+        <LoadingState />
       ) : (
         <ScrollView showsVerticalScrollIndicator={false}>
           <View style={styles.identity}>

@@ -17,6 +17,7 @@ import {
 import type { ColorValue } from '../theme/tokens';
 import { colors, radius } from '../theme/tokens';
 import { MainLayout, PageBody, PageHeader } from '../components/layout';
+import { ErrorState, LoadingState } from '../components/shared/StateView';
 import { AddVendorModal } from '../components/network/AddVendorModal';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { webOnly } from '../components/layout/web';
@@ -82,18 +83,12 @@ export function DashboardScreen({ navigation }: Props): React.JSX.Element {
 
       <PageBody>
         {isLoading ? (
-          <View style={styles.center}>
-            <ActivityIndicator color={colors.accent} size="large" />
-          </View>
+          <LoadingState />
         ) : isError || !data ? (
-          <View style={styles.center}>
-            <Text style={styles.errorText}>
-              {error instanceof Error ? error.message : 'Failed to load.'}
-            </Text>
-            <Pressable onPress={() => void refetch()} style={styles.retry}>
-              <Text style={styles.retryText}>Retry</Text>
-            </Pressable>
-          </View>
+          <ErrorState
+            message={error instanceof Error ? error.message : 'Failed to load.'}
+            onRetry={() => void refetch()}
+          />
         ) : (
           <>
             {/* Overview — four tappable tiles (incl. Vendors) */}

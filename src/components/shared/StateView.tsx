@@ -6,9 +6,9 @@ import { colors, radius } from '../../theme/tokens';
 import { webOnly } from '../layout/web';
 
 /**
- * Standardized loading / empty / error states, so every screen presents these
- * the same way (centered icon + title + message + optional action). Drop-in
- * replacements for the bespoke spinners and "no data" blocks across screens.
+ * Standardized loading + error states, so every screen presents these the same
+ * way. (Empty states use the existing `EmptyState` component — not duplicated
+ * here.) Drop-in replacements for the bespoke spinners and error blocks.
  */
 
 export function LoadingState({ label }: { label?: string }): React.JSX.Element {
@@ -16,29 +16,6 @@ export function LoadingState({ label }: { label?: string }): React.JSX.Element {
     <View style={styles.center} accessibilityRole="progressbar">
       <ActivityIndicator color={colors.accent} size="large" />
       {label ? <Text style={styles.sub}>{label}</Text> : null}
-    </View>
-  );
-}
-
-export function EmptyState({
-  icon = 'file-tray-outline',
-  title,
-  message,
-  action,
-}: {
-  icon?: keyof typeof Ionicons.glyphMap;
-  title: string;
-  message?: string;
-  action?: { label: string; onPress: () => void };
-}): React.JSX.Element {
-  return (
-    <View style={styles.center}>
-      <View style={styles.iconWrap}>
-        <Ionicons name={icon} size={30} color={colors.textMuted} />
-      </View>
-      <Text style={styles.title}>{title}</Text>
-      {message ? <Text style={styles.sub}>{message}</Text> : null}
-      {action ? <ActionButton label={action.label} onPress={action.onPress} /> : null}
     </View>
   );
 }

@@ -27,6 +27,7 @@ import {
   type PendingConnection,
 } from '../services/supabase/network';
 import { MainLayout, PageBody, PageHeader } from '../components/layout';
+import { LoadingState } from '../components/shared/StateView';
 import { AddVendorModal } from '../components/network/AddVendorModal';
 import { BulkUploadModal } from '../components/network/BulkUploadModal';
 import { ViewVendorModal } from '../components/network/ViewVendorModal';
@@ -212,9 +213,7 @@ export function NetworkScreen({ navigation }: Props): React.JSX.Element {
         {isMobile ? (
           /* Mobile: stacked cards instead of a wide table. */
           isLoading ? (
-            <View style={styles.center}>
-              <ActivityIndicator color={colors.accent} size="large" />
-            </View>
+            <LoadingState />
           ) : showPending ? (
             filteredPending.length === 0 ? (
               <Text style={styles.empty}>
@@ -265,9 +264,7 @@ export function NetworkScreen({ navigation }: Props): React.JSX.Element {
             </View>
 
             {isLoading ? (
-              <View style={styles.center}>
-                <ActivityIndicator color={colors.accent} size="large" />
-              </View>
+              <LoadingState />
             ) : showPending ? (
               filteredPending.length === 0 ? (
                 <Text style={styles.empty}>

@@ -8,6 +8,7 @@ import { ScreenHeader } from '../components/shared/ScreenHeader';
 import { FormTextField } from '../components/shared/FormTextField';
 import { SelectField } from '../components/shared/SelectField';
 import { AppButton } from '../components/shared/AppButton';
+import { LoadingState } from '../components/shared/StateView';
 import {
   getManualVendor,
   getVendorProfile,
@@ -53,9 +54,7 @@ export function EditVendorScreen({ navigation, route }: Props): React.JSX.Elemen
     <View style={styles.fill}>
       <ScreenHeader title="Edit Vendor" onBack={() => navigation.goBack()} />
       {isLoading || !data ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={colors.emerald} size="large" />
-        </View>
+        <LoadingState />
       ) : isManual ? (
         <ManualVendorForm
           row={data as Awaited<ReturnType<typeof getManualVendor>>}

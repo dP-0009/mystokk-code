@@ -1,11 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { StyleSheet, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { useFocusEffect } from '@react-navigation/native';
@@ -18,6 +12,7 @@ import { getReceivedShares } from '../services/supabase/received';
 import { MainLayout, PageBody, PageHeader } from '../components/layout';
 import { ReceivedCard } from '../components/received/ReceivedCard';
 import { EmptyState } from '../components/shared/EmptyState';
+import { ErrorState, LoadingState } from '../components/shared/StateView';
 import { colors, radius } from '../theme/tokens';
 
 type Props = CompositeScreenProps<
@@ -72,13 +67,12 @@ export function ReceivedListScreen({ navigation }: Props): React.JSX.Element {
         </View>
 
         {isLoading ? (
-          <View style={styles.center}>
-            <ActivityIndicator color={colors.accent} size="large" />
-          </View>
+          <LoadingState />
         ) : isError ? (
-          <View style={styles.center}>
-            <Text style={styles.errorText}>{error instanceof Error ? error.message : 'Failed to load.'}</Text>
-          </View>
+          <ErrorState
+            message={error instanceof Error ? error.message : 'Failed to load.'}
+            onRetry={() => void refetch()}
+          />
         ) : items.length === 0 ? (
           <EmptyState
             icon="📥"

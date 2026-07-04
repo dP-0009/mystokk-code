@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation';
 import { ScreenHeader } from '../components/shared/ScreenHeader';
+import { LoadingState } from '../components/shared/StateView';
 import { FormTextField } from '../components/shared/FormTextField';
 import { SelectField } from '../components/shared/SelectField';
 import { AppButton } from '../components/shared/AppButton';
@@ -43,9 +44,7 @@ export function EditProfileScreen({ navigation }: Props): React.JSX.Element {
     <View style={styles.fill}>
       <ScreenHeader title="Edit Profile" onBack={() => navigation.goBack()} />
       {isLoading || !vendor ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={colors.emerald} size="large" />
-        </View>
+        <LoadingState />
       ) : (
         <ProfileForm vendor={vendor} onDone={() => navigation.goBack()} />
       )}

@@ -5,6 +5,8 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation';
 import { getItemDirectShares, revokeShare, type DirectShare } from '../services/supabase/shares';
 import { ScreenHeader } from '../components/shared/ScreenHeader';
+import { EmptyState } from '../components/shared/EmptyState';
+import { ErrorState, LoadingState } from '../components/shared/StateView';
 import { toast } from '../stores/toast';
 import { confirmAction } from '../utils/confirm';
 import { colors } from '../theme/tokens';
@@ -81,13 +83,12 @@ export function ManageSharesScreen({ navigation, route }: Props): React.JSX.Elem
     <View style={styles.fill}>
       <ScreenHeader title="Manage Shares" onBack={() => navigation.goBack()} />
       {isLoading ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={colors.emerald} size="large" />
-        </View>
+        <LoadingState />
       ) : isError ? (
-        <View style={styles.center}>
-          <Text style={styles.errorText}>{error instanceof Error ? error.message : 'Failed to load.'}</Text>
-        </View>
+        <ErrorState
+          message={error instanceof Error ? error.message : 'Failed to load.'}
+          onRetry={() => void refetch()}
+        />
       ) : (
         <FlatList
           data={data ?? []}
@@ -98,10 +99,11 @@ export function ManageSharesScreen({ navigation, route }: Props): React.JSX.Elem
             (data?.length ?? 0) > 0 ? <Text style={styles.hint}>Direct shares of this item. Revoking also pulls any downstream forwards.</Text> : null
           }
           ListEmptyComponent={
-            <View style={styles.center}>
-              <Text style={styles.emptyTitle}>Not shared yet</Text>
-              <Text style={styles.emptySub}>Direct shares of this item will appear here.</Text>
-            </View>
+            <EmptyState
+              icon="🔗"
+              title="Not shared yet"
+              message="Direct shares of this item will appear here."
+            />
           }
         />
       )}
