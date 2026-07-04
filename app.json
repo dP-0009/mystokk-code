@@ -44,6 +44,14 @@
       "expo-web-browser",
       "expo-secure-store",
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "MyStokk needs access to your photos to add product images and your company logo.",
+          "cameraPermission": "MyStokk needs access to your camera to photograph inventory items.",
+          "microphonePermission": false
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/splash-icon.png",

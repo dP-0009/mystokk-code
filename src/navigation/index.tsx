@@ -3,6 +3,7 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import {
   NavigationContainer,
   createNavigationContainerRef,
+  getStateFromPath,
   type LinkingOptions,
   type NavigatorScreenParams,
 } from '@react-navigation/native';
@@ -51,7 +52,7 @@ export type RootStackParamList = {
   NewPassword: { email: string; otp: string };
   Onboarding: undefined;
   Main: NavigatorScreenParams<MainTabParamList> | undefined; // Bottom tabs
-  ShareLanding: { token: string }; // public share landing (deep link)
+  ShareLanding: { token?: string; code?: string }; // public share landing (deep link: /share/:token or /s/:code)
   InventoryDetail: { inventoryId: string };
   InventoryCreate: undefined;
   InventoryEdit: { inventoryId: string };
@@ -97,6 +98,15 @@ const linking: LinkingOptions<RootStackParamList> = {
       ShareLanding: 'share/:token', // public share link entry point (works signed out)
       InventoryDetail: 'inventory/:inventoryId',
     },
+  },
+  // Short links (mystokk.vercel.app/s/<code>) resolve to the same ShareLanding,
+  // passing the code; the screen resolves it to a token via an anon RPC.
+  getStateFromPath: (path, options) => {
+    const m = path.match(/^\/?s\/([^/?#]+)/);
+    if (m) {
+      return { routes: [{ name: 'ShareLanding', params: { code: decodeURIComponent(m[1]) } }] };
+    }
+    return getStateFromPath(path, options);
   },
 };
 

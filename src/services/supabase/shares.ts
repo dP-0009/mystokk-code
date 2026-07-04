@@ -182,6 +182,16 @@ export async function getPublicShare(token: string): Promise<PublicShare | null>
   return ((data ?? []) as PublicShare[])[0] ?? null;
 }
 
+/**
+ * Resolve a short-link code (`mystokk.vercel.app/s/<code>`) to its share token.
+ * Anon-safe RPC (migration 047) — used when a short universal link opens the app.
+ */
+export async function resolveShortCode(code: string): Promise<string | null> {
+  const { data, error } = await supabase.rpc('token_for_short_code', { p_code: code });
+  if (error) throw error;
+  return (data as string | null) ?? null;
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 // Forward flow — a recipient (B) re-shares a received item downstream (to C).
 // original_owner_id is copied from the parent server-side; the downstream

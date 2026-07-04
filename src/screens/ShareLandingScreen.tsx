@@ -5,7 +5,14 @@ import { useQuery } from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import type { RootStackParamList } from '../navigation';
-import { claimShare, getPublicShare, publicPhotoUrl, resolveShareToken, type PublicShare } from '../services/supabase/shares';
+import {
+  claimShare,
+  getPublicShare,
+  publicPhotoUrl,
+  resolveShareToken,
+  resolveShortCode,
+  type PublicShare,
+} from '../services/supabase/shares';
 import { toFullUrl } from '../services/supabase/storage';
 import { useAuthStore } from '../stores/authStore';
 import { toast } from '../stores/toast';
@@ -16,16 +23,41 @@ import { colors, radius, shadows } from '../theme/tokens';
 type Props = NativeStackScreenProps<RootStackParamList, 'ShareLanding'>;
 
 export function ShareLandingScreen({ navigation, route }: Props): React.JSX.Element {
-  const { token } = route.params;
+  const { token: paramToken, code } = route.params;
   const status = useAuthStore((s) => s.status);
   const setPendingShareToken = useAuthStore((s) => s.setPendingShareToken);
   const [claiming, setClaiming] = useState(false);
   // While signed in, resolve ownership before showing anything (self-share protection).
   const [checkingOwner, setCheckingOwner] = useState(status === 'signedIn');
 
+  // The share token: taken from /share/:token directly, or resolved from a
+  // /s/:code short link. `undefined` until resolved / when the code is invalid.
+  const [token, setToken] = useState<string | undefined>(paramToken);
+  const [resolvingCode, setResolvingCode] = useState<boolean>(Boolean(code) && !paramToken);
+
+  useEffect(() => {
+    if (paramToken || !code) return;
+    let active = true;
+    setResolvingCode(true);
+    void resolveShortCode(code)
+      .then((t) => {
+        if (active) {
+          setToken(t ?? undefined);
+          setResolvingCode(false);
+        }
+      })
+      .catch(() => {
+        if (active) setResolvingCode(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [code, paramToken]);
+
   const { data, isLoading, isError } = useQuery({
     queryKey: ['publicShare', token],
-    queryFn: () => getPublicShare(token),
+    queryFn: () => getPublicShare(token as string),
+    enabled: Boolean(token),
     staleTime: 60_000,
   });
 
@@ -39,7 +71,7 @@ export function ShareLandingScreen({ navigation, route }: Props): React.JSX.Elem
   // owns this listing, route to their Inventory Detail with a toast instead of
   // Received Detail. Also triggers the bogus self-share cleanup server-side.
   useEffect(() => {
-    if (status !== 'signedIn') {
+    if (status !== 'signedIn' || !token) {
       setCheckingOwner(false);
       return;
     }
@@ -65,11 +97,13 @@ export function ShareLandingScreen({ navigation, route }: Props): React.JSX.Elem
   }, [status, token]);
 
   const onAuth = (target: 'Login' | 'Signup'): void => {
+    if (!token) return;
     setPendingShareToken(token); // claimed once signed in (see RootNavigator)
     navigation.navigate(target);
   };
 
   const onClaim = async (): Promise<void> => {
+    if (!token) return;
     setClaiming(true);
     try {
       const res = await claimShare(token);
@@ -98,11 +132,11 @@ export function ShareLandingScreen({ navigation, route }: Props): React.JSX.Elem
         </View>
       </View>
 
-      {isLoading || checkingOwner ? (
+      {resolvingCode || isLoading || checkingOwner ? (
         <View style={styles.center}>
           <ActivityIndicator color={colors.accent} size="large" />
         </View>
-      ) : isError || !data ? (
+      ) : isError || !token || !data ? (
         <View style={styles.center}>
           <Text style={styles.errTitle}>Link unavailable</Text>
           <Text style={styles.errSub}>This share link is invalid or no longer active.</Text>
