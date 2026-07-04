@@ -1,5 +1,6 @@
 import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors } from '../../theme/tokens';
 import { NotificationBell } from './NotificationBell';
@@ -21,8 +22,10 @@ type MobileTopBarProps = {
  */
 export function MobileTopBar({ company, logoUrl, onProfilePress }: MobileTopBarProps): React.JSX.Element {
   const initial = (company.trim()[0] ?? '?').toUpperCase();
+  // Clear the status bar / notch on native (0 on web, so the layout is unchanged).
+  const insets = useSafeAreaInsets();
   return (
-    <View style={styles.bar}>
+    <View style={[styles.bar, { paddingTop: insets.top + 12 }]}>
       <View style={styles.brand}>
         <View style={styles.brandText}>
           <Text style={styles.kicker}>MYSTOKK</Text>
@@ -58,7 +61,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
     paddingHorizontal: 16,
-    paddingTop: 14,
     paddingBottom: 12,
     backgroundColor: colors.bgWhite,
     borderBottomWidth: 1,

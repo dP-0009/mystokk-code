@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -7,6 +7,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation';
 import { MainLayout, PageBody, PageHeader } from '../components/layout';
 import { AddItemForm, type AddItemFormInitial } from '../components/inventory/AddItemForm';
+import { ErrorState, LoadingState } from '../components/shared/StateView';
 import { getInventoryDetail, updateInventory, type InventoryInput } from '../services/supabase/inventory';
 import { uploadInventoryDocument, uploadInventoryPhoto, type UploadFile } from '../services/supabase/storage';
 import { colors } from '../theme/tokens';
@@ -60,18 +61,12 @@ export function InventoryEditScreen({ navigation, route }: Props): React.JSX.Ele
       <PageBody>
         <View style={styles.container}>
           {isLoading ? (
-            <View style={styles.center}>
-              <ActivityIndicator color={colors.accent} size="large" />
-            </View>
+            <LoadingState />
           ) : isError || !data ? (
-            <View style={styles.center}>
-              <Text style={styles.errorText}>
-                {loadError instanceof Error ? loadError.message : 'Failed to load.'}
-              </Text>
-              <Pressable onPress={() => void refetch()} style={styles.retry}>
-                <Text style={styles.retryText}>Retry</Text>
-              </Pressable>
-            </View>
+            <ErrorState
+              message={loadError instanceof Error ? loadError.message : 'Failed to load.'}
+              onRetry={() => void refetch()}
+            />
           ) : (
             <AddItemForm
               initial={toInitial(data.item)}

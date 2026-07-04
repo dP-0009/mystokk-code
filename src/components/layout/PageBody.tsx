@@ -1,5 +1,5 @@
 import React, { type ReactNode } from 'react';
-import { ScrollView, StyleSheet, type ViewStyle } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, type ViewStyle } from 'react-native';
 
 import { colors } from '../../theme/tokens';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -22,12 +22,19 @@ export function PageBody({
 }: PageBodyProps): React.JSX.Element {
   const isMobile = useIsMobile();
   return (
-    <ScrollView
+    <KeyboardAvoidingView
       style={styles.body}
-      contentContainerStyle={[isMobile ? styles.contentMobile : styles.content, contentContainerStyle]}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      {children}
-    </ScrollView>
+      <ScrollView
+        style={styles.body}
+        contentContainerStyle={[isMobile ? styles.contentMobile : styles.content, contentContainerStyle]}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+      >
+        {children}
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
