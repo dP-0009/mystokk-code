@@ -1,11 +1,11 @@
 [
   {
-    "relation": ["delegate_permission/common.handle_all_urls"],
+    "relation": [ "delegate_permission/common.handle_all_urls" ],
     "target": {
       "namespace": "android_app",
       "package_name": "com.ecozoe.mystokk",
       "sha256_cert_fingerprints": [
-        "REPLACE_WITH_APP_SIGNING_SHA256_FINGERPRINT"
+        "F6:FC:29:86:40:B7:D5:68:D8:D3:ED:B9:E4:FD:C1:60:38:E9:D7:E5:A7:9E:17:F5:C2:6E:8A:4E:14:7C:67:0D"
       ]
     }
   }

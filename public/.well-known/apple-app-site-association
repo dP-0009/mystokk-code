@@ -3,8 +3,8 @@
     "apps": [],
     "details": [
       {
-        "appID": "TEAMID.com.ecozoe.mystokk",
-        "paths": ["/share/*", "/s/*"]
+        "appID": "HBH7MFW8UP.com.ecozoe.mystokk",
+        "paths": [ "/share/*", "/s/*" ]
       }
     ]
   }
