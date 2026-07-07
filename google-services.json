@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "174239436994",
+    "project_id": "mystokk-01",
+    "storage_bucket": "mystokk-01.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:174239436994:android:e4e9329bf8816e717deb5b",
+        "android_client_info": {
+          "package_name": "com.ecozoe.mystokk"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyANZUNyavJiQy8qm7o7oYDBdc-ykQ4qEm8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
