@@ -45,6 +45,16 @@
           "data": [
             {
               "scheme": "https",
+              "host": "www.mystokk.com",
+              "pathPrefix": "/share"
+            },
+            {
+              "scheme": "https",
+              "host": "www.mystokk.com",
+              "pathPrefix": "/s"
+            },
+            {
+              "scheme": "https",
               "host": "mystokk.com",
               "pathPrefix": "/share"
             },

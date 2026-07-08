@@ -67,6 +67,8 @@ export interface InventoryDocument {
 export interface InventoryDetail {
   item: InventoryItem;
   photoUrls: string[];
+  /** Storage paths for each photo (same order as photoUrls) — needed to delete. */
+  photoPaths: string[];
   documents: InventoryDocument[];
   shareActivity: ShareActivity[];
   reservations: ItemReservation[];
@@ -181,6 +183,7 @@ export async function getInventoryDetail(inventoryId: string): Promise<Inventory
   const photoRows = (photoRes.data ?? []) as PhotoRow[];
   // Public-read bucket → resized public URLs (800px/q80), no signing needed.
   const photoUrls: string[] = photoRows.map((p) => photoDetailUrl(p.storage_path));
+  const photoPaths: string[] = photoRows.map((p) => p.storage_path);
 
   const fileRows = (fileRes.data ?? []) as { storage_path: string; original_name: string | null }[];
   let documents: InventoryDocument[] = [];
@@ -202,6 +205,7 @@ export async function getInventoryDetail(inventoryId: string): Promise<Inventory
   return {
     item: itemRes.data as InventoryItem,
     photoUrls,
+    photoPaths,
     documents,
     shareActivity: (activityRes.data ?? []) as ShareActivity[],
     reservations: (resvRes.data ?? []) as ItemReservation[],

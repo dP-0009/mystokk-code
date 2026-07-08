@@ -153,6 +153,24 @@ export async function uploadInventoryDocument(
 }
 
 /**
+ * Delete a product photo: remove its inventory_photos row (the source of truth
+ * for what's shown), then best-effort delete the storage object. RLS restricts
+ * the row delete to the owner.
+ */
+export async function deleteInventoryPhoto(storagePath: string): Promise<void> {
+  const { error } = await supabase.from('inventory_photos').delete().eq('storage_path', storagePath);
+  if (error) throw error;
+  await supabase.storage.from(PHOTOS_BUCKET).remove([storagePath]);
+}
+
+/** Delete an inventory document (inventory_files row + storage object). */
+export async function deleteInventoryDocument(storagePath: string): Promise<void> {
+  const { error } = await supabase.from('inventory_files').delete().eq('storage_path', storagePath);
+  if (error) throw error;
+  await supabase.storage.from(DOCS_BUCKET).remove([storagePath]);
+}
+
+/**
  * Upload a company logo to the public bucket and save its public URL on the
  * vendor record. Returns the public URL. (vendorId must be the caller — the
  * owner-write policy enforces the first folder equals the auth uid.)

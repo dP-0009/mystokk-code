@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import type { InventoryInput } from '../../services/supabase/inventory';
 import { toFullUrl, type UploadFile } from '../../services/supabase/storage';
@@ -68,22 +69,35 @@ export interface AddItemFormInitial {
   description?: string;
 }
 
+/** Saved photos/documents the user removed in this edit session. */
+export interface RemovedAttachments {
+  photoPaths: string[];
+  docPaths: string[];
+}
+
 interface AddItemFormProps {
   submitting: boolean;
   error?: string | null;
-  onSubmit: (input: InventoryInput, photos: UploadFile[], docs: UploadFile[]) => void | Promise<void>;
+  onSubmit: (
+    input: InventoryInput,
+    photos: UploadFile[],
+    docs: UploadFile[],
+    removed: RemovedAttachments,
+  ) => void | Promise<void>;
   onCancel: () => void;
   /** Seed values for editing an existing item. Applied on mount. */
   initial?: AddItemFormInitial;
-  /** Already-saved photo URLs — shown read-only above newly-added ones. */
-  existingPhotoUrls?: string[];
-  /** Already-saved documents — shown read-only above newly-added ones. */
-  existingDocs?: { name: string }[];
+  /** Already-saved photos (url + storage path) — shown above newly-added ones, each removable. */
+  existingPhotos?: { url: string; path: string }[];
+  /** Already-saved documents (name + storage path) — shown above newly-added ones, each removable. */
+  existingDocs?: { name: string; path: string }[];
   /** Primary button label. Defaults to "Submit". */
   submitLabel?: string;
 }
 
 type Errors = Partial<Record<'title' | 'quantity' | 'price', string>>;
+
+const LAST_CURRENCY_KEY = 'mystokk:lastCurrency';
 
 export function AddItemForm({
   submitting,
@@ -91,7 +105,7 @@ export function AddItemForm({
   onSubmit,
   onCancel,
   initial,
-  existingPhotoUrls,
+  existingPhotos,
   existingDocs,
   submitLabel = 'Submit',
 }: AddItemFormProps): React.JSX.Element {
@@ -109,10 +123,29 @@ export function AddItemForm({
   const [photos, setPhotos] = useState<UploadFile[]>([]);
   const [docs, setDocs] = useState<UploadFile[]>([]);
   const [errors, setErrors] = useState<Errors>({});
+  // Saved attachments the user removed this session (deleted on submit).
+  const [removedPhotoPaths, setRemovedPhotoPaths] = useState<string[]>([]);
+  const [removedDocPaths, setRemovedDocPaths] = useState<string[]>([]);
+
+  // New item (no seed currency): default to the last currency this user picked
+  // (persisted locally), falling back to AED the very first time.
+  const isEditing = initial?.currency !== undefined;
+  React.useEffect(() => {
+    if (isEditing) return;
+    let active = true;
+    void AsyncStorage.getItem(LAST_CURRENCY_KEY).then((v) => {
+      if (active && v) setCurrency(v);
+    });
+    return () => {
+      active = false;
+    };
+  }, [isEditing]);
 
   const { open: openLightbox } = useLightbox();
-  // Already-saved photos, normalized to full URLs for the shared lightbox.
-  const existingFullUrls = (existingPhotoUrls ?? []).map(toFullUrl).filter(Boolean);
+  // Saved photos still present (not removed), normalized to full URLs for the lightbox.
+  const visibleExistingPhotos = (existingPhotos ?? []).filter((p) => !removedPhotoPaths.includes(p.path));
+  const existingFullUrls = visibleExistingPhotos.map((p) => toFullUrl(p.url)).filter(Boolean);
+  const visibleExistingDocs = (existingDocs ?? []).filter((d) => !removedDocPaths.includes(d.path));
 
   // Category options depend on the chosen industry (same taxonomy as the profile).
   const categoryOptions = industry ? SETTINGS_INDUSTRY_CATEGORIES[industry] ?? [] : [];
