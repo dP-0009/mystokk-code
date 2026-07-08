@@ -22,7 +22,7 @@
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_APP_URL": "https://mystokk.vercel.app"
+        "EXPO_PUBLIC_APP_URL": "https://mystokk.com"
       }
     }
   },

@@ -308,7 +308,14 @@ export function NetworkScreen({ navigation }: Props): React.JSX.Element {
       </PageBody>
 
       <AddVendorModal visible={addOpen} onClose={() => setAddOpen(false)} />
-      <BulkUploadModal visible={bulkOpen} onClose={() => setBulkOpen(false)} />
+      <BulkUploadModal
+        visible={bulkOpen}
+        onClose={() => setBulkOpen(false)}
+        onImported={() => {
+          void networkQuery.refetch();
+          void pendingQuery.refetch();
+        }}
+      />
 
       {/* Mobile action sheet — the card's ⋮ opens call/whatsapp/email/view/edit/delete. */}
       <Modal

@@ -14,11 +14,11 @@
       "usesAppleSignIn": true,
       "googleServicesFile": "./GoogleService-Info.plist",
       "associatedDomains": [
-        "applinks:mystokk.vercel.app"
+        "applinks:www.mystokk.com",
+        "applinks:mystokk.com"
       ],
       "infoPlist": {
         "UIBackgroundModes": [
-          "remote-notification",
           "remote-notification"
         ],
         "ITSAppUsesNonExemptEncryption": false
@@ -45,12 +45,12 @@
           "data": [
             {
               "scheme": "https",
-              "host": "mystokk.vercel.app",
+              "host": "mystokk.com",
               "pathPrefix": "/share"
             },
             {
               "scheme": "https",
-              "host": "mystokk.vercel.app",
+              "host": "mystokk.com",
               "pathPrefix": "/s"
             }
           ],
@@ -86,6 +86,7 @@
         }
       ],
       "@react-native-firebase/app",
+      "@react-native-firebase/messaging",
       [
         "expo-build-properties",
         {
@@ -94,7 +95,8 @@
           }
         }
       ],
-      "expo-font"
+      "expo-font",
+      "expo-sharing"
     ],
     "extra": {
       "eas": {

@@ -17,7 +17,7 @@ import type { NetworkVendor } from './network';
  * `shareUrl()` never produces a double slash.
  */
 export const SHARE_BASE = (
-  process.env.EXPO_PUBLIC_APP_URL ?? 'https://mystokk.vercel.app'
+  process.env.EXPO_PUBLIC_APP_URL ?? 'https://www.mystokk.com'
 ).replace(/\/+$/, '');
 
 export function shareUrl(token: string): string {

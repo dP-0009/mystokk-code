@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
+import { File, Paths } from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 import { useQueryClient } from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation';
 import { ScreenHeader } from '../components/shared/ScreenHeader';
 import { AppButton } from '../components/shared/AppButton';
 import { bulkImportVendors } from '../services/supabase/network';
-import { buildTemplateCsv, CSV_COLUMNS, parseCsv } from '../utils/csv';
+import { buildTemplateXlsx, CSV_COLUMNS, parseVendorFile, TEMPLATE_FILENAME, TEMPLATE_MIME } from '../utils/csv';
 import { colors } from '../theme/tokens';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'BulkUpload'>;
@@ -20,28 +22,64 @@ export function BulkUploadScreen({ navigation }: Props): React.JSX.Element {
   const [importing, setImporting] = useState(false);
 
   const downloadTemplate = async (): Promise<void> => {
+    const bytes = buildTemplateXlsx();
+    if (Platform.OS === 'web') {
+      const blob = new Blob([bytes as BlobPart], { type: TEMPLATE_MIME });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = TEMPLATE_FILENAME;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      return;
+    }
+    // Native: write a real file to the cache, then hand it to the share sheet.
     try {
-      await Share.share({
-        title: 'mystokk-vendors-template.csv',
-        message: buildTemplateCsv(),
-      });
+      const file = new File(Paths.cache, TEMPLATE_FILENAME);
+      if (file.exists) file.delete();
+      file.create();
+      file.write(bytes);
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(file.uri, {
+          mimeType: TEMPLATE_MIME,
+          UTI: 'org.openxmlformats.spreadsheetml.sheet',
+          dialogTitle: 'MyStokk vendor template',
+        });
+      } else {
+        Alert.alert('Sharing not available', 'This device cannot share files.');
+      }
     } catch {
-      // User dismissed the share sheet — nothing to do.
+      // User dismissed the share sheet, or the file couldn't be written.
     }
   };
 
   const pickFile = async (): Promise<void> => {
     setParseError(null);
     const res = await DocumentPicker.getDocumentAsync({
-      type: ['text/csv', 'text/comma-separated-values', 'application/vnd.ms-excel', 'text/plain', '*/*'],
+      type: [
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'text/csv',
+        'text/comma-separated-values',
+        'application/vnd.ms-excel',
+        'application/xml',
+        'text/xml',
+        'text/plain',
+        '*/*',
+      ],
       copyToCacheDirectory: true,
       multiple: false,
     });
     if (res.canceled) return;
     const asset = res.assets[0];
     try {
-      const text = await (await fetch(asset.uri)).text();
-      const parsed = parseCsv(text).filter((r) => (r.company_name ?? '').trim() !== '');
+      // Read raw bytes — the file may be a binary .xlsx (zip) or text (CSV/.xls).
+      const bytes =
+        Platform.OS === 'web'
+          ? new Uint8Array(await (await fetch(asset.uri)).arrayBuffer())
+          : await new File(asset.uri).bytes();
+      const parsed = parseVendorFile(bytes).filter((r) => (r.company_name ?? '').trim() !== '');
       if (parsed.length === 0) {
         setParseError('No vendor rows found. Make sure the file has a company_name column.');
         setRows(null);
@@ -51,7 +89,7 @@ export function BulkUploadScreen({ navigation }: Props): React.JSX.Element {
       setRows(parsed);
       setFileName(asset.name);
     } catch {
-      setParseError('Could not read that file. Please upload a valid CSV.');
+      setParseError('Could not read that file. Please upload a valid Excel (.xlsx) or CSV file.');
       setRows(null);
     }
   };
@@ -78,15 +116,15 @@ export function BulkUploadScreen({ navigation }: Props): React.JSX.Element {
       <ScrollView contentContainerStyle={styles.body}>
         {/* Step 1 */}
         <Text style={styles.stepLabel}>Step 1 — Download Template</Text>
-        <Text style={styles.hint}>{CSV_COLUMNS.length}-column CSV template with all vendor fields pre-formatted.</Text>
-        <AppButton title="📄 Download CSV Template" variant="outline" onPress={() => void downloadTemplate()} style={styles.block} />
+        <Text style={styles.hint}>Excel template with all {CSV_COLUMNS.length} vendor fields pre-formatted.</Text>
+        <AppButton title="📄 Download Excel Template" variant="outline" onPress={() => void downloadTemplate()} style={styles.block} />
 
         {/* Step 2 */}
         <Text style={[styles.stepLabel, styles.step2]}>Step 2 — Upload Your File</Text>
         <Text style={styles.hint}>Duplicates are automatically removed by email address.</Text>
         <Pressable style={styles.dropzone} onPress={() => void pickFile()}>
           <Text style={styles.dropIcon}>📤</Text>
-          <Text style={styles.dropText}>{fileName ?? 'Tap to choose a CSV file'}</Text>
+          <Text style={styles.dropText}>{fileName ?? 'Tap to choose your filled template (.xlsx or .csv)'}</Text>
           {rows ? <Text style={styles.dropCount}>{rows.length} vendor row{rows.length === 1 ? '' : 's'} ready</Text> : null}
         </Pressable>
         {parseError ? <Text style={styles.error}>{parseError}</Text> : null}

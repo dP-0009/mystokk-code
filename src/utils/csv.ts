@@ -7,6 +7,8 @@
  * happen server-side in the bulk_import_vendors RPC.
  */
 
+import { writeXlsx, readXlsxRows, isXlsx } from './xlsx';
+
 export const CSV_COLUMNS = [
   'company_name',
   'contact_person',
@@ -22,23 +24,25 @@ export const CSV_COLUMNS = [
   'notes',
 ] as const;
 
+/** One filled example row (aligned to CSV_COLUMNS) shown in every template. */
+export const TEMPLATE_EXAMPLE_ROW = [
+  'Spinneys Distribution',
+  'Rajesh Kumar',
+  'Procurement Lead',
+  'rajesh@spinneys.example',
+  '971500000000',
+  '971500000000',
+  'Retail',
+  'Food & Beverage',
+  'United Arab Emirates',
+  'Dubai',
+  'Suppliers UAE',
+  'Met at Gulfood 2026',
+];
+
 /** A header row + one example row so non-technical users see the expected shape. */
 export function buildTemplateCsv(): string {
-  const example = [
-    'Spinneys Distribution',
-    'Rajesh Kumar',
-    'Procurement Lead',
-    'rajesh@spinneys.example',
-    '971500000000',
-    '971500000000',
-    'Retail',
-    'Food & Beverage',
-    'United Arab Emirates',
-    'Dubai',
-    'Suppliers UAE',
-    'Met at Gulfood 2026',
-  ];
-  return `${CSV_COLUMNS.join(',')}\n${example.map(csvCell).join(',')}\n`;
+  return `${CSV_COLUMNS.join(',')}\n${TEMPLATE_EXAMPLE_ROW.map(csvCell).join(',')}\n`;
 }
 
 function csvCell(value: string): string {
@@ -77,12 +81,30 @@ export function normalizePhoneNumber(raw: string): string {
  */
 export function parseSpreadsheet(text: string): Record<string, string>[] {
   const looksLikeXml = /urn:schemas-microsoft-com:office:spreadsheet/i.test(text) || /<Workbook[\s>]/i.test(text);
-  return rowsToVendorObjects(looksLikeXml ? spreadsheetMlRows(text) : tokenize(text));
+  return rowsToVendorObjects(looksLikeXml ? spreadsheetMlRows(text) : tokenize(text, detectDelimiter(text)));
 }
 
 /** Parse CSV text into objects keyed by the (lower-cased, trimmed) header row. */
 export function parseCsv(text: string): Record<string, string>[] {
-  return rowsToVendorObjects(tokenize(text));
+  return rowsToVendorObjects(tokenize(text, detectDelimiter(text)));
+}
+
+/**
+ * Pick the delimiter Excel used. "CSV (Comma delimited)" uses commas, but Excel
+ * in many locales exports "CSV" with semicolons, and some exports use tabs. We
+ * sniff the header line and choose whichever separator appears most — so a plain
+ * CSV, a CSV UTF-8, and a locale/semicolon export all import the same way.
+ */
+function detectDelimiter(text: string): string {
+  const firstLine = text.replace(/^﻿/, '').split(/\r\n|\r|\n/, 1)[0] ?? '';
+  const counts: Record<string, number> = { ',': 0, ';': 0, '\t': 0 };
+  let inQuotes = false;
+  for (const ch of firstLine) {
+    if (ch === '"') inQuotes = !inQuotes;
+    else if (!inQuotes && ch in counts) counts[ch]++;
+  }
+  const best = (Object.keys(counts) as string[]).sort((a, b) => counts[b] - counts[a])[0];
+  return counts[best] > 0 ? best : ',';
 }
 
 /** Map a header row + data rows into objects, repairing phone columns. */
@@ -106,8 +128,8 @@ function rowsToVendorObjects(rows: string[][]): Record<string, string>[] {
   return out;
 }
 
-/** RFC-4180-ish tokenizer: handles quoted fields, embedded commas/newlines, "" escapes. */
-function tokenize(text: string): string[][] {
+/** RFC-4180-ish tokenizer: handles quoted fields, embedded delimiters/newlines, "" escapes. */
+function tokenize(text: string, delimiter = ','): string[][] {
   const rows: string[][] = [];
   let row: string[] = [];
   let field = '';
@@ -132,7 +154,7 @@ function tokenize(text: string): string[][] {
 
     if (ch === '"') {
       inQuotes = true;
-    } else if (ch === ',') {
+    } else if (ch === delimiter) {
       row.push(field);
       field = '';
     } else if (ch === '\n' || ch === '\r') {
@@ -156,14 +178,18 @@ function tokenize(text: string): string[][] {
 }
 
 // ---------------------------------------------------------------------------
-// Excel template (SpreadsheetML 2003 .xls)
+// Excel template (real .xlsx / OOXML)
 //
 // A plain CSV can't carry cell formatting, so a 12-digit number typed into a
 // "General" column shows up as "9.7E+11". This template ships the two phone
-// columns as a real Number format ("0") via a per-COLUMN style, which Excel
-// also applies to the cells the user types in — so their numbers stay full and
-// plain without anyone touching the format. Downloaded as .xls; Excel opens it
-// natively, and parseSpreadsheet() reads it (or a CSV) straight back on upload.
+// columns with a real integer Number format ("0") via a per-COLUMN style, which
+// Excel also applies to the cells the user types in — so their numbers stay full
+// and plain without anyone touching the format.
+//
+// We emit a genuine .xlsx (see ./xlsx), NOT SpreadsheetML-2003-as-.xls: the old
+// format made desktop Excel warn "format and extension don't match" and made
+// mobile viewers render the raw XML. parseVendorFile() reads the filled .xlsx
+// (or a CSV, or an old .xls) straight back on upload.
 // ---------------------------------------------------------------------------
 
 /** 0-based indexes of the phone columns within CSV_COLUMNS. */
@@ -172,56 +198,29 @@ const PHONE_COLUMN_INDEXES = CSV_COLUMNS.reduce<number[]>((acc, c, i) => {
   return acc;
 }, []);
 
-export const TEMPLATE_FILENAME = 'mystokk-vendors-template.xls';
-export const TEMPLATE_MIME = 'application/vnd.ms-excel';
+export const TEMPLATE_FILENAME = 'mystokk-vendors-template.xlsx';
+export const TEMPLATE_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
-/** Build the downloadable Excel template (SpreadsheetML 2003 XML). */
-export function buildTemplateXls(): string {
-  const example = [
-    'Spinneys Distribution',
-    'Rajesh Kumar',
-    'Procurement Lead',
-    'rajesh@spinneys.example',
-    '971500000000',
-    '971500000000',
-    'Retail',
-    'Food & Beverage',
-    'United Arab Emirates',
-    'Dubai',
-    'Suppliers UAE',
-    'Met at Gulfood 2026',
-  ];
+/** Build the downloadable Excel template as real .xlsx bytes. */
+export function buildTemplateXlsx(): Uint8Array {
+  return writeXlsx({
+    name: 'Vendors',
+    header: [...CSV_COLUMNS],
+    rows: [TEMPLATE_EXAMPLE_ROW],
+    numberColumns: PHONE_COLUMN_INDEXES,
+  });
+}
 
-  const headerCells = CSV_COLUMNS.map(
-    (c) => `<Cell ss:StyleID="sHdr"><Data ss:Type="String">${xmlEscape(c)}</Data></Cell>`,
-  ).join('');
-  const sampleCells = example
-    .map((v, i) =>
-      PHONE_COLUMN_INDEXES.includes(i)
-        ? `<Cell ss:StyleID="sNum"><Data ss:Type="Number">${v}</Data></Cell>`
-        : `<Cell><Data ss:Type="String">${xmlEscape(v)}</Data></Cell>`,
-    )
-    .join('');
-  // Number-format the whole phone columns (1-based ss:Index) so user entries stay plain.
-  const columns = PHONE_COLUMN_INDEXES.map(
-    (i) => `<Column ss:Index="${i + 1}" ss:StyleID="sNum" ss:Width="120"/>`,
-  ).join('');
-
-  return `<?xml version="1.0"?>
-<?mso-application progid="Excel.Sheet"?>
-<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
- <Styles>
-  <Style ss:ID="sHdr"><Font ss:Bold="1"/></Style>
-  <Style ss:ID="sNum"><NumberFormat ss:Format="0"/></Style>
- </Styles>
- <Worksheet ss:Name="Vendors">
-  <Table>
-   ${columns}
-   <Row>${headerCells}</Row>
-   <Row>${sampleCells}</Row>
-  </Table>
- </Worksheet>
-</Workbook>`;
+/**
+ * Parse an uploaded vendor file from its raw bytes. Handles a filled .xlsx
+ * (zip), the legacy SpreadsheetML .xls, or a CSV (e.g. saved-as from Excel) —
+ * so whatever the user uploads imports clean.
+ */
+export function parseVendorFile(bytes: Uint8Array): Record<string, string>[] {
+  if (isXlsx(bytes)) return rowsToVendorObjects(readXlsxRows(bytes));
+  // Everything else is text (CSV or SpreadsheetML); decode and strip any BOM.
+  const text = new TextDecoder('utf-8').decode(bytes).replace(/^﻿/, '');
+  return parseSpreadsheet(text);
 }
 
 /** Extract rows (arrays of cell strings) from a SpreadsheetML 2003 workbook. */
@@ -249,15 +248,6 @@ function spreadsheetMlRows(xml: string): string[][] {
     rows.push(cells);
   }
   return rows;
-}
-
-function xmlEscape(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
 }
 
 function xmlUnescape(s: string): string {

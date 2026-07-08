@@ -4,17 +4,18 @@ import {
   Modal,
   Platform,
   Pressable,
-  Share,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
+import { File, Paths } from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { bulkImportVendors } from '../../services/supabase/network';
-import { buildTemplateXls, parseSpreadsheet, TEMPLATE_FILENAME, TEMPLATE_MIME } from '../../utils/csv';
+import { buildTemplateXlsx, parseVendorFile, TEMPLATE_FILENAME, TEMPLATE_MIME } from '../../utils/csv';
 import { webOnly } from '../layout/web';
 import { colors, radius, shadows } from '../../theme/tokens';
 import { toast } from '../../stores/toast';
@@ -38,9 +39,9 @@ export function BulkUploadModal({ visible, onClose, onImported }: BulkUploadModa
   };
 
   const downloadTemplate = async (): Promise<void> => {
-    const xls = buildTemplateXls();
+    const bytes = buildTemplateXlsx();
     if (Platform.OS === 'web') {
-      const blob = new Blob([xls], { type: `${TEMPLATE_MIME};charset=utf-8` });
+      const blob = new Blob([bytes as BlobPart], { type: TEMPLATE_MIME });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -51,10 +52,24 @@ export function BulkUploadModal({ visible, onClose, onImported }: BulkUploadModa
       URL.revokeObjectURL(url);
       return;
     }
+    // Native: write a real file to the cache, then hand it to the share sheet
+    // (Share.share only takes text, which is why the old .xls arrived corrupt).
     try {
-      await Share.share({ title: TEMPLATE_FILENAME, message: xls });
+      const file = new File(Paths.cache, TEMPLATE_FILENAME);
+      if (file.exists) file.delete();
+      file.create();
+      file.write(bytes);
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(file.uri, {
+          mimeType: TEMPLATE_MIME,
+          UTI: 'org.openxmlformats.spreadsheetml.sheet',
+          dialogTitle: 'MyStokk vendor template',
+        });
+      } else {
+        setError('Sharing is not available on this device.');
+      }
     } catch {
-      // User dismissed the share sheet — nothing to do.
+      // User dismissed the share sheet, or the file couldn't be written.
     }
   };
 
@@ -63,6 +78,7 @@ export function BulkUploadModal({ visible, onClose, onImported }: BulkUploadModa
     setError(null);
     const res = await DocumentPicker.getDocumentAsync({
       type: [
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'text/csv',
         'text/comma-separated-values',
         'application/vnd.ms-excel',
@@ -78,9 +94,14 @@ export function BulkUploadModal({ visible, onClose, onImported }: BulkUploadModa
 
     setImporting(true);
     try {
-      const text = await (await fetch(res.assets[0].uri)).text();
-      // Accepts the filled .xls template OR a CSV (e.g. saved-as from Excel).
-      const rows = parseSpreadsheet(text).filter((r) => (r.company_name ?? '').trim() !== '');
+      const uri = res.assets[0].uri;
+      // Read raw bytes — the file may be a binary .xlsx (zip) or text (CSV/.xls).
+      const bytes =
+        Platform.OS === 'web'
+          ? new Uint8Array(await (await fetch(uri)).arrayBuffer())
+          : await new File(uri).bytes();
+      // Accepts the filled .xlsx template, an old .xls, OR a CSV (saved-as from Excel).
+      const rows = parseVendorFile(bytes).filter((r) => (r.company_name ?? '').trim() !== '');
       if (rows.length === 0) {
         setError('No vendor rows found. Make sure the file has a company_name column.');
         return;
@@ -144,7 +165,7 @@ export function BulkUploadModal({ visible, onClose, onImported }: BulkUploadModa
               ) : (
                 <>
                   <Ionicons name="cloud-upload-outline" size={24} color={colors.textMuted} />
-                  <Text style={styles.dropText}>Click to upload your filled template (.xls or .csv)</Text>
+                  <Text style={styles.dropText}>Click to upload your filled template (.xlsx or .csv)</Text>
                 </>
               )}
             </Pressable>

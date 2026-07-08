@@ -37,7 +37,7 @@ export const SUPABASE_ANON_KEY =
   process.env.SUPABASE_ANON_KEY ??
   process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ??
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdqcHpnZHJtZnhpd3FmaWphaXpiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE5Mzg4MzgsImV4cCI6MjA5NzUxNDgzOH0.03-PKq7f39r06cxLdePdcIn_ijp8uTwiHnF7lmJlcyw';
-export const APP_BASE = (process.env.EXPO_PUBLIC_APP_URL ?? 'https://mystokk.vercel.app').replace(/\/+$/, '');
+export const APP_BASE = (process.env.EXPO_PUBLIC_APP_URL ?? 'https://www.mystokk.com').replace(/\/+$/, '');
 const PHOTO_BUCKET = 'inventory-photos';
 
 interface PublicShare {
@@ -119,25 +119,23 @@ function escapeHtml(value: string): string {
 }
 
 /**
- * Lines under the product title:
- *   Shared by {company}
- *   {city}, {country}
- *   Powered by MyStokk
- * Parts omitted when absent. Never includes price.
+ * Single-line description under the product title, e.g.:
+ *   Ever Global • Dubai • United Arab Emirates • Powered by MyStokk
+ * Bullet-separated so WhatsApp/Telegram render it on one line (newlines get
+ * collapsed to a single truncated line). Parts omitted when absent; never price.
  */
 function buildDescription(share: PublicShare | null): string {
   if (!share) return 'View this shared item on MyStokk.';
-  const location = [share.shared_by_city, share.shared_by_country].filter(Boolean).join(', ');
-  const lines: string[] = [];
-  lines.push(share.shared_by_company ? `Shared by ${share.shared_by_company}` : 'Shared on MyStokk');
-  if (location) lines.push(location);
-  lines.push('Powered by MyStokk');
-  return lines.join('\n');
+  const parts = [share.shared_by_company, share.shared_by_city, share.shared_by_country]
+    .map((s) => (s ?? '').trim())
+    .filter(Boolean);
+  parts.push('Powered by MyStokk');
+  return parts.join(' • ');
 }
 
-/** Spaced variant (leading blank line under the title) for the social preview. */
+/** Social-preview description — same single-line bullet form as buildDescription. */
 function buildOgDescription(share: PublicShare | null): string {
-  return `\n${buildDescription(share)}`;
+  return buildDescription(share);
 }
 
 /** og:title is the product name only — the company appears below in the description. */
@@ -147,10 +145,19 @@ function buildTitle(share: PublicShare | null): string {
 
 const FALLBACK_OG_IMAGE = 'https://placehold.co/600x600/1e293b/ffffff?text=MyStokk';
 
+/**
+ * og:image, most-specific first, so a share ALWAYS carries an image:
+ *   1. the item's first product photo (rendered 600×600), else
+ *   2. the sharer's company logo (a public Supabase URL), else
+ *   3. a branded MyStokk placeholder.
+ */
 function resolveOgImage(share: PublicShare | null): string {
-  if (!share?.first_photo_path) return FALLBACK_OG_IMAGE;
-  const path = share.first_photo_path.split('/').map(encodeURIComponent).join('/');
-  return `${SUPABASE_URL}/storage/v1/render/image/public/${PHOTO_BUCKET}/${path}?width=600&height=600&resize=cover`;
+  if (share?.first_photo_path) {
+    const path = share.first_photo_path.split('/').map(encodeURIComponent).join('/');
+    return `${SUPABASE_URL}/storage/v1/render/image/public/${PHOTO_BUCKET}/${path}?width=600&height=600&resize=cover`;
+  }
+  if (share?.shared_by_logo_url) return share.shared_by_logo_url;
+  return FALLBACK_OG_IMAGE;
 }
 
 function renderOgHtml(share: PublicShare | null, canonical: string, imageUrl: string): string {

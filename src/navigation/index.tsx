@@ -88,15 +88,55 @@ export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 const linking: LinkingOptions<RootStackParamList> = {
   prefixes: [
     'mystokk://',
-    process.env.EXPO_PUBLIC_APP_URL ?? 'https://mystokk.vercel.app',
+    process.env.EXPO_PUBLIC_APP_URL ?? 'https://www.mystokk.com',
+    'https://www.mystokk.com',
+    'https://mystokk.com',
+    // Legacy hosts — kept so links shared before the domain switch still open.
+    'https://mystokk.vercel.app',
     'https://mystokk.app',
     'https://app.mystokk.com',
   ],
   config: {
+    // Every screen has a URL path so the address bar reflects the current screen
+    // and a browser refresh restores it (instead of dropping back to the
+    // dashboard). Static paths are listed before the dynamic ones they'd shadow.
     screens: {
+      // Auth
+      Login: 'login',
+      Signup: 'signup',
+      ForgotPassword: 'forgot-password',
       Otp: 'verify',
-      ShareLanding: 'share/:token', // public share link entry point (works signed out)
+      NewPassword: 'reset-password',
+      Onboarding: 'onboarding',
+      // Main tabs
+      Main: {
+        screens: {
+          Dashboard: 'dashboard',
+          Inventory: 'inventory',
+          Network: 'network',
+          Received: 'received',
+          Reservations: 'reservations',
+        },
+      },
+      // Inventory (static `create` before `:inventoryId`)
+      InventoryCreate: 'inventory/create',
+      InventoryEdit: 'inventory/:inventoryId/edit',
+      ManageShares: 'inventory/:inventoryId/shares',
       InventoryDetail: 'inventory/:inventoryId',
+      // Network / vendors
+      AddVendor: 'network/add',
+      BulkUpload: 'network/bulk-upload',
+      VendorDetail: 'vendor', // vendorId / manualVendorId ride as query params
+      EditVendor: 'vendor/edit',
+      // Received / misc
+      ReceivedDetail: 'received/:shareId',
+      Notifications: 'notifications',
+      Profile: 'profile',
+      EditProfile: 'profile/edit',
+      Settings: 'settings',
+      Preferences: 'preferences',
+      Legal: 'legal/:page',
+      ShareLanding: 'share/:token', // public share link entry point (works signed out)
     },
   },
   // Short links (mystokk.vercel.app/s/<code>) resolve to the same ShareLanding,
