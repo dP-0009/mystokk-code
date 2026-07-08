@@ -229,11 +229,31 @@ export function LandingScreen({ navigation }: Props): React.JSX.Element {
           {/* ---------------- Footer ---------------- */}
           <View style={styles.footer}>
             <BrandMark size={26} labelSize={15} />
-            <Text style={styles.footerCopy}>© {new Date().getFullYear()} MyStokk. Private B2B inventory sharing.</Text>
+            <View style={styles.footerLinks}>
+              <FooterLink label="Privacy Policy" onPress={() => navigation.navigate('Legal', { page: 'privacy' })} />
+              <Text style={styles.footerDot}>·</Text>
+              <FooterLink label="Terms of Service" onPress={() => navigation.navigate('Legal', { page: 'terms' })} />
+              <Text style={styles.footerDot}>·</Text>
+              <FooterLink label="Contact Us" onPress={() => navigation.navigate('Legal', { page: 'contact' })} />
+              <Text style={styles.footerDot}>·</Text>
+              <FooterLink label="FAQ" onPress={() => navigation.navigate('Legal', { page: 'faq' })} />
+            </View>
+            <Text style={styles.footerCopy}>
+              © {new Date().getFullYear()} Everglobal Trading LLC · MyStokk. Private B2B inventory sharing.
+            </Text>
           </View>
         </ScrollView>
       </SafeAreaView>
     </View>
+  );
+}
+
+/** A muted, hover-underlined footer link. */
+function FooterLink({ label, onPress }: { label: string; onPress: () => void }): React.JSX.Element {
+  return (
+    <Pressable onPress={onPress} style={webOnly({ cursor: 'pointer' })}>
+      <Text style={styles.footerLink}>{label}</Text>
+    </Pressable>
   );
 }
 
@@ -443,7 +463,10 @@ const styles = StyleSheet.create({
     paddingVertical: 28,
     paddingHorizontal: 20,
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
   },
+  footerLinks: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'center' },
+  footerLink: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
+  footerDot: { fontSize: 13, color: colors.textMuted },
   footerCopy: { fontSize: 12, color: colors.textMuted, textAlign: 'center' },
 });

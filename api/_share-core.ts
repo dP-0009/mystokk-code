@@ -37,7 +37,7 @@ export const SUPABASE_ANON_KEY =
   process.env.SUPABASE_ANON_KEY ??
   process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ??
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdqcHpnZHJtZnhpd3FmaWphaXpiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE5Mzg4MzgsImV4cCI6MjA5NzUxNDgzOH0.03-PKq7f39r06cxLdePdcIn_ijp8uTwiHnF7lmJlcyw';
-export const APP_BASE = (process.env.EXPO_PUBLIC_APP_URL ?? 'https://www.mystokk.com').replace(/\/+$/, '');
+export const APP_BASE = (process.env.EXPO_PUBLIC_APP_URL ?? 'https://mystokk.com').replace(/\/+$/, '');
 const PHOTO_BUCKET = 'inventory-photos';
 
 interface PublicShare {

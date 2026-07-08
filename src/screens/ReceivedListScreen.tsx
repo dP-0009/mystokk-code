@@ -93,6 +93,7 @@ export function ReceivedListScreen({ navigation }: Props): React.JSX.Element {
                 key={item.share_id}
                 item={item}
                 onPress={() => navigation.navigate('ReceivedDetail', { shareId: item.share_id })}
+                onEdit={() => navigation.navigate('ReceivedEdit', { shareId: item.share_id })}
               />
             ))}
           </View>

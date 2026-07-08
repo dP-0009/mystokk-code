@@ -9,20 +9,20 @@
       "distribution": "internal",
       "ios": { "simulator": true },
       "env": {
-        "EXPO_PUBLIC_APP_URL": "https://www.mystokk.com"
+        "EXPO_PUBLIC_APP_URL": "https://mystokk.com"
       }
     },
     "preview": {
       "distribution": "internal",
       "android": { "buildType": "apk" },
       "env": {
-        "EXPO_PUBLIC_APP_URL": "https://www.mystokk.com"
+        "EXPO_PUBLIC_APP_URL": "https://mystokk.com"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_APP_URL": "https://www.mystokk.com"
+        "EXPO_PUBLIC_APP_URL": "https://mystokk.com"
       }
     }
   },

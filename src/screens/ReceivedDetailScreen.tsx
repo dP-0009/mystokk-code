@@ -183,6 +183,7 @@ export function ReceivedDetailScreen({ navigation, route }: Props): React.JSX.El
             subtitle={subtitle}
             onReserve={() => setReserveOpen(true)}
             onShare={() => setPreShareOpen(true)}
+            onEdit={() => navigation.navigate('ReceivedEdit', { shareId })}
             onSharedWith={() => setSharedWithOpen(true)}
             openLightbox={openLightbox}
           />
@@ -381,6 +382,7 @@ function MobileReceivedBody({
   subtitle,
   onReserve,
   onShare,
+  onEdit,
   onSharedWith,
   openLightbox,
 }: {
@@ -388,6 +390,7 @@ function MobileReceivedBody({
   subtitle: string;
   onReserve: () => void;
   onShare: () => void;
+  onEdit: () => void;
   onSharedWith: () => void;
   openLightbox: (photos: string[], index: number) => void;
 }): React.JSX.Element {
@@ -422,7 +425,7 @@ function MobileReceivedBody({
         </View>
       </View>
 
-      {/* Reserve + Share */}
+      {/* Reserve + Share + Edit */}
       <View style={styles.mActions}>
         <Pressable style={[styles.mReserve, webOnly({ cursor: 'pointer' })]} onPress={onReserve}>
           <Ionicons name="cube-outline" size={16} color="#FFFFFF" />
@@ -431,6 +434,10 @@ function MobileReceivedBody({
         <Pressable style={[styles.mShareBtn, webOnly({ cursor: 'pointer' })]} onPress={onShare}>
           <Ionicons name="share-social-outline" size={16} color={colors.textPrimary} />
           <Text style={styles.mShareText}>Share</Text>
+        </Pressable>
+        <Pressable style={[styles.mShareBtn, webOnly({ cursor: 'pointer' })]} onPress={onEdit}>
+          <Ionicons name="create-outline" size={16} color={colors.textPrimary} />
+          <Text style={styles.mShareText}>Edit</Text>
         </Pressable>
       </View>
 

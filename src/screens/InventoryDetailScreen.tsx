@@ -239,6 +239,11 @@ export function InventoryDetailScreen({ navigation, route }: Props): React.JSX.E
             onSharedWith={() => setSharesOpen(true)}
             onDelete={confirmDelete}
             openLightbox={openLightbox}
+            onViewSource={
+              item.edited_from_share_id
+                ? () => navigation.navigate('ReceivedDetail', { shareId: item.edited_from_share_id as string })
+                : undefined
+            }
           />
         </View>
         {false ? (
@@ -465,6 +470,7 @@ function MobileInventoryBody({
   onSharedWith,
   onDelete,
   openLightbox,
+  onViewSource,
 }: {
   item: InventoryDetail['item'];
   photoUrls: string[];
@@ -478,6 +484,8 @@ function MobileInventoryBody({
   onSharedWith: () => void;
   onDelete: () => void;
   openLightbox: (photos: string[], index: number) => void;
+  /** When this item was created by editing a received share, jumps to that source. */
+  onViewSource?: () => void;
 }): React.JSX.Element {
   const subtitle = `${item.product_code ?? '—'} • ${item.category ?? 'General'} • ${daysAgo(item.created_at)}`;
   const specEntries = Object.entries(item.specs ?? {});
@@ -569,6 +577,27 @@ function MobileInventoryBody({
           </View>
         ))}
       </DetailCard>
+
+      {/* Provenance — quiet, non-highlighted note when this item was created by
+          editing a received share. Never shown to anyone this item is shared with. */}
+      {item.edited_from_company ? (
+        <Text style={styles.provenance}>
+          Edited from the inventory shared by{' '}
+          <Text style={styles.provenanceStrong}>{item.edited_from_company}</Text>
+          {item.edited_from_title ? (
+            <Text>
+              {' — '}
+              <Text style={styles.provenanceStrong}>{item.edited_from_title}</Text>
+            </Text>
+          ) : null}
+          .{' '}
+          {onViewSource ? (
+            <Text style={[styles.provenanceLink, webOnly({ cursor: 'pointer' })]} onPress={onViewSource}>
+              View inventory
+            </Text>
+          ) : null}
+        </Text>
+      ) : null}
 
       <Pressable style={[styles.mDeleteBtn, webOnly({ cursor: 'pointer' })]} onPress={onDelete}>
         <Ionicons name="trash-outline" size={16} color={colors.red} />
@@ -801,6 +830,10 @@ const styles = StyleSheet.create({
   },
   mDeleteText: { color: colors.red, fontSize: 15, fontWeight: '700' },
 
+  // Provenance note — intentionally low-key (muted, no card/background).
+  provenance: { fontSize: 12, color: colors.textMuted, lineHeight: 18, marginBottom: 14, paddingHorizontal: 2 },
+  provenanceStrong: { color: colors.textSecondary, fontWeight: '700' },
+  provenanceLink: { color: colors.accent, fontWeight: '700' },
 
   wrap: { width: '100%', maxWidth: 760, alignSelf: 'center' },
 

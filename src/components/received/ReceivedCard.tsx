@@ -39,6 +39,8 @@ function compactTime(iso: string): string {
 interface ReceivedCardProps {
   item: ReceivedListItem;
   onPress: () => void;
+  /** Opens the "edit as my own item" form. */
+  onEdit: () => void;
 }
 
 /**
@@ -46,7 +48,7 @@ interface ReceivedCardProps {
  * footer row with the sharing vendor on the left and the time-ago on the right.
  * Rendered in a responsive multi-column grid by ReceivedListScreen.
  */
-export function ReceivedCard({ item, onPress }: ReceivedCardProps): React.JSX.Element {
+export function ReceivedCard({ item, onPress, onEdit }: ReceivedCardProps): React.JSX.Element {
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -93,15 +95,30 @@ export function ReceivedCard({ item, onPress }: ReceivedCardProps): React.JSX.El
         </View>
       </View>
 
-      {/* Divider + footer: From vendor (left), time-ago (right) */}
+      {/* Divider + footer: From vendor (left), Edit + time-ago (right) */}
       <View style={styles.divider} />
       <View style={styles.footer}>
         <Text style={styles.from} numberOfLines={1}>
           From: <Text style={styles.fromName}>{item.shared_by_company_name ?? 'a vendor'}</Text>
         </Text>
-        <View style={styles.timeWrap}>
-          <Ionicons name="time-outline" size={12} color={colors.textMuted} />
-          <Text style={styles.time}>{compactTime(item.created_at)}</Text>
+        <View style={styles.footerRight}>
+          <Pressable
+            style={styles.editBtn}
+            onPress={(e) => {
+              e.stopPropagation();
+              onEdit();
+            }}
+            hitSlop={6}
+            accessibilityLabel="Edit as my item"
+            testID={`received-edit-${item.share_id}`}
+          >
+            <Ionicons name="create-outline" size={13} color={colors.accent} />
+            <Text style={styles.editText}>Edit</Text>
+          </Pressable>
+          <View style={styles.timeWrap}>
+            <Ionicons name="time-outline" size={12} color={colors.textMuted} />
+            <Text style={styles.time}>{compactTime(item.created_at)}</Text>
+          </View>
         </View>
       </View>
     </Pressable>
@@ -138,9 +155,20 @@ const styles = StyleSheet.create({
 
   divider: { height: 1, backgroundColor: colors.border, marginTop: 12, marginBottom: 10 },
 
-  footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   from: { fontSize: 12, color: colors.textMuted, flexShrink: 1 },
   fromName: { color: colors.textSecondary, fontWeight: '700' },
+  footerRight: { flexDirection: 'row', alignItems: 'center', gap: 12, flexShrink: 0 },
+  editBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: radius.sm,
+    backgroundColor: colors.accentLight,
+  },
+  editText: { fontSize: 12, fontWeight: '700', color: colors.accent },
   timeWrap: { flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 0 },
   time: { fontSize: 11, color: colors.textMuted },
 });

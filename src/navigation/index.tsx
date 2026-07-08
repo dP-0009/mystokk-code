@@ -3,6 +3,7 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import {
   NavigationContainer,
   createNavigationContainerRef,
+  getPathFromState,
   getStateFromPath,
   type LinkingOptions,
   type NavigatorScreenParams,
@@ -35,6 +36,7 @@ import { EditVendorScreen } from '../screens/EditVendorScreen';
 import { AddVendorScreen } from '../screens/AddVendorScreen';
 import { BulkUploadScreen } from '../screens/BulkUploadScreen';
 import { ReceivedDetailScreen } from '../screens/ReceivedDetailScreen';
+import { ReceivedEditScreen } from '../screens/ReceivedEditScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { EditProfileScreen } from '../screens/EditProfileScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
@@ -63,6 +65,7 @@ export type RootStackParamList = {
   AddVendor: undefined;
   BulkUpload: undefined;
   ReceivedDetail: { shareId: string };
+  ReceivedEdit: { shareId: string };
   Profile: undefined;
   EditProfile: undefined;
   Settings: undefined;
@@ -88,9 +91,9 @@ export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 const linking: LinkingOptions<RootStackParamList> = {
   prefixes: [
     'mystokk://',
-    process.env.EXPO_PUBLIC_APP_URL ?? 'https://www.mystokk.com',
-    'https://www.mystokk.com',
+    process.env.EXPO_PUBLIC_APP_URL ?? 'https://mystokk.com',
     'https://mystokk.com',
+    'https://www.mystokk.com',
     // Legacy hosts — kept so links shared before the domain switch still open.
     'https://mystokk.vercel.app',
     'https://mystokk.app',
@@ -128,7 +131,8 @@ const linking: LinkingOptions<RootStackParamList> = {
       BulkUpload: 'network/bulk-upload',
       VendorDetail: 'vendor', // vendorId / manualVendorId ride as query params
       EditVendor: 'vendor/edit',
-      // Received / misc
+      // Received / misc (static `edit` suffix before the bare :shareId)
+      ReceivedEdit: 'received/:shareId/edit',
       ReceivedDetail: 'received/:shareId',
       Notifications: 'notifications',
       Profile: 'profile',
@@ -139,16 +143,47 @@ const linking: LinkingOptions<RootStackParamList> = {
       ShareLanding: 'share/:token', // public share link entry point (works signed out)
     },
   },
-  // Short links (mystokk.vercel.app/s/<code>) resolve to the same ShareLanding,
-  // passing the code; the screen resolves it to a token via an anon RPC.
+  // Clean public URLs for the legal pages: /privacy, /terms, /contact, /faq all
+  // render the Legal screen with the matching page (works signed-out). Short
+  // links (…/s/<code>) resolve to the same ShareLanding, passing the code; that
+  // screen resolves it to a token via an anon RPC.
   getStateFromPath: (path, options) => {
+    const seg = path.replace(/^\/+/, '').split(/[/?#]/)[0]?.toLowerCase();
+    if (seg && (LEGAL_PATHS as readonly string[]).includes(seg)) {
+      return { routes: [{ name: 'Legal', params: { page: seg as LegalPageParam } }] };
+    }
     const m = path.match(/^\/?s\/([^/?#]+)/);
     if (m) {
       return { routes: [{ name: 'ShareLanding', params: { code: decodeURIComponent(m[1]) } }] };
     }
     return getStateFromPath(path, options);
   },
+  // Reverse: render Legal as its clean /<page> URL instead of /legal/<page>.
+  getPathFromState: (state, config) => {
+    const route = activeLeafRoute(state as unknown as NavState);
+    const page = route?.name === 'Legal' ? (route.params as { page?: string } | undefined)?.page : undefined;
+    if (page) return `/${page}`;
+    return getPathFromState(state, config);
+  },
 };
+
+type LegalPageParam = RootStackParamList['Legal']['page'];
+const LEGAL_PATHS = ['privacy', 'terms', 'contact', 'faq'] as const;
+
+type NavState = {
+  index?: number;
+  routes: Array<{ name: string; params?: Record<string, unknown>; state?: NavState }>;
+};
+
+/** Walk a navigation state to its innermost active route (name + params). */
+function activeLeafRoute(state: NavState): { name: string; params?: Record<string, unknown> } | undefined {
+  let route = state.routes[state.index ?? state.routes.length - 1];
+  while (route?.state) {
+    const s = route.state;
+    route = s.routes[s.index ?? s.routes.length - 1];
+  }
+  return route;
+}
 
 function LoadingView(): React.JSX.Element {
   return (
@@ -234,6 +269,8 @@ export function RootNavigator(): React.JSX.Element {
             <Stack.Screen name="Otp" component={OtpScreen} />
             <Stack.Screen name="NewPassword" component={NewPasswordScreen} />
             <Stack.Screen name="ShareLanding" component={ShareLandingScreen} />
+            {/* Public legal pages — reachable at /privacy, /terms, /contact, /faq without login. */}
+            <Stack.Screen name="Legal" component={LegalScreen} />
           </Stack.Group>
         ) : vendor !== null && !vendor.onboarded ? (
           <Stack.Screen name="Onboarding" component={OnboardingScreen} />
@@ -251,6 +288,7 @@ export function RootNavigator(): React.JSX.Element {
             <Stack.Screen name="AddVendor" component={AddVendorScreen} />
             <Stack.Screen name="BulkUpload" component={BulkUploadScreen} />
             <Stack.Screen name="ReceivedDetail" component={ReceivedDetailScreen} />
+            <Stack.Screen name="ReceivedEdit" component={ReceivedEditScreen} />
             <Stack.Screen name="Profile" component={ProfileScreen} />
             <Stack.Screen name="EditProfile" component={EditProfileScreen} />
             <Stack.Screen name="Settings" component={SettingsScreen} />

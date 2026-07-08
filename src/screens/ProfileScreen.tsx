@@ -56,7 +56,7 @@ export function ProfileScreen({ navigation }: Props): React.JSX.Element {
     { icon: '🏢', bg: colors.emeraldBg, label: 'Company Profile', sub: 'Edit name, industry, location, logo', onPress: () => navigation.navigate('EditProfile') },
     { icon: '🔔', bg: colors.blueBg, label: 'Notifications', sub: unread > 0 ? `${unread} unread` : 'All caught up', onPress: () => navigation.navigate('Notifications') },
     { icon: '⚙️', bg: colors.slate100, label: 'Settings', sub: 'Password, account preferences', onPress: () => navigation.navigate('Settings') },
-    { icon: '❓', bg: colors.amberBg, label: 'Help & FAQ', onPress: () => Alert.alert('Help & FAQ', 'Reach us at support@mystokk.app.') },
+    { icon: '❓', bg: colors.amberBg, label: 'Help & FAQ', onPress: () => Alert.alert('Help & FAQ', 'Reach us at support@mystokk.com.') },
     { icon: '🔒', bg: colors.slate100, label: 'Privacy Policy', onPress: () => Alert.alert('Privacy Policy', 'Your stock is shared only with vendors you choose.') },
     { icon: '🚪', bg: colors.redBg, label: 'Sign Out', onPress: onSignOut, danger: true },
   ];

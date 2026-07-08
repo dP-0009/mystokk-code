@@ -39,7 +39,7 @@ const json = (body: unknown, status = 200): Response =>
 
 // Hardcoded on purpose: a stale PUBLIC_SHARE_BASE_URL secret (= app.mystokk.com)
 // was overriding the default, so links kept opening the wrong domain. Pin it here.
-const SHARE_BASE = 'https://www.mystokk.com';
+const SHARE_BASE = 'https://mystokk.com';
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL') ?? '',

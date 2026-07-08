@@ -24,7 +24,7 @@ type PageContent = {
   contact?: boolean;
 };
 
-const SUPPORT_EMAIL = 'support@mystokk.app';
+const SUPPORT_EMAIL = 'support@mystokk.com';
 
 export const LEGAL_PAGES: Record<LegalPage, PageContent> = {
   faq: {
@@ -63,17 +63,23 @@ export const LEGAL_PAGES: Record<LegalPage, PageContent> = {
     title: 'Privacy Policy',
     subtitle: 'How MyStokk collects, uses, and protects your data',
     blocks: [
-      { kind: 'p', text: 'Your privacy matters. This policy explains what we collect and how we use it. By using MyStokk you agree to the practices described here.' },
+      { kind: 'p', text: 'MyStokk is operated by Everglobal Trading LLC (Dubai, United Arab Emirates). This policy explains what personal data we collect, why we collect it, and how we protect it. By using MyStokk you agree to the practices described here.' },
       { kind: 'h', text: 'Information we collect' },
-      { kind: 'p', text: 'Account details (company name, contact person, email), the inventory and documents you upload, your network connections, and reservation/negotiation activity. We also collect basic usage and device information to operate the service.' },
-      { kind: 'h', text: 'How we use it' },
-      { kind: 'p', text: 'To provide the platform: showing your inventory to the contacts you choose, delivering share and reservation notifications, and keeping your account secure. We do not sell your data, and we never list your inventory on a public marketplace.' },
-      { kind: 'h', text: 'Sharing' },
-      { kind: 'p', text: 'Item details are shared only with the vendors you select or with anyone holding a public share link you created. Notification emails are sent on your behalf via our email provider.' },
-      { kind: 'h', text: 'Data security' },
-      { kind: 'p', text: 'Access is enforced with row-level security so vendors only see data they are entitled to. Private photos and documents are delivered through short-lived signed URLs.' },
-      { kind: 'h', text: 'Your choices' },
-      { kind: 'p', text: 'You can edit or delete your inventory and account at any time from Settings. Deleting your account removes your data subject to legal retention requirements.' },
+      { kind: 'p', text: 'Account & profile: your name (contact person), email address, company name, phone and WhatsApp numbers, and your city and country. Business data: the product photos, inventory, documents, and pricing you add, your network connections, and your reservation and negotiation activity. Technical: basic device and usage information needed to run the service and deliver notifications.' },
+      { kind: 'h', text: 'Why we collect it' },
+      { kind: 'p', text: 'To provide the platform — creating your account, showing your inventory only to the specific contacts you choose, powering reservations and negotiations, sending share and reservation notifications, and keeping your account secure. We do not use your data for advertising, and we never list your inventory on a public marketplace.' },
+      { kind: 'h', text: 'Where your data is stored' },
+      { kind: 'p', text: 'Your data is hosted on Supabase, our cloud database and storage provider. Access is enforced with row-level security so each vendor can only reach data they are entitled to. Product photos and documents are kept private and delivered through short-lived signed links.' },
+      { kind: 'h', text: 'Sign in with Google & Apple' },
+      { kind: 'p', text: 'You can sign in with Google or Apple. When you do, we receive only your basic profile (name and email) to create or access your account. We never receive your Google or Apple password and we do not post anything to those accounts.' },
+      { kind: 'h', text: 'Push notifications' },
+      { kind: 'p', text: 'With your permission, we send push notifications for shares, reservations, and negotiation updates, delivered via Apple Push Notification service and Firebase Cloud Messaging. You can turn notifications off at any time in your device settings.' },
+      { kind: 'h', text: 'Data sharing' },
+      { kind: 'p', text: 'We do not sell your data or share it with third parties for their own use. Item details are shared only with the vendors you select or anyone holding a public share link you created. We rely on trusted service providers strictly to operate MyStokk — Supabase (database and storage), our email provider for notifications, and Apple and Google for sign-in and push delivery.' },
+      { kind: 'h', text: 'Data retention & deletion' },
+      { kind: 'p', text: 'We keep your data for as long as your account is active. You can edit or delete your inventory, and delete your account, at any time from Settings — this removes your data subject to any legal retention requirements. You can also request access to, or deletion of, your data by emailing us using the button below.' },
+      { kind: 'h', text: 'Contact us' },
+      { kind: 'p', text: 'Everglobal Trading LLC, Dubai, United Arab Emirates. For any privacy question or a data-deletion request, reach us at the address below.' },
     ],
     contact: true,
   },
@@ -81,7 +87,7 @@ export const LEGAL_PAGES: Record<LegalPage, PageContent> = {
     title: 'Terms of Service',
     subtitle: 'The agreement for using MyStokk',
     blocks: [
-      { kind: 'p', text: 'These terms govern your use of MyStokk. By creating an account you agree to them.' },
+      { kind: 'p', text: 'These Terms of Service govern your use of MyStokk, operated by Everglobal Trading LLC (Dubai, United Arab Emirates). By creating an account you agree to them.' },
       { kind: 'h', text: 'Using the service' },
       { kind: 'p', text: 'You must provide accurate company information and are responsible for activity under your account. Use MyStokk only for legitimate B2B trading and distribution purposes.' },
       { kind: 'h', text: 'Your content' },

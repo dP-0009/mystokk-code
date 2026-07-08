@@ -41,6 +41,17 @@ export interface InventoryItem {
   shared_count: number;
   specs: Record<string, string>;
   created_at: string;
+  /** Provenance (owner-only): set when this item was created by editing a received share. */
+  edited_from_share_id: string | null;
+  edited_from_company: string | null;
+  edited_from_title: string | null;
+}
+
+/** Where an edited copy came from — recorded when saving an edited received item. */
+export interface InventoryProvenance {
+  editedFromShareId: string;
+  editedFromCompany: string | null;
+  editedFromTitle: string | null;
 }
 
 export interface ShareActivity {
@@ -212,8 +223,15 @@ export async function getInventoryDetail(inventoryId: string): Promise<Inventory
   };
 }
 
-/** Create an item: status='active', quantity_available=quantity, shared_count=0. Returns its id. */
-export async function createInventory(input: InventoryInput): Promise<string> {
+/**
+ * Create an item: status='active', quantity_available=quantity, shared_count=0.
+ * Returns its id. `provenance` is set only when the item is created by editing a
+ * received share (records where the copy came from — owner-only, never shared).
+ */
+export async function createInventory(
+  input: InventoryInput,
+  provenance?: InventoryProvenance,
+): Promise<string> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -238,6 +256,9 @@ export async function createInventory(input: InventoryInput): Promise<string> {
       status: 'active',
       shared_count: 0,
       specs: {},
+      edited_from_share_id: provenance?.editedFromShareId ?? null,
+      edited_from_company: provenance?.editedFromCompany ?? null,
+      edited_from_title: provenance?.editedFromTitle ?? null,
     })
     .select('inventory_id')
     .single();

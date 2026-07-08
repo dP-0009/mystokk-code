@@ -6,10 +6,16 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import type { RootStackParamList } from '../navigation';
 import { MainLayout, PageBody, PageHeader } from '../components/layout';
-import { AddItemForm, type AddItemFormInitial } from '../components/inventory/AddItemForm';
+import { AddItemForm, type AddItemFormInitial, type RemovedAttachments } from '../components/inventory/AddItemForm';
 import { ErrorState, LoadingState } from '../components/shared/StateView';
 import { getInventoryDetail, updateInventory, type InventoryInput } from '../services/supabase/inventory';
-import { uploadInventoryDocument, uploadInventoryPhoto, type UploadFile } from '../services/supabase/storage';
+import {
+  deleteInventoryDocument,
+  deleteInventoryPhoto,
+  uploadInventoryDocument,
+  uploadInventoryPhoto,
+  type UploadFile,
+} from '../services/supabase/storage';
 import { colors } from '../theme/tokens';
 import { toast } from '../stores/toast';
 
@@ -26,7 +32,12 @@ export function InventoryEditScreen({ navigation, route }: Props): React.JSX.Ele
     staleTime: 30_000,
   });
 
-  const onSubmit = async (input: InventoryInput, photos: UploadFile[], docs: UploadFile[]): Promise<void> => {
+  const onSubmit = async (
+    input: InventoryInput,
+    photos: UploadFile[],
+    docs: UploadFile[],
+    removed: RemovedAttachments,
+  ): Promise<void> => {
     setError(null);
     setSubmitting(true);
     try {
@@ -35,6 +46,8 @@ export function InventoryEditScreen({ navigation, route }: Props): React.JSX.Ele
       await Promise.all([
         ...photos.map((p) => uploadInventoryPhoto(inventoryId, p)),
         ...docs.map((d) => uploadInventoryDocument(inventoryId, d)),
+        ...removed.photoPaths.map((path) => deleteInventoryPhoto(path)),
+        ...removed.docPaths.map((path) => deleteInventoryDocument(path)),
       ]);
       toast.success('Item updated successfully!');
       navigation.navigate('InventoryDetail', { inventoryId });
@@ -70,8 +83,8 @@ export function InventoryEditScreen({ navigation, route }: Props): React.JSX.Ele
           ) : (
             <AddItemForm
               initial={toInitial(data.item)}
-              existingPhotoUrls={data.photoUrls}
-              existingDocs={data.documents.map((d) => ({ name: d.name }))}
+              existingPhotos={data.photoUrls.map((url, i) => ({ url, path: data.photoPaths[i] }))}
+              existingDocs={data.documents.map((d) => ({ name: d.name, path: d.storage_path }))}
               submitLabel="Save Changes"
               submitting={submitting}
               error={error}

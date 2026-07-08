@@ -75,15 +75,17 @@ export interface RemovedAttachments {
   docPaths: string[];
 }
 
+type SubmitHandler = (
+  input: InventoryInput,
+  photos: UploadFile[],
+  docs: UploadFile[],
+  removed: RemovedAttachments,
+) => void | Promise<void>;
+
 interface AddItemFormProps {
   submitting: boolean;
   error?: string | null;
-  onSubmit: (
-    input: InventoryInput,
-    photos: UploadFile[],
-    docs: UploadFile[],
-    removed: RemovedAttachments,
-  ) => void | Promise<void>;
+  onSubmit: SubmitHandler;
   onCancel: () => void;
   /** Seed values for editing an existing item. Applied on mount. */
   initial?: AddItemFormInitial;
@@ -91,8 +93,17 @@ interface AddItemFormProps {
   existingPhotos?: { url: string; path: string }[];
   /** Already-saved documents (name + storage path) — shown above newly-added ones, each removable. */
   existingDocs?: { name: string; path: string }[];
+  /** Pre-loaded photos to UPLOAD (e.g. copied from a received item being edited). */
+  initialPhotos?: UploadFile[];
+  /** Pre-loaded documents to UPLOAD. */
+  initialDocs?: UploadFile[];
+  /** Optional banner shown at the very top of the form. */
+  warning?: string;
   /** Primary button label. Defaults to "Submit". */
   submitLabel?: string;
+  /** When set, renders a second primary button (e.g. "Save & Share") that runs this handler. */
+  secondarySubmitLabel?: string;
+  onSecondarySubmit?: SubmitHandler;
 }
 
 type Errors = Partial<Record<'title' | 'quantity' | 'price', string>>;
@@ -107,7 +118,12 @@ export function AddItemForm({
   initial,
   existingPhotos,
   existingDocs,
+  initialPhotos,
+  initialDocs,
+  warning,
   submitLabel = 'Submit',
+  secondarySubmitLabel,
+  onSecondarySubmit,
 }: AddItemFormProps): React.JSX.Element {
   const [productCode, setProductCode] = useState(initial?.productCode ?? '');
   const [title, setTitle] = useState(initial?.title ?? '');
@@ -120,8 +136,8 @@ export function AddItemForm({
   const [origin, setOrigin] = useState(initial?.origin ?? '');
   const [stockLocation, setStockLocation] = useState(initial?.stockLocation ?? '');
   const [description, setDescription] = useState(initial?.description ?? '');
-  const [photos, setPhotos] = useState<UploadFile[]>([]);
-  const [docs, setDocs] = useState<UploadFile[]>([]);
+  const [photos, setPhotos] = useState<UploadFile[]>(initialPhotos ?? []);
+  const [docs, setDocs] = useState<UploadFile[]>(initialDocs ?? []);
   const [errors, setErrors] = useState<Errors>({});
   // Saved attachments the user removed this session (deleted on submit).
   const [removedPhotoPaths, setRemovedPhotoPaths] = useState<string[]>([]);
@@ -206,7 +222,7 @@ export function AddItemForm({
     return next;
   };
 
-  const submit = (): void => {
+  const runSubmit = (handler: SubmitHandler): void => {
     const found = validate();
     setErrors(found);
     if (Object.keys(found).length > 0) return;
@@ -224,11 +240,22 @@ export function AddItemForm({
       stockLocation: stockLocation.trim() || undefined,
       description: description.trim() || undefined,
     };
-    void onSubmit(input, photos, docs);
+    // Remember this currency so the next new item defaults to it.
+    void AsyncStorage.setItem(LAST_CURRENCY_KEY, currency);
+    void handler(input, photos, docs, { photoPaths: removedPhotoPaths, docPaths: removedDocPaths });
   };
+
+  const submit = (): void => runSubmit(onSubmit);
 
   return (
     <View>
+      {warning ? (
+        <View style={styles.warningBanner}>
+          <Ionicons name="information-circle-outline" size={18} color={colors.amber} />
+          <Text style={styles.warningText}>{warning}</Text>
+        </View>
+      ) : null}
+
       {/* Single continuous form — no separate section cards. */}
       <View style={styles.card}>
         <Field label="Product Code">
@@ -346,17 +373,26 @@ export function AddItemForm({
             hint="PNG or JPG, up to 8 images"
             onPress={pickPhotos}
           />
-          {existingFullUrls.length > 0 || photos.length > 0 ? (
+          {visibleExistingPhotos.length > 0 || photos.length > 0 ? (
             <View style={styles.thumbs}>
-              {existingFullUrls.map((url, i) => (
-                <Pressable
-                  key={url}
-                  onPress={() => openLightbox(existingFullUrls, i)}
-                  style={webOnly({ cursor: 'pointer' })}
-                  accessibilityLabel={`View photo ${i + 1}`}
-                >
-                  <Image source={{ uri: url }} style={styles.thumb} />
-                </Pressable>
+              {visibleExistingPhotos.map((p, i) => (
+                <View key={p.path} style={styles.thumbWrap}>
+                  <Pressable
+                    onPress={() => openLightbox(existingFullUrls, i)}
+                    style={webOnly({ cursor: 'pointer' })}
+                    accessibilityLabel={`View photo ${i + 1}`}
+                  >
+                    <Image source={{ uri: existingFullUrls[i] }} style={styles.thumb} />
+                  </Pressable>
+                  <Pressable
+                    style={styles.thumbRemove}
+                    onPress={() => setRemovedPhotoPaths((prev) => [...prev, p.path])}
+                    hitSlop={6}
+                    accessibilityLabel={`Remove photo ${i + 1}`}
+                  >
+                    <Ionicons name="close" size={11} color={colors.bgWhite} />
+                  </Pressable>
+                </View>
               ))}
               {photos.map((p, i) => (
                 <View key={`${p.uri}-${i}`} style={styles.thumbWrap}>
@@ -382,13 +418,20 @@ export function AddItemForm({
             hint="PDF, Word, Excel, CSV"
             onPress={pickDocs}
           />
-          {(existingDocs ?? []).map((d, i) => (
-            <View key={`existing-${i}-${d.name}`} style={styles.docRow}>
+          {visibleExistingDocs.map((d) => (
+            <View key={`existing-${d.path}`} style={styles.docRow}>
               <Ionicons name="document-text-outline" size={18} color={colors.textSecondary} />
               <Text style={styles.docName} numberOfLines={1}>
                 {d.name}
               </Text>
               <Text style={styles.docSaved}>Saved</Text>
+              <Pressable
+                onPress={() => setRemovedDocPaths((prev) => [...prev, d.path])}
+                hitSlop={8}
+                accessibilityLabel={`Remove ${d.name}`}
+              >
+                <Ionicons name="close" size={16} color={colors.red} />
+              </Pressable>
             </View>
           ))}
           {docs.map((d, i) => (
@@ -420,6 +463,16 @@ export function AddItemForm({
         >
           <Text style={styles.btnPrimaryText}>{submitting ? 'Saving…' : submitLabel}</Text>
         </Pressable>
+        {onSecondarySubmit ? (
+          <Pressable
+            style={[styles.btn, styles.btnAccent, submitting ? styles.btnDisabled : null]}
+            onPress={() => runSubmit(onSecondarySubmit)}
+            disabled={submitting}
+          >
+            <Ionicons name="share-social-outline" size={15} color={colors.bgWhite} />
+            <Text style={styles.btnPrimaryText}>{secondarySubmitLabel ?? 'Save & Share'}</Text>
+          </Pressable>
+        ) : null}
       </View>
     </View>
   );
@@ -766,12 +819,28 @@ const styles = StyleSheet.create({
 
   formError: { color: colors.red, fontSize: 13, fontWeight: '600', marginBottom: 12, textAlign: 'center' },
 
-  // Action bar — right-aligned, gap 12
-  actionBar: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12, marginTop: 4 },
-  btn: { paddingVertical: 11, paddingHorizontal: 22, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
+  // Warning / info banner at the top of the form.
+  warningBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.amberBg,
+    borderWidth: 1,
+    borderColor: colors.yellowBorder,
+    borderRadius: radius.md,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginBottom: 16,
+  },
+  warningText: { flex: 1, fontSize: 13, fontWeight: '600', color: colors.amber, lineHeight: 18 },
+
+  // Action bar — right-aligned, gap 12, wraps on narrow widths.
+  actionBar: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12, marginTop: 4, flexWrap: 'wrap' },
+  btn: { flexDirection: 'row', gap: 6, paddingVertical: 11, paddingHorizontal: 22, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
   btnOutline: { borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.bgWhite },
   btnOutlineText: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
   btnPrimary: { backgroundColor: colors.primary },
+  btnAccent: { backgroundColor: colors.accent },
   btnPrimaryText: { fontSize: 13, fontWeight: '600', color: colors.bgWhite },
   btnDisabled: { opacity: 0.6 },
 });
