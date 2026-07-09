@@ -60,3 +60,8 @@ mystokk-release-key.jks
 
 # Office temp/lock files
 ~$*
+
+# Build artifacts / local exports (never commit)
+*.aab
+*.ipa
+/Screenshot*.png
