@@ -65,3 +65,4 @@ mystokk-release-key.jks
 *.aab
 *.ipa
 /Screenshot*.png
+*firebase-adminsdk*.json
