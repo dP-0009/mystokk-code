@@ -43,7 +43,9 @@ export interface PublicShare {
   title: string;
   description: string | null;
   category: string | null;
+  product_code: string | null;
   quantity: number;
+  quantity_available: number;
   unit: string;
   origin: string | null;
   stock_location: string | null;
@@ -54,7 +56,15 @@ export interface PublicShare {
   shared_by_logo_url: string | null;
   /** Storage path of the item's first photo (inventory-photos bucket), or null. */
   first_photo_path: string | null;
+  /** Storage paths of every photo, in display order (may be empty). */
+  photo_paths: string[];
+  item_created_at: string;
   has_recipient: boolean;
+}
+
+export interface PublicShareFile {
+  name: string;
+  storage_path: string;
 }
 
 /**
@@ -180,6 +190,28 @@ export async function getPublicShare(token: string): Promise<PublicShare | null>
   const { data, error } = await supabase.rpc('get_public_share', { p_token: token });
   if (error) throw error;
   return ((data ?? []) as PublicShare[])[0] ?? null;
+}
+
+/** Documents attached to a publicly-shared item (paths only — see `publicDocUrl`). */
+export async function getPublicShareFiles(token: string): Promise<PublicShareFile[]> {
+  const { data, error } = await supabase.rpc('get_public_share_files', { p_token: token });
+  if (error) throw error;
+  return (data ?? []) as PublicShareFile[];
+}
+
+/**
+ * Exchange a share token + document path for a short-lived signed URL. The
+ * inventory-documents bucket is private, so anon visitors cannot sign a path
+ * themselves; the `public-doc` Edge Function checks the token still points at an
+ * active share owning that document before signing it.
+ */
+export async function publicDocUrl(token: string, storagePath: string): Promise<string> {
+  const { data, error } = await supabase.functions.invoke('public-doc', {
+    body: { token, path: storagePath },
+  });
+  if (error) throw error;
+  const { url } = data as { url: string };
+  return url;
 }
 
 /**

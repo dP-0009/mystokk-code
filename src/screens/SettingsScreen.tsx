@@ -22,7 +22,6 @@ import type { RootStackParamList } from '../navigation';
 import { MainLayout, PageBody, PageHeader } from '../components/layout';
 import { FormTextField } from '../components/shared/FormTextField';
 import { PhoneField } from '../components/shared/PhoneField';
-import { SelectField } from '../components/shared/SelectField';
 import { DropdownSelectField } from '../components/shared/DropdownSelectField';
 import { AppButton } from '../components/shared/AppButton';
 import {
@@ -468,12 +467,13 @@ function CompanyProfileForm({ vendor }: { vendor: VendorProfile }): React.JSX.El
           />
         </View>
         <View style={styles.flex1}>
-          <SelectField
+          <DropdownSelectField
             control={control}
             name="country"
             label="Country"
             placeholder="Select country"
             options={COUNTRIES}
+            searchable
             required
             rules={{ required: 'Country is required' }}
           />
@@ -624,7 +624,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgWhite,
     marginBottom: 28,
   },
-  nbText: { flexShrink: 1 },
+  // Text claims the leftover width (basis 0) instead of being measured at
+  // max-content and squeezed into a narrow ragged column beside the button.
+  nbText: { flex: 1, minWidth: 0 },
   nbTitle: { fontSize: 14, fontWeight: '700', color: colors.textPrimary, marginBottom: 4 },
   nbSub: { fontSize: 13, color: colors.textSecondary },
   nbHint: { fontSize: 12, color: colors.textMuted, marginTop: 2 },

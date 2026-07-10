@@ -1,8 +1,43 @@
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../services/supabase/client';
 import { queryClient } from '../services/queryClient';
+
+/**
+ * The pending share token outlives the JS runtime: signing in with Google does a
+ * FULL-PAGE redirect on web, which wipes in-memory state. Without this, a user
+ * who opened a share link and chose "Continue with Google" would land on the
+ * dashboard instead of the item they were invited to. Stored with a timestamp so
+ * an abandoned link can't silently hijack an unrelated sign-in weeks later.
+ */
+const PENDING_SHARE_KEY = 'mystokk.pendingShareToken';
+const PENDING_SHARE_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+async function persistPendingShareToken(token: string | null): Promise<void> {
+  try {
+    if (token) await AsyncStorage.setItem(PENDING_SHARE_KEY, JSON.stringify({ token, ts: Date.now() }));
+    else await AsyncStorage.removeItem(PENDING_SHARE_KEY);
+  } catch {
+    // Storage is a convenience here — never block auth on it.
+  }
+}
+
+async function readPendingShareToken(): Promise<string | null> {
+  try {
+    const raw = await AsyncStorage.getItem(PENDING_SHARE_KEY);
+    if (!raw) return null;
+    const { token, ts } = JSON.parse(raw) as { token?: string; ts?: number };
+    if (!token || !ts || Date.now() - ts > PENDING_SHARE_TTL_MS) {
+      await AsyncStorage.removeItem(PENDING_SHARE_KEY);
+      return null;
+    }
+    return token;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Web only: after Google's full-page redirect we land back on our origin with
@@ -71,9 +106,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   session: null,
   vendor: null,
   pendingShareToken: null,
-  setPendingShareToken: (token) => set({ pendingShareToken: token }),
+  setPendingShareToken: (token) => {
+    set({ pendingShareToken: token });
+    void persistPendingShareToken(token);
+  },
 
   initialize: async () => {
+    // Restore a share token captured before a full-page OAuth redirect, so the
+    // post-sign-in effect in RootNavigator can still claim it.
+    const pending = await readPendingShareToken();
+    if (pending) set({ pendingShareToken: pending });
+
     // Complete a Google web sign-in (?code= → session) before reading the session.
     // Never let a failure here wedge the app on the loading screen — log and fall
     // through to signedOut so the user can retry.

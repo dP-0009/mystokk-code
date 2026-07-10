@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -8,15 +8,18 @@ import type { RootStackParamList } from '../navigation';
 import {
   claimShare,
   getPublicShare,
+  getPublicShareFiles,
+  publicDocUrl,
   publicPhotoUrl,
   resolveShareToken,
   resolveShortCode,
   type PublicShare,
+  type PublicShareFile,
 } from '../services/supabase/shares';
-import { toFullUrl } from '../services/supabase/storage';
 import { useAuthStore } from '../stores/authStore';
 import { toast } from '../stores/toast';
 import { useLightbox } from '../components/shared/Lightbox';
+import { DetailCard, FileRow, HeroCarousel, InfoRow, StatGrid } from '../components/shared/DetailMobile';
 import { webOnly } from '../components/layout/web';
 import { colors, radius, shadows } from '../theme/tokens';
 
@@ -57,6 +60,13 @@ export function ShareLandingScreen({ navigation, route }: Props): React.JSX.Elem
   const { data, isLoading, isError } = useQuery({
     queryKey: ['publicShare', token],
     queryFn: () => getPublicShare(token as string),
+    enabled: Boolean(token),
+    staleTime: 60_000,
+  });
+
+  const filesQuery = useQuery({
+    queryKey: ['publicShareFiles', token],
+    queryFn: () => getPublicShareFiles(token as string),
     enabled: Boolean(token),
     staleTime: 60_000,
   });
@@ -147,6 +157,7 @@ export function ShareLandingScreen({ navigation, route }: Props): React.JSX.Elem
       ) : (
         <Preview
           share={data}
+          files={filesQuery.data ?? []}
           authed={authed}
           claiming={claiming}
           onClaim={() => void onClaim()}
@@ -158,8 +169,16 @@ export function ShareLandingScreen({ navigation, route }: Props): React.JSX.Elem
   );
 }
 
+/**
+ * Login-free item preview. Mirrors the signed-in Received Item detail layout,
+ * minus everything a stranger shouldn't see or can't do: no SKU / category / age
+ * subtitle, no stock location, no price, no "shared with" count, no
+ * Reserve/Share/Edit actions, and the sharer's company name without their contact
+ * details. The reserve path is the sign-up CTA.
+ */
 function Preview({
   share,
+  files,
   authed,
   claiming,
   onClaim,
@@ -167,91 +186,91 @@ function Preview({
   onSignup,
 }: {
   share: PublicShare;
+  files: PublicShareFile[];
   authed: boolean;
   claiming: boolean;
   onClaim: () => void;
   onLogin: () => void;
   onSignup: () => void;
 }): React.JSX.Element {
-  const qty = share.quantity.toLocaleString();
-  const photoUrl = publicPhotoUrl(share.first_photo_path);
-  const fullPhoto = toFullUrl(photoUrl);
   const { open: openLightbox } = useLightbox();
-  // Fall back to the cube placeholder if the photo URL fails to load.
-  const [imgError, setImgError] = useState(false);
-  const showPhoto = Boolean(fullPhoto) && !imgError;
+  // Photos live in a public-read bucket, so they load without auth. Drop any
+  // path that fails to resolve rather than rendering a broken frame.
+  const photos = share.photo_paths.map((p) => publicPhotoUrl(p)).filter((u): u is string => Boolean(u));
+  const initial = (share.shared_by_company ?? 'V').trim().charAt(0).toUpperCase();
+
+  const openDoc = async (storagePath: string): Promise<void> => {
+    // The signed URL is fetched async, so on web claim the popup synchronously —
+    // otherwise the browser blocks the tab opened after the await.
+    const tab = Platform.OS === 'web' && typeof window !== 'undefined' ? window.open('', '_blank') : null;
+    try {
+      const url = await publicDocUrl(share.token, storagePath);
+      if (tab) tab.location.href = url;
+      else await Linking.openURL(url);
+    } catch {
+      tab?.close();
+      toast.error('Could not open this file.');
+    }
+  };
+
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.body}>
       <View style={styles.column}>
-        {/* Stock Update badge */}
         <Text style={styles.stockBadge}>Stock Update</Text>
 
-        {/* Product image — the inventory-photos bucket is public-read, so the
-            first photo loads here without auth (cube placeholder when none or on
-            load error). Tapping it opens the shared lightbox. */}
-        <View style={styles.imageBox}>
-          {showPhoto ? (
-            <Pressable
-              onPress={() => openLightbox([fullPhoto], 0)}
-              style={[styles.imagePress, webOnly({ cursor: 'pointer' })]}
-              accessibilityLabel="View photo"
-            >
-              <Image
-                source={{ uri: fullPhoto }}
-                style={styles.imageImg}
-                resizeMode="cover"
-                onError={() => setImgError(true)}
-              />
-            </Pressable>
-          ) : (
+        {photos.length > 0 ? (
+          <HeroCarousel photos={photos} onOpen={(i) => openLightbox(photos, i)} />
+        ) : (
+          <View style={styles.noPhoto}>
             <Ionicons name="cube-outline" size={56} color={colors.textMuted} />
-          )}
-        </View>
+          </View>
+        )}
 
-        {/* Product info card */}
         <View style={styles.card}>
           <Text style={styles.title}>{share.title}</Text>
+          <View style={styles.divider} />
+          <InfoRow label="Origin" value={share.origin || '—'} />
+          <StatGrid
+            stats={[
+              { label: 'Total Qty', value: share.quantity, sub: share.unit },
+              { label: 'Available', value: share.quantity_available, sub: share.unit, color: colors.green },
+            ]}
+          />
+        </View>
 
-          <View style={styles.sharedByRow}>
-            <Text style={styles.sharedByIcon}>🏢</Text>
-            <Text style={styles.sharedByText}>
-              Shared by <Text style={styles.sharedByName}>{share.shared_by_company ?? 'a MyStokk vendor'}</Text>
+        {share.forward_remark ? (
+          <View style={styles.remark}>
+            <Text style={styles.remarkText}>{share.forward_remark}</Text>
+          </View>
+        ) : null}
+
+        {share.description ? (
+          <DetailCard icon="reader-outline" title="Details">
+            <Text style={styles.detailsText}>{share.description}</Text>
+          </DetailCard>
+        ) : null}
+
+        {files.length > 0 ? (
+          <DetailCard icon="document-outline" title="Packing list and spec sheets">
+            {files.map((f) => (
+              <FileRow key={f.storage_path} name={f.name} onPress={() => void openDoc(f.storage_path)} />
+            ))}
+          </DetailCard>
+        ) : null}
+
+        <DetailCard icon="person-outline" title="Shared by">
+          <View style={styles.sharedRow}>
+            <View style={styles.sharedAvatar}>
+              <Text style={styles.sharedAvatarText}>{initial}</Text>
+            </View>
+            <Text style={styles.sharedName} numberOfLines={1}>
+              {share.shared_by_company ?? 'A MyStokk vendor'}
             </Text>
           </View>
+        </DetailCard>
 
-          {/* Stat grid — price intentionally omitted from the public landing. */}
-          <View style={styles.statGrid}>
-            <Stat label="Quantity" value={qty} sub={share.unit} />
-            <Stat label="Available" value={qty} sub={share.unit} valueColor={colors.green} />
-            <Stat label="Origin" value={share.origin ?? '📍'} sub={share.origin ? ' ' : '—'} last />
-          </View>
-
-          {share.stock_location ? (
-            <View style={styles.locationLine}>
-              <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
-              <Text style={styles.locationText}>
-                <Text style={styles.metaLabel}>Stock Location: </Text>
-                {share.stock_location}
-              </Text>
-            </View>
-          ) : null}
-
-          {share.category ? (
-            <Text style={styles.metaLine}>
-              <Text style={styles.metaLabel}>Category: </Text>
-              {share.category}
-            </Text>
-          ) : null}
-
-          {share.forward_remark ? (
-            <View style={styles.remark}>
-              <Text style={styles.remarkText}>{share.forward_remark}</Text>
-            </View>
-          ) : null}
-
-          {share.description ? <Text style={styles.description}>{share.description}</Text> : null}
-
-          {/* CTA / auth gate */}
+        {/* CTA / auth gate */}
+        <View style={styles.card}>
           <Text style={styles.interested}>Interested in this inventory?</Text>
           {authed ? (
             <Pressable style={styles.primaryBtn} onPress={onClaim} disabled={claiming} testID="public-claim">
@@ -272,7 +291,6 @@ function Preview({
             </>
           )}
 
-          {/* Trust badges */}
           <View style={styles.trustRow}>
             <Text style={styles.trustItem}>🛡 Secure Platform</Text>
             <Text style={styles.trustItem}>🏢 B2B Trading</Text>
@@ -280,37 +298,6 @@ function Preview({
         </View>
       </View>
     </ScrollView>
-  );
-}
-
-function Stat({
-  label,
-  value,
-  sub,
-  valueColor,
-  small,
-  last,
-}: {
-  label: string;
-  value: string;
-  sub: string;
-  valueColor?: string;
-  small?: boolean;
-  last?: boolean;
-}): React.JSX.Element {
-  return (
-    <View style={[styles.statCell, last ? null : styles.statCellBorder]}>
-      <Text style={styles.statLabel}>{label}</Text>
-      <Text
-        style={[styles.statValue, small ? styles.statValueSmall : null, valueColor ? { color: valueColor } : null]}
-        numberOfLines={1}
-      >
-        {value}
-      </Text>
-      <Text style={styles.statSub} numberOfLines={1}>
-        {sub}
-      </Text>
-    </View>
   );
 }
 
@@ -339,27 +326,16 @@ const styles = StyleSheet.create({
   },
   logoMarkText: { fontSize: 14 },
   logoText: { fontSize: 16, fontWeight: '700', color: colors.textPrimary },
-  topbarActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  ghostBtn: { paddingVertical: 7, paddingHorizontal: 10, ...webOnly({ cursor: 'pointer' }) },
-  ghostBtnText: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
-  signupBtn: {
-    backgroundColor: colors.primary, // #0F172A
-    borderRadius: radius.md,
-    paddingVertical: 7,
-    paddingHorizontal: 16,
-    ...webOnly({ cursor: 'pointer' }),
-  },
-  signupBtnText: { fontSize: 13, fontWeight: '600', color: '#FFFFFF' },
 
   // Loading / error
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 30 },
   errTitle: { fontSize: 17, fontWeight: '800', color: colors.textPrimary, marginBottom: 6 },
   errSub: { fontSize: 13, color: colors.textSecondary, textAlign: 'center', marginBottom: 18 },
 
-  // Page content (max-width 640, centered)
+  // Page content — same centred column width as the signed-in detail pages.
   scroll: { flex: 1 },
   body: { paddingVertical: 32, paddingHorizontal: 16, alignItems: 'center' },
-  column: { width: '100%', maxWidth: 640 },
+  column: { width: '100%', maxWidth: 760 },
 
   stockBadge: {
     fontSize: 11,
@@ -370,63 +346,27 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
 
-  imageBox: {
-    height: 300,
-    maxHeight: 340,
-    borderRadius: radius.xl,
-    overflow: 'hidden',
+  noPhoto: {
+    height: 240,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.bgChip, // light placeholder (#F1F5F9) when no photo
+    backgroundColor: colors.bgChip,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: 10,
   },
-  imagePress: { width: '100%', height: '100%' },
-  imageImg: { width: '100%', height: '100%' },
 
-  // `.card`
   card: {
     backgroundColor: colors.bgWhite,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.xl,
-    padding: 24,
+    borderRadius: radius.lg,
+    padding: 16,
+    marginBottom: 14,
   },
-  title: { fontSize: 22, fontWeight: '800', color: colors.textPrimary, marginBottom: 8 },
-
-  sharedByRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 16 },
-  sharedByIcon: { fontSize: 15 },
-  sharedByText: { fontSize: 14, color: colors.textPrimary },
-  sharedByName: { fontWeight: '700' },
-
-  // Stat grid
-  statGrid: {
-    flexDirection: 'row',
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    overflow: 'hidden',
-    marginBottom: 16,
-  },
-  statCell: { flex: 1, paddingVertical: 14, paddingHorizontal: 6, alignItems: 'center' },
-  statCellBorder: { borderRightWidth: 1, borderRightColor: colors.border },
-  statLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-    marginBottom: 4,
-  },
-  statValue: { fontSize: 20, fontWeight: '800', color: colors.textPrimary },
-  statValueSmall: { fontSize: 16 },
-  statSub: { fontSize: 11, color: colors.textSecondary },
-
-  locationLine: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
-  locationText: { fontSize: 13, color: colors.textSecondary, flexShrink: 1 },
-  metaLine: { fontSize: 13, color: colors.textSecondary, marginBottom: 16 },
-  metaLabel: { fontWeight: '700' },
+  title: { fontSize: 22, fontWeight: '800', color: colors.textPrimary },
+  divider: { height: 1, backgroundColor: colors.border, marginVertical: 14 },
 
   remark: {
     backgroundColor: colors.yellowLight,
@@ -434,10 +374,23 @@ const styles = StyleSheet.create({
     borderColor: colors.yellowBorder,
     borderRadius: radius.md,
     padding: 12,
-    marginBottom: 16,
+    marginBottom: 14,
   },
   remarkText: { fontSize: 13, color: colors.amber },
-  description: { fontSize: 13, color: colors.textSecondary, lineHeight: 21, marginBottom: 16 },
+
+  detailsText: { fontSize: 13, color: colors.textSecondary, lineHeight: 22 },
+
+  sharedRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  sharedAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.accentLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sharedAvatarText: { fontSize: 16, fontWeight: '800', color: colors.accent },
+  sharedName: { flex: 1, fontSize: 15, fontWeight: '700', color: colors.textPrimary },
 
   interested: { fontSize: 14, fontWeight: '600', color: colors.textSecondary, textAlign: 'center', marginBottom: 14 },
   primaryBtn: {
@@ -446,6 +399,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     alignItems: 'center',
     ...shadows.sm,
+    ...webOnly({ cursor: 'pointer' }),
   },
   primaryBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
   outlineBtn: {
@@ -456,10 +410,10 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     alignItems: 'center',
     marginTop: 10,
+    ...webOnly({ cursor: 'pointer' }),
   },
   outlineBtnText: { color: colors.textPrimary, fontWeight: '700', fontSize: 14 },
 
-  // Trust badges
   trustRow: { flexDirection: 'row', gap: 24, justifyContent: 'center', marginTop: 20 },
   trustItem: { fontSize: 12, color: colors.textMuted },
 });

@@ -18,7 +18,8 @@ import { Reveal } from './Reveal';
 
 interface AuthShellProps {
   title: string;
-  subtitle: string;
+  /** Plain text, or rich nodes when part of it needs emphasis (e.g. an email). */
+  subtitle: ReactNode;
   onBack: () => void;
   /** Form body. */
   children: ReactNode;
@@ -118,5 +119,8 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 26, fontWeight: '800', color: colors.textPrimary, letterSpacing: -0.4, marginBottom: 6 },
   subtitle: { fontSize: 14, color: colors.textSecondary, lineHeight: 20, marginBottom: 24 },
-  footer: { marginTop: 20, alignItems: 'center' },
+  // `alignSelf: stretch` + a full-width child: without it the footer Text is
+  // sized to its max-content and Android clips the tail ("…Sign" instead of
+  // "…Sign up") rather than wrapping.
+  footer: { marginTop: 20, alignItems: 'center', alignSelf: 'stretch', width: '100%' },
 });

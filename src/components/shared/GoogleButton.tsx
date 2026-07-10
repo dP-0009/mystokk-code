@@ -1,6 +1,11 @@
 import React from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors } from '../../theme/tokens';
+import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { colors, radius } from '../../theme/tokens';
+import { webOnly } from '../layout/web';
+
+// Official Google "G" mark — bundled as an asset rather than an emoji so the
+// button matches Google's branding requirements for sign-in.
+const GOOGLE_LOGO = require('../../../assets/google-logo.png');
 
 interface GoogleButtonProps {
   title: string;
@@ -16,10 +21,10 @@ export function GoogleButton({ title, onPress, loading = false }: GoogleButtonPr
       style={({ pressed }) => [styles.button, pressed && !loading ? styles.pressed : null]}
     >
       {loading ? (
-        <ActivityIndicator color={colors.navy} />
+        <ActivityIndicator color={colors.textPrimary} />
       ) : (
         <View style={styles.row}>
-          <Text style={styles.icon}>🔵</Text>
+          <Image source={GOOGLE_LOGO} style={styles.icon} resizeMode="contain" />
           <Text style={styles.label}>{title}</Text>
         </View>
       )}
@@ -31,15 +36,16 @@ const styles = StyleSheet.create({
   button: {
     width: '100%',
     paddingVertical: 13,
-    borderRadius: 12,
+    borderRadius: radius.md,
     borderWidth: 1.5,
-    borderColor: colors.slate200,
-    backgroundColor: '#FFFFFF',
+    borderColor: colors.border,
+    backgroundColor: colors.bgWhite,
     alignItems: 'center',
     justifyContent: 'center',
+    ...webOnly({ cursor: 'pointer' }),
   },
   pressed: { opacity: 0.85 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  icon: { fontSize: 16 },
-  label: { fontSize: 14, fontWeight: '600', color: colors.slate700 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  icon: { width: 18, height: 18 },
+  label: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
 });

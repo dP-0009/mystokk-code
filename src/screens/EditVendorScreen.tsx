@@ -6,7 +6,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation';
 import { ScreenHeader } from '../components/shared/ScreenHeader';
 import { FormTextField } from '../components/shared/FormTextField';
-import { SelectField } from '../components/shared/SelectField';
+import { DropdownSelectField } from '../components/shared/DropdownSelectField';
 import { AppButton } from '../components/shared/AppButton';
 import { LoadingState } from '../components/shared/StateView';
 import {
@@ -17,7 +17,7 @@ import {
   type ManualVendorRow,
   type VendorProfile,
 } from '../services/supabase/network';
-import { INDUSTRIES, COUNTRIES } from '../constants/industries';
+import { SETTINGS_INDUSTRIES, COUNTRIES } from '../constants/industries';
 import { colors } from '../theme/tokens';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'EditVendor'>;
@@ -118,8 +118,8 @@ function ManualVendorForm({
       <FormTextField control={control} name="contact_person" label="Contact Person" autoCapitalize="words" />
       <FormTextField control={control} name="email" label="Email" keyboardType="email-address" />
       <FormTextField control={control} name="mobile_number" label="Mobile Number" keyboardType="phone-pad" />
-      <SelectField control={control} name="industry" label="Industry" placeholder="Select industry" options={INDUSTRIES} />
-      <SelectField control={control} name="country" label="Country" placeholder="Select country" options={COUNTRIES} />
+      <DropdownSelectField control={control} name="industry" label="Industry" placeholder="Select industry" options={SETTINGS_INDUSTRIES} />
+      <DropdownSelectField control={control} name="country" label="Country" placeholder="Select country" options={COUNTRIES} searchable />
       <FormTextField control={control} name="city" label="City" autoCapitalize="words" />
       <FormTextField control={control} name="group_name" label="Group" placeholder="e.g. Suppliers UAE" autoCapitalize="words" />
       {error ? <Text style={styles.error}>{error}</Text> : null}

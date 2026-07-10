@@ -811,10 +811,11 @@ const styles = StyleSheet.create({
   mSpecValue: { fontSize: 13, fontWeight: '600', color: colors.textPrimary, textAlign: 'right', flexShrink: 1 },
 
   mActivityRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingVertical: 8 },
-  mActivityLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1, minWidth: 0 },
-  mActivityDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.borderDark },
-  mActivityLabel: { fontSize: 13, color: colors.textSecondary, flexShrink: 1 },
-  mActivityDate: { fontSize: 12, color: colors.textMuted },
+  mActivityLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 },
+  mActivityDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.borderDark, flexShrink: 0 },
+  mActivityLabel: { fontSize: 13, color: colors.textSecondary, flex: 1, minWidth: 0 },
+  // The date is the fixed column — it must never be clipped mid-year ("03/07/202").
+  mActivityDate: { fontSize: 12, color: colors.textMuted, flexShrink: 0 },
 
   mDeleteBtn: {
     flexDirection: 'row',

@@ -20,6 +20,15 @@ const TABS: readonly Tab[] = [
   { id: 'network', label: 'Network', icon: 'people-outline' },
 ];
 
+/**
+ * Height of the bar itself, excluding the bottom safe-area inset:
+ *   8 (wrap pad) + 1 + 8 (bar border+pad) + 22 (icon) + 3 (gap) + 12 (label)
+ *   + 2×2 (item pad) + 8 (bar pad) + 1 + 10 (wrap pad)
+ * Scrolling screens add this + `insets.bottom` to their bottom padding so the
+ * floating bar never covers the last row of content. Keep in sync with `styles`.
+ */
+export const MOBILE_TAB_BAR_HEIGHT = 86;
+
 type MobileTabBarProps = {
   /** Highlighted destination. */
   activeId?: SidebarNavId;

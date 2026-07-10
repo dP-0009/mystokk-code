@@ -108,7 +108,12 @@ export function HeroCarousel({
 export function InfoRow({ label, value, valueColor }: { label: string; value: string; valueColor?: string }): React.JSX.Element {
   return (
     <View style={styles.infoRow}>
-      <Text style={styles.infoLabel}>{label}</Text>
+      {/* numberOfLines pins the label to one line: at a large system font scale
+          Android otherwise wraps it and clips the second line, rendering
+          "Stock location" as "Stock". The value takes the slack and ellipsizes. */}
+      <Text style={styles.infoLabel} numberOfLines={1}>
+        {label}
+      </Text>
       <Text style={[styles.infoValue, valueColor ? { color: valueColor } : null]} numberOfLines={2}>
         {value}
       </Text>
@@ -143,10 +148,15 @@ export function StatGrid({ stats }: { stats: StatSpec[] }): React.JSX.Element {
             <Text style={styles.statLabel} numberOfLines={2}>
               {s.label}
             </Text>
-            <Text style={[styles.statValue, s.color ? { color: s.color } : null]} numberOfLines={1}>
-              {s.value.toLocaleString()}
-            </Text>
-            <Text style={styles.statSub}>{s.sub}</Text>
+            {/* Pushed to the bottom of the cell so a label that wraps onto two
+                lines ("Shared with") doesn't shove its value out of line with
+                the neighbouring single-line cells. */}
+            <View style={styles.statValueWrap}>
+              <Text style={[styles.statValue, s.color ? { color: s.color } : null]} numberOfLines={1}>
+                {s.value.toLocaleString()}
+              </Text>
+              <Text style={styles.statSub}>{s.sub}</Text>
+            </View>
           </Wrap>
         );
       })}
@@ -272,8 +282,10 @@ const styles = StyleSheet.create({
   dotActive: { width: 18, backgroundColor: colors.accent },
 
   infoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12 },
-  infoLabel: { fontSize: 14, color: colors.textSecondary },
-  infoValue: { fontSize: 15, fontWeight: '700', color: colors.textPrimary, flexShrink: 1, textAlign: 'right' },
+  // The label never shrinks (it's short and must stay readable); the value is the
+  // flexible column, so an over-long value ellipsizes instead of squeezing the label.
+  infoLabel: { fontSize: 14, color: colors.textSecondary, flexShrink: 0 },
+  infoValue: { fontSize: 15, fontWeight: '700', color: colors.textPrimary, flex: 1, minWidth: 0, textAlign: 'right' },
 
   statGrid: {
     flexDirection: 'row',
@@ -286,6 +298,7 @@ const styles = StyleSheet.create({
   stat: { flex: 1, paddingVertical: 12, paddingHorizontal: 8 },
   statBorder: { borderRightWidth: 1, borderRightColor: colors.border },
   statLabel: { fontSize: 9, fontWeight: '700', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: 6 },
+  statValueWrap: { marginTop: 'auto' },
   statValue: { fontSize: 17, fontWeight: '800', color: colors.textPrimary },
   statSub: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
 

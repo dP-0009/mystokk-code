@@ -7,13 +7,15 @@ import {
   TextInputKeyPressEventData,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation';
-import { ScreenHeader } from '../components/shared/ScreenHeader';
+import { AuthShell } from '../components/shared/AuthShell';
 import { AppButton } from '../components/shared/AppButton';
+import { webOnly } from '../components/layout/web';
 import { requestPasswordReset, requestSignupOtp, signUp, verifyOtp } from '../services/supabase/auth';
 import { clearSignupDraft, getSignupDraft } from '../stores/signupDraft';
-import { colors } from '../theme/tokens';
+import { colors, radius } from '../theme/tokens';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Otp'>;
 
@@ -118,89 +120,102 @@ export function OtpScreen({ navigation, route }: Props): React.JSX.Element {
   };
 
   return (
-    <View style={styles.fill}>
-      <ScreenHeader
-        title={purpose === 'signup' ? 'Verify Email' : 'Verify Code'}
-        onBack={() => navigation.goBack()}
-      />
-      <View style={styles.body}>
-        <Text style={styles.emoji}>📧</Text>
-        <Text style={styles.title}>Check your inbox</Text>
-        <Text style={styles.sub}>
-          We sent a 6-digit code to{'\n'}
-          <Text style={styles.email}>{email}</Text>
-        </Text>
-
-        <View style={styles.boxes}>
-          {digits.map((digit, i) => (
-            <TextInput
-              // eslint-disable-next-line react/no-array-index-key
-              key={i}
-              ref={(el) => {
-                inputs.current[i] = el;
-              }}
-              style={[styles.box, digit ? styles.boxFilled : null]}
-              keyboardType="number-pad"
-              maxLength={1}
-              value={digit}
-              onChangeText={(t) => setDigit(i, t)}
-              onKeyPress={(e) => onKeyPress(i, e)}
-              returnKeyType="done"
-              autoFocus={i === 0}
-            />
-          ))}
-        </View>
-
-        <Text style={styles.timer}>
-          {expired ? 'Code expired — request a new one' : <>Code expires in <Text style={styles.timerStrong}>{formatClock(secondsLeft)}</Text></>}
-        </Text>
-
-        {notice ? <Text style={styles.notice}>{notice}</Text> : null}
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-
-        <AppButton
-          title="Verify & Continue"
-          onPress={onVerify}
-          loading={submitting}
-          disabled={code.length < OTP_LENGTH || expired}
-        />
-
+    <AuthShell
+      title="Check your inbox"
+      subtitle={
+        <>
+          We sent a 6-digit code to <Text style={styles.email}>{email}</Text>
+        </>
+      }
+      onBack={() => navigation.goBack()}
+      footer={
         <Text style={styles.resend}>
           Didn&apos;t get it?{' '}
-          <Text style={styles.link} onPress={onResend}>
+          <Text style={[styles.link, webOnly({ cursor: 'pointer' })]} onPress={onResend}>
             Resend code
           </Text>
         </Text>
+      }
+    >
+      <View style={styles.iconWrap}>
+        <Ionicons name="mail-outline" size={26} color={colors.accent} />
       </View>
-    </View>
+
+      <View style={styles.boxes}>
+        {digits.map((digit, i) => (
+          <TextInput
+            // eslint-disable-next-line react/no-array-index-key
+            key={i}
+            ref={(el) => {
+              inputs.current[i] = el;
+            }}
+            style={[styles.box, digit ? styles.boxFilled : null]}
+            keyboardType="number-pad"
+            maxLength={1}
+            value={digit}
+            onChangeText={(t) => setDigit(i, t)}
+            onKeyPress={(e) => onKeyPress(i, e)}
+            returnKeyType="done"
+            autoFocus={i === 0}
+          />
+        ))}
+      </View>
+
+      <Text style={styles.timer}>
+        {expired ? (
+          'Code expired — request a new one'
+        ) : (
+          <>
+            Code expires in <Text style={styles.timerStrong}>{formatClock(secondsLeft)}</Text>
+          </>
+        )}
+      </Text>
+
+      {notice ? <Text style={styles.notice}>{notice}</Text> : null}
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+
+      <AppButton
+        title={purpose === 'signup' ? 'Verify & Continue' : 'Verify Code'}
+        variant="primary"
+        onPress={onVerify}
+        loading={submitting}
+        disabled={code.length < OTP_LENGTH || expired}
+      />
+    </AuthShell>
   );
 }
 
 const styles = StyleSheet.create({
-  fill: { flex: 1, backgroundColor: colors.slate50 },
-  body: { padding: 24, alignItems: 'center' },
-  emoji: { fontSize: 40, marginVertical: 12 },
-  title: { fontSize: 24, fontWeight: '800', color: colors.navy, marginBottom: 6 },
-  sub: { fontSize: 13, color: colors.slate500, textAlign: 'center', marginBottom: 24, lineHeight: 20 },
-  email: { fontWeight: '700', color: colors.slate700 },
-  boxes: { flexDirection: 'row', justifyContent: 'space-between', gap: 8, marginBottom: 20 },
+  email: { fontWeight: '700', color: colors.textPrimary },
+  iconWrap: {
+    alignSelf: 'center',
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: colors.accentLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 22,
+  },
+  boxes: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: 18 },
   box: {
     width: 46,
     height: 56,
     borderWidth: 1.5,
-    borderColor: colors.slate200,
-    borderRadius: 10,
-    backgroundColor: '#FFFFFF',
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    backgroundColor: colors.bgWhite,
     textAlign: 'center',
     fontSize: 22,
     fontWeight: '700',
-    color: colors.navy,
+    color: colors.textPrimary,
+    ...({ outlineStyle: 'none' } as object),
   },
-  boxFilled: { borderColor: colors.emerald },
-  timer: { fontSize: 12, color: colors.slate400, marginBottom: 18 },
-  timerStrong: { fontWeight: '700', color: colors.slate700 },
-  notice: { fontSize: 13, color: colors.emerald, fontWeight: '600', marginBottom: 10 },
+  boxFilled: { borderColor: colors.accent },
+  timer: { fontSize: 12, color: colors.textMuted, textAlign: 'center', marginBottom: 18 },
+  timerStrong: { fontWeight: '700', color: colors.textSecondary },
+  notice: { fontSize: 13, color: colors.green, fontWeight: '600', textAlign: 'center', marginBottom: 10 },
   error: { fontSize: 13, color: colors.red, fontWeight: '600', marginBottom: 10, textAlign: 'center' },
-  resend: { marginTop: 16, fontSize: 13, color: colors.slate500 },
-  link: { color: colors.emerald, fontWeight: '700' },
+  resend: { textAlign: 'center', fontSize: 13, color: colors.textSecondary },
+  link: { color: colors.accent, fontWeight: '700' },
 });

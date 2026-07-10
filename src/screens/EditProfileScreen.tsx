@@ -8,7 +8,7 @@ import type { RootStackParamList } from '../navigation';
 import { ScreenHeader } from '../components/shared/ScreenHeader';
 import { LoadingState } from '../components/shared/StateView';
 import { FormTextField } from '../components/shared/FormTextField';
-import { SelectField } from '../components/shared/SelectField';
+import { DropdownSelectField } from '../components/shared/DropdownSelectField';
 import { AppButton } from '../components/shared/AppButton';
 import { getMyVendor, updateVendorProfile, type VendorProfile } from '../services/supabase/vendor';
 import { toast } from '../stores/toast';
@@ -129,7 +129,7 @@ function ProfileForm({ vendor, onDone }: { vendor: VendorProfile; onDone: () => 
         <Text style={styles.roValue}>{vendor.industry ?? '—'}</Text>
       </View>
 
-      <SelectField control={control} name="country" label="Country" placeholder="Select country" options={COUNTRIES} required rules={{ required: 'Country is required' }} />
+      <DropdownSelectField control={control} name="country" label="Country" placeholder="Select country" options={COUNTRIES} searchable required rules={{ required: 'Country is required' }} />
       <FormTextField control={control} name="city" label="City *" autoCapitalize="words" rules={{ required: 'City is required' }} />
       <FormTextField control={control} name="address" label="Address" autoCapitalize="words" />
       <View style={styles.row}>

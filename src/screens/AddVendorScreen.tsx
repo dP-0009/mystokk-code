@@ -6,10 +6,10 @@ import type { RootStackParamList } from '../navigation';
 import { ScreenHeader } from '../components/shared/ScreenHeader';
 import { FormTextField } from '../components/shared/FormTextField';
 import { PhoneField } from '../components/shared/PhoneField';
-import { SelectField } from '../components/shared/SelectField';
+import { DropdownSelectField } from '../components/shared/DropdownSelectField';
 import { AppButton } from '../components/shared/AppButton';
 import { addManualVendor } from '../services/supabase/network';
-import { INDUSTRIES, COUNTRIES } from '../constants/industries';
+import { SETTINGS_INDUSTRIES, COUNTRIES } from '../constants/industries';
 import { colors } from '../theme/tokens';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddVendor'>;
@@ -102,8 +102,8 @@ export function AddVendorScreen({ navigation }: Props): React.JSX.Element {
           }}
         />
         <PhoneField control={control} name="mobileNumber" label="Mobile Number" countryName={country} placeholder="Phone number" />
-        <SelectField control={control} name="industry" label="Industry" placeholder="Select industry" options={INDUSTRIES} />
-        <SelectField control={control} name="country" label="Country" placeholder="Select country" options={COUNTRIES} />
+        <DropdownSelectField control={control} name="industry" label="Industry" placeholder="Select industry" options={SETTINGS_INDUSTRIES} />
+        <DropdownSelectField control={control} name="country" label="Country" placeholder="Select country" options={COUNTRIES} searchable />
         <FormTextField control={control} name="city" label="City" placeholder="e.g. Dubai" autoCapitalize="words" />
         <FormTextField
           control={control}

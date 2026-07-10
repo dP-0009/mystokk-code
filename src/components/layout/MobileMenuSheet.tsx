@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { colors, radius, shadows } from '../../theme/tokens';
@@ -45,6 +46,9 @@ export function MobileMenuSheet({
   onLogout,
 }: MobileMenuSheetProps): React.JSX.Element | null {
   const unread = useUnreadCount();
+  // Without this the last row (Log Out) is sliced off by the Android gesture bar
+  // / iPhone home indicator, since the sheet is pinned to the raw screen bottom.
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (!visible || Platform.OS !== 'web' || typeof document === 'undefined') return;
@@ -63,7 +67,7 @@ export function MobileMenuSheet({
     <View style={styles.root}>
       <Pressable style={styles.backdrop} onPress={onClose} testID="mobile-menu-backdrop" />
 
-      <View style={styles.sheet} testID="mobile-menu">
+      <View style={[styles.sheet, { paddingBottom: 28 + insets.bottom }]} testID="mobile-menu">
         <View style={styles.handle} />
 
         {/* Account header */}
@@ -145,7 +149,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 22,
     paddingHorizontal: 10,
     paddingTop: 8,
-    paddingBottom: 28,
+    // paddingBottom is applied inline (base 28 + safe-area inset).
     ...shadows.dropdown,
   },
   handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginVertical: 8 },

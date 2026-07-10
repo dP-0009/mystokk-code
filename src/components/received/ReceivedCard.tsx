@@ -127,10 +127,12 @@ export function ReceivedCard({ item, onPress, onEdit }: ReceivedCardProps): Reac
 
 const styles = StyleSheet.create({
   card: {
-    // Grid item — ~3 across on desktop, wraps to 2 / 1 as width shrinks.
+    // Grid item — ~3 across on desktop, wraps to 2 / 1 as width shrinks. The
+    // basis (not a minWidth) drives the wrap, so on a 320dp phone the single
+    // column can still shrink below 300 instead of overflowing the screen.
     flexGrow: 1,
-    flexBasis: '31%',
-    minWidth: 300,
+    flexBasis: 300,
+    minWidth: 0,
     backgroundColor: colors.bgWhite,
     borderWidth: 1,
     borderColor: colors.border,
@@ -147,7 +149,9 @@ const styles = StyleSheet.create({
   name: { fontSize: 14, fontWeight: '700', color: colors.textPrimary },
   // Stock location, on its own line under the title (map-pin + value), 12px #475569.
   locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
-  location: { fontSize: 12, color: colors.textSecondary, flexShrink: 1 },
+  // flex (basis 0) rather than flexShrink (basis auto): the text then claims the
+  // row's leftover width instead of being measured at max-content and clipped.
+  location: { fontSize: 12, color: colors.textSecondary, flex: 1, minWidth: 0 },
   price: { fontSize: 14, fontWeight: '700', color: colors.green, marginTop: 4 },
   qty: { fontSize: 12, marginTop: 8 },
   qtyAvail: { color: colors.textPrimary, fontWeight: '700' },
@@ -156,7 +160,7 @@ const styles = StyleSheet.create({
   divider: { height: 1, backgroundColor: colors.border, marginTop: 12, marginBottom: 10 },
 
   footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  from: { fontSize: 12, color: colors.textMuted, flexShrink: 1 },
+  from: { fontSize: 12, color: colors.textMuted, flex: 1, minWidth: 0 },
   fromName: { color: colors.textSecondary, fontWeight: '700' },
   footerRight: { flexDirection: 'row', alignItems: 'center', gap: 12, flexShrink: 0 },
   editBtn: {

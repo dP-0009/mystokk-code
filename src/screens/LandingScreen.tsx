@@ -382,7 +382,10 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: radius.lg,
     padding: 24,
-    height: '100%',
+    // Equal-height cards across the desktop grid row. Web-only: on native the
+    // parent has auto height, so a percentage height resolves against nothing
+    // and blows the card up to fill the whole screen.
+    ...webOnly({ height: '100%' }),
     ...shadows.sm,
   },
   featureIcon: {
