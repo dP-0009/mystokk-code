@@ -86,31 +86,49 @@ export function initPushHandlers(navigate: PushNavigate): void {
     data?: Record<string, string>;
   } | null;
 
-  // Foreground messages: show a local notification (FCM won't auto-display).
-  messaging().onMessage(async (remoteMessage: RemoteMessage) => {
-    await displayLocal(remoteMessage ?? {});
-  });
-
-  // Notifee press (foreground notification tapped).
-  notifee.onForegroundEvent(
-    ({ type, detail }: { type: number; detail: { notification?: { data?: Record<string, string> } } }) => {
-      if (type === EventType.PRESS && detail.notification?.data) {
-        navigate(detail.notification.data);
+  // CRITICAL: this runs at app startup (RootNavigator mount). Every call below
+  // reaches into a native TurboModule — `messaging()` throws synchronously if the
+  // Firebase default app isn't configured, and on iOS the messaging/APNs bridge
+  // has more failure modes than Android (where Firebase auto-inits). An unguarded
+  // throw here surfaces as an uncaught FATAL JS EXCEPTION (RCTExceptionsManager
+  // reportFatal) and crashes the app right after the splash screen. Push is never
+  // important enough to take the whole app down, so swallow any wiring failure.
+  try {
+    // Foreground messages: show a local notification (FCM won't auto-display).
+    messaging().onMessage(async (remoteMessage: RemoteMessage) => {
+      try {
+        await displayLocal(remoteMessage ?? {});
+      } catch {
+        // a single message failing to display must not surface
       }
-    },
-  );
+    });
 
-  // App opened from background by tapping the FCM notification.
-  messaging().onNotificationOpenedApp((remoteMessage: RemoteMessage) => {
-    if (remoteMessage?.data) navigate(remoteMessage.data);
-  });
+    // Notifee press (foreground notification tapped).
+    notifee.onForegroundEvent(
+      ({ type, detail }: { type: number; detail: { notification?: { data?: Record<string, string> } } }) => {
+        if (type === EventType.PRESS && detail.notification?.data) {
+          navigate(detail.notification.data);
+        }
+      },
+    );
 
-  // App launched from a cold start by tapping the FCM notification.
-  void messaging()
-    .getInitialNotification()
-    .then((remoteMessage: RemoteMessage) => {
+    // App opened from background by tapping the FCM notification.
+    messaging().onNotificationOpenedApp((remoteMessage: RemoteMessage) => {
       if (remoteMessage?.data) navigate(remoteMessage.data);
     });
+
+    // App launched from a cold start by tapping the FCM notification.
+    void messaging()
+      .getInitialNotification()
+      .then((remoteMessage: RemoteMessage) => {
+        if (remoteMessage?.data) navigate(remoteMessage.data);
+      })
+      .catch(() => {
+        /* no initial notification / bridge not ready */
+      });
+  } catch (err) {
+    console.warn('[push] initPushHandlers failed; push disabled this session:', err);
+  }
 }
 
 /** Clear the stored token (e.g. on sign-out). */

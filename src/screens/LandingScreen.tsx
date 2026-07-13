@@ -138,10 +138,12 @@ export function LandingScreen({ navigation }: Props): React.JSX.Element {
               </Reveal>
 
               <Reveal delay={140}>
-                <Text style={[styles.h1, isMobile ? styles.h1Mobile : null]}>
-                  Share live stock with the{'\n'}
-                  <Text style={styles.h1Accent}>vendors you trust</Text>.
-                </Text>
+                {Platform.OS === 'web' && (
+                  <Text style={[styles.h1, isMobile ? styles.h1Mobile : null]}>
+                    Share live stock with the{'\n'}
+                    <Text style={styles.h1Accent}>vendors you trust</Text>.
+                  </Text>
+                )}
               </Reveal>
 
               <Reveal delay={220}>

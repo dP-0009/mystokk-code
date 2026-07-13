@@ -212,14 +212,20 @@ export function RootNavigator(): React.JSX.Element {
   }, [initialize]);
 
   // Wire push notification handlers once. A tapped push deep-links to the
-  // relevant tab. No-op on web / Expo Go.
+  // relevant tab. No-op on web / Expo Go. Guarded so a native push-bridge
+  // failure (notably iOS Firebase/APNs at startup) can never crash the app —
+  // initPushHandlers already swallows internally, this is the outer backstop.
   useEffect(() => {
-    initPushHandlers((data) => {
-      const tab = pushTargetTab(data.type);
-      if (tab && navigationRef.isReady()) {
-        navigationRef.navigate('Main', { screen: tab });
-      }
-    });
+    try {
+      initPushHandlers((data) => {
+        const tab = pushTargetTab(data.type);
+        if (tab && navigationRef.isReady()) {
+          navigationRef.navigate('Main', { screen: tab });
+        }
+      });
+    } catch (err) {
+      console.warn('[push] handler wiring failed:', err);
+    }
   }, []);
 
   // Once signed in + onboarded, resolve any share captured before auth. When a
