@@ -1,0 +1,1495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>MyStokk — Final Mobile Prototype</title>
+<style>
+  :root{
+    --navy:#0F2B54; --blue:#2E7CF6; --blue-d:#1E5FD0; --sky:#56C8FF; --ice:#E3EEFF;
+    --bg:#FFFFFF; --line:#E8EDF5; --muted:#67768F; --text:#17233A;
+    --green:#149A54; --green-bg:#E7F6EE; --amber:#B26205; --amber-bg:#FDF1E0;
+    --red:#D93030; --red-bg:#FCEBEB; --violet:#6D5BE8; --violet-bg:#EFEDFC;
+    --glass:rgba(252,253,255,.6); --gline:rgba(15,43,84,.08); --ghl:rgba(255,255,255,.85);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;
+    background:#0A1830;display:flex;align-items:center;justify-content:center;min-height:100vh;color:var(--text)}
+  .frame{width:390px;height:844px;background:var(--bg);border-radius:54px;position:relative;overflow:hidden;
+    box-shadow:0 42px 110px rgba(0,0,0,.6),inset 0 0 0 12px #0e2140,inset 0 0 0 14px #21395e}
+  @media (max-width:430px){body{background:var(--bg)}
+    .frame{width:100vw;height:100vh;border-radius:0;box-shadow:none}
+    .statusbar .notch{display:none}}
+  .statusbar{position:absolute;top:0;left:0;right:0;height:52px;z-index:65;display:flex;align-items:flex-end;
+    justify-content:space-between;padding:0 30px 5px;font-size:15px;font-weight:600;color:var(--navy);pointer-events:none}
+  .statusbar .notch{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:118px;height:33px;background:#0A1830;border-radius:20px}
+  .homebar{position:absolute;bottom:4px;left:50%;transform:translateX(-50%);width:132px;height:5px;border-radius:3px;background:var(--navy);opacity:.18;z-index:75;pointer-events:none}
+
+  .screen{position:absolute;inset:0;background:var(--bg);display:flex;flex-direction:column;
+    transform:translateX(100%);transition:transform .3s cubic-bezier(.32,.72,.35,1);z-index:1;visibility:hidden}
+  .screen.active{transform:translateX(0);z-index:5;visibility:visible}
+  .screen.under{transform:translateX(-26%);z-index:2;visibility:visible}
+  .screen.fade{transition:opacity .16s ease;transform:none;opacity:0}
+  .screen.fade.active{opacity:1}
+  .scroll{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:0 18px;scrollbar-width:none}
+  .scroll::-webkit-scrollbar{display:none}
+  .pt-nav{padding-top:112px}.pt-tab{padding-top:60px}
+  .pb-tab{padding-bottom:143px}.pb-cta{padding-bottom:132px}.pb-plain{padding-bottom:44px}
+  .nav{position:absolute;top:0;left:0;right:0;z-index:40;padding:56px 18px 10px;display:flex;align-items:center;gap:10px;
+    background:linear-gradient(rgba(255,255,255,.95) 72%,rgba(255,255,255,0))}
+  .nav .title{font-size:17px;font-weight:800;color:var(--navy);flex:1;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .nav .side{width:42px;display:flex}
+  .navbtn{width:42px;height:42px;border-radius:21px;background:var(--glass);
+    backdrop-filter:blur(28px) saturate(1.85);-webkit-backdrop-filter:blur(28px) saturate(1.85);
+    border:1px solid var(--gline);box-shadow:inset 0 1px 0 var(--ghl),0 4px 14px rgba(15,43,84,.08);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .1s;position:relative}
+  .navbtn:active{transform:scale(.9)}
+  .dot{position:absolute;top:8px;right:9px;width:9px;height:9px;border-radius:5px;background:var(--red);border:1.5px solid #fff}
+  .h1{font-size:29px;font-weight:800;letter-spacing:-.6px;color:var(--navy)}
+  .h1small{font-size:24px;font-weight:800;letter-spacing:-.5px;color:var(--navy)}
+  .sub{font-size:14.5px;color:var(--muted);margin-top:3px}
+  .sect{font-size:12.5px;font-weight:800;letter-spacing:.7px;color:var(--muted);text-transform:uppercase;margin:22px 2px 10px}
+
+  /* floating glass tab bar with highlighted active tab */
+  .tabbar{position:absolute;left:10px;right:10px;bottom:26px;z-index:50;height:80px;border-radius:34px;
+    background:rgba(255,255,255,.62);backdrop-filter:blur(36px) saturate(1.9);-webkit-backdrop-filter:blur(36px) saturate(1.9);
+    border:1px solid var(--gline);box-shadow:inset 0 1.5px 0 rgba(255,255,255,.95),inset 0 -1px 0 rgba(255,255,255,.3),0 18px 50px rgba(15,43,84,.2);
+    display:flex;padding:11px 4px 0}
+  .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;color:#93A2BC;
+    font-size:9.5px;font-weight:700;letter-spacing:-.15px;position:relative;z-index:1;padding-top:5px;white-space:nowrap;min-width:0}
+  .tab svg{width:24px;height:24px}
+  .tab:active{opacity:.55}
+  .tab.on{color:var(--blue-d);font-weight:800}
+  .tab.on::before{content:'';position:absolute;top:0;left:4px;right:4px;width:auto;height:58px;
+    border-radius:19px;z-index:-1;background:linear-gradient(rgba(46,124,246,.17),rgba(46,124,246,.09));
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.9),inset 0 0 0 1px rgba(46,124,246,.2)}
+  .tab .tbadge{position:absolute;margin-left:26px;margin-top:-2px;min-width:17px;height:17px;border-radius:9px;background:var(--red);
+    color:#fff;font-size:10.5px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 4px;z-index:2}
+
+  /* glass surfaces */
+  .card,.row,.stat,.crow{background:var(--glass);backdrop-filter:blur(30px) saturate(1.85);-webkit-backdrop-filter:blur(30px) saturate(1.85);
+    border:1px solid var(--gline);border-radius:18px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.95),inset 0 -1px 0 rgba(255,255,255,.25),0 10px 34px rgba(15,43,84,.09)}
+  .card{padding:16px}
+  .btn{display:flex;align-items:center;justify-content:center;gap:8px;height:53px;border-radius:17px;
+    font-size:16px;font-weight:800;cursor:pointer;transition:transform .1s,opacity .1s;user-select:none}
+  .btn:active{transform:scale(.98);opacity:.9}
+  .btn-primary{background:var(--blue);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 8px 22px rgba(46,124,246,.32)}
+  .btn-dark{background:var(--navy);color:#fff}
+  .btn-ghost{background:var(--glass);color:var(--navy);border:1px solid var(--gline);
+    backdrop-filter:blur(14px) saturate(1.6);-webkit-backdrop-filter:blur(14px) saturate(1.6);
+    box-shadow:inset 0 1px 0 var(--ghl),0 4px 12px rgba(15,43,84,.06)}
+  .btn-soft{background:var(--ice);color:var(--blue-d)}
+  .btn-green{background:var(--green);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 8px 20px rgba(20,154,84,.32)}
+  .btn-danger{background:var(--red-bg);color:var(--red)}
+  .btn.sm{height:44px;font-size:14.5px;border-radius:13px}
+  .btn.disabled{opacity:.42;pointer-events:none}
+  .cta{position:absolute;left:0;right:0;bottom:0;z-index:45;padding:12px 18px 32px;
+    background:linear-gradient(rgba(255,255,255,0),rgba(255,255,255,.94) 44%)}
+  .searchpill{display:flex;align-items:center;gap:9px;height:45px;background:var(--glass);border:1px solid var(--gline);
+    backdrop-filter:blur(24px) saturate(1.7);-webkit-backdrop-filter:blur(24px) saturate(1.7);box-shadow:inset 0 1px 0 rgba(255,255,255,.95);
+    border-radius:15px;padding:0 14px;color:var(--muted);font-size:15px;margin:10px 0 10px}
+  .chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 12px;scrollbar-width:none}
+  .chips::-webkit-scrollbar{display:none}
+  .chip{flex:none;height:35px;display:flex;align-items:center;gap:6px;padding:0 14px;border-radius:18px;font-size:13px;
+    font-weight:700;background:var(--glass);border:1px solid var(--gline);color:var(--muted);cursor:pointer;transition:transform .1s;
+    box-shadow:inset 0 1px 0 var(--ghl),0 3px 8px rgba(15,43,84,.05)}
+  .chip:active{transform:scale(.95)}
+  .chip.on{background:var(--navy);border-color:var(--navy);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.22)}
+  .row{display:flex;align-items:center;gap:12px;padding:13px 14px;margin-bottom:10px;cursor:pointer;transition:transform .1s;position:relative}
+  .row:active{transform:scale(.985)}
+  .thumb{width:52px;height:52px;border-radius:13px;flex:none;display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:15px;color:#fff;letter-spacing:.3px}
+  .mid{flex:1;min-width:0}
+  .t1{font-size:15.5px;font-weight:750;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .t2{font-size:12.5px;color:var(--muted);margin-top:2.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .end{text-align:right;flex:none}
+  .p1{font-size:14.5px;font-weight:800;color:var(--navy)}
+  .badge{display:inline-flex;align-items:center;gap:5px;padding:3.5px 9px;border-radius:9px;font-size:11px;font-weight:800;letter-spacing:.2px}
+  .b-green{background:var(--green-bg);color:var(--green)}
+  .b-amber{background:var(--amber-bg);color:var(--amber)}
+  .b-red{background:var(--red-bg);color:var(--red)}
+  .b-blue{background:var(--ice);color:var(--blue-d)}
+  .b-gray{background:#EEF1F7;color:var(--muted)}
+  .chev{color:#C3CDDF;flex:none}
+  .seg{display:flex;background:rgba(233,237,245,.75);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    border:1px solid var(--gline);border-radius:13px;padding:3px;margin:12px 0 14px}
+  .seg div{flex:1;text-align:center;padding:9.5px 0;border-radius:10px;font-size:13.5px;font-weight:800;color:var(--muted);cursor:pointer}
+  .seg div.on{background:#fff;color:var(--navy);box-shadow:inset 0 1px 0 var(--ghl),0 2px 8px rgba(15,43,84,.12)}
+  .input{margin-bottom:14px}
+  .input label{display:block;font-size:13px;font-weight:800;color:var(--navy);margin-bottom:7px}
+  .input label i{font-style:normal;color:var(--red)}
+  .input input,.input select,.input textarea{width:100%;height:51px;border:1px solid var(--gline);border-radius:13px;
+    background:var(--glass);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:inset 0 1px 0 var(--ghl);
+    padding:0 14px;font-size:15.5px;color:var(--text);font-family:inherit;outline:none;appearance:none;-webkit-appearance:none}
+  .input select{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2367768F' stroke-width='2.4' stroke-linecap='round'><path d='m6 9 6 6 6-6'/></svg>");
+    background-repeat:no-repeat;background-position:right 14px center;padding-right:40px}
+  .input textarea{height:92px;padding-top:13px;resize:none}
+  .input input:focus,.input textarea:focus,.input select:focus{border-color:var(--blue)}
+  .err{color:var(--red);font-size:12.5px;font-weight:700;margin-top:6px;display:none}
+  .fab{position:absolute;right:18px;bottom:123px;z-index:46;width:57px;height:57px;border-radius:29px;
+    background:var(--glass);backdrop-filter:blur(20px) saturate(1.8);-webkit-backdrop-filter:blur(20px) saturate(1.8);
+    border:1px solid var(--gline);color:var(--navy);display:flex;align-items:center;justify-content:center;
+    box-shadow:inset 0 1px 0 var(--ghl),0 12px 30px rgba(15,43,84,.22);cursor:pointer;transition:transform .12s}
+  .fab:active{transform:scale(.9)}
+  .stockbar{display:flex;height:5px;border-radius:3px;overflow:hidden;background:#EDF1F8;margin-top:7px}
+  .stockbar i{height:100%}
+  .sb-av{background:#20B368}.sb-res{background:#F0A030}
+  .legend{display:flex;gap:14px;margin-top:10px;font-size:12px;font-weight:700;color:var(--muted);flex-wrap:wrap}
+  .legend span{display:flex;align-items:center;gap:6px}
+  .legend b{width:9px;height:9px;border-radius:3px;display:inline-block}
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+  .stat{padding:14px;cursor:pointer;transition:transform .1s}
+  .stat:active{transform:scale(.97)}
+  .stat .ic{width:36px;height:36px;border-radius:11px;display:flex;align-items:center;justify-content:center;margin-bottom:10px}
+  .stat .v{font-size:22px;font-weight:800;color:var(--navy);letter-spacing:-.5px}
+  .stat .l{font-size:12px;color:var(--muted);font-weight:700;margin-top:1px}
+  .steps{display:flex;gap:6px;margin:4px 0 16px}
+  .steps i{flex:1;height:4px;border-radius:2px;background:#E2E8F2}
+  .steps i.on{background:var(--blue)}
+  .crow{display:flex;align-items:center;gap:12px;border-radius:15px;padding:12px 13px;margin-bottom:9px;cursor:pointer}
+  .crow.on{border-color:rgba(46,124,246,.6);background:rgba(232,241,255,.85)}
+  .cbox{width:23px;height:23px;border-radius:8px;border:2px solid #C6D1E4;flex:none;display:flex;align-items:center;justify-content:center;background:#fff}
+  .crow.on .cbox{background:var(--blue);border-color:var(--blue)}
+  .cbox svg{opacity:0}.crow.on .cbox svg{opacity:1}
+  .avatar{width:45px;height:45px;border-radius:23px;flex:none;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:#fff}
+  .sheet-wrap{position:absolute;inset:0;z-index:80;visibility:hidden}
+  .sheet-wrap.open{visibility:visible}
+  .sheet-bg{position:absolute;inset:0;background:rgba(10,24,48,.4);opacity:0;transition:opacity .25s}
+  .sheet-wrap.open .sheet-bg{opacity:1}
+  .sheet{position:absolute;left:0;right:0;bottom:0;background:rgba(255,255,255,.72);
+    backdrop-filter:blur(42px) saturate(1.9);-webkit-backdrop-filter:blur(42px) saturate(1.9);
+    border:1px solid rgba(255,255,255,.85);border-bottom:none;border-radius:34px 34px 0 0;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 -18px 60px rgba(15,43,84,.22);
+    padding:10px 20px 38px;transform:translateY(105%);transition:transform .3s cubic-bezier(.32,.72,.35,1);max-height:88%;overflow-y:auto}
+  .sheet-wrap.open .sheet{transform:translateY(0)}
+  .grab{width:40px;height:5px;border-radius:3px;background:rgba(15,43,84,.2);margin:4px auto 14px}
+  .sheet h3{font-size:19px;font-weight:800;color:var(--navy)}
+  .sheet .desc{font-size:13.5px;color:var(--muted);margin-top:3px;margin-bottom:14px;line-height:1.5}
+  .act{display:flex;align-items:center;gap:13px;padding:14px 2px;border-bottom:1px solid var(--line);cursor:pointer;font-size:15.5px;font-weight:700;color:var(--navy)}
+  .act:last-of-type{border-bottom:none}
+  .act:active{opacity:.55}
+  .act .ic{width:37px;height:37px;border-radius:12px;background:var(--ice);display:flex;align-items:center;justify-content:center;flex:none}
+  .act.danger{color:var(--red)}.act.danger .ic{background:var(--red-bg)}
+  .qty{display:flex;align-items:center;border:1px solid var(--gline);border-radius:13px;overflow:hidden;
+    background:var(--glass);box-shadow:inset 0 1px 0 var(--ghl)}
+  .qty div{width:44px;height:49px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:var(--blue);cursor:pointer}
+  .qty div:active{background:#F0F5FE}
+  .qty input{flex:1;border:none;text-align:center;font-weight:800;font-size:16px;outline:none;height:49px;font-family:inherit;color:var(--navy);min-width:0;background:transparent}
+  .bubble{max-width:82%;border-radius:16px;padding:11px 14px;margin-bottom:10px;font-size:14px;line-height:1.4;
+    border:1px solid var(--gline);box-shadow:inset 0 1px 0 var(--ghl),0 4px 12px rgba(15,43,84,.05)}
+  .bub-them{background:rgba(240,244,250,.85)}
+  .bub-you{background:rgba(222,236,255,.9);margin-left:auto}
+  .bubble .who{font-size:11px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);margin-bottom:3px;display:flex;justify-content:space-between;gap:14px}
+  .bubble .big{font-size:15px;font-weight:800;color:var(--navy)}
+  .bubble .note{font-style:italic;color:var(--muted);margin-top:2px}
+  .bubble .time{font-size:11px;color:#9AA7BF;margin-top:5px}
+  .toast{position:absolute;left:50%;bottom:126px;transform:translateX(-50%) translateY(16px);background:var(--navy);color:#fff;
+    padding:12px 22px;border-radius:14px;font-size:14px;font-weight:700;opacity:0;transition:all .3s;z-index:95;pointer-events:none;white-space:nowrap;max-width:86%}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .linkpill{display:flex;align-items:center;gap:10px;background:rgba(241,245,252,.85);border:1.5px dashed #B7CBEC;border-radius:14px;
+    padding:13px 15px;font-size:13.5px;color:var(--blue-d);font-weight:700;word-break:break-all;cursor:pointer}
+  .empty{text-align:center;padding:54px 30px;color:var(--muted)}
+  .empty .eic{width:74px;height:74px;border-radius:24px;background:var(--ice);display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
+  .empty h4{font-size:16.5px;font-weight:800;color:var(--navy);margin-bottom:5px}
+  .empty p{font-size:13.5px;line-height:1.5}
+  .note{display:flex;gap:12px;align-items:flex-start;background:rgba(255,249,236,.92);border:1px solid #F0E0BC;border-radius:14px;padding:13px 14px;font-size:13px;line-height:1.5;color:#6B5518}
+  .infonote{display:flex;gap:12px;align-items:flex-start;background:rgba(240,246,255,.92);border:1px solid #D6E5FB;border-radius:14px;padding:13px 14px;font-size:13px;line-height:1.5;color:var(--text)}
+  .kv{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--line);font-size:14.5px;gap:14px}
+  .kv:last-child{border-bottom:none}
+  .kv .k{color:var(--muted);font-weight:600;flex:none}
+  .kv .v{font-weight:800;color:var(--navy);text-align:right}
+  .doc{display:flex;align-items:center;gap:12px;background:var(--glass);border:1px solid var(--gline);
+    box-shadow:inset 0 1px 0 var(--ghl);border-radius:13px;padding:12px 14px;margin-bottom:9px;cursor:pointer}
+  .doc:active{opacity:.6}
+  .doc .ext{margin-left:auto;font-size:11.5px;font-weight:800}
+  .catchip{display:inline-flex;height:34px;align-items:center;padding:0 14px;border-radius:17px;border:1px solid var(--gline);
+    background:var(--glass);box-shadow:inset 0 1px 0 var(--ghl);font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;margin:0 8px 8px 0}
+  .catchip.on{border-color:rgba(46,124,246,.55);color:var(--blue-d);background:rgba(232,241,255,.9)}
+  .toggle{width:51px;height:31px;border-radius:16px;background:#E9E9EB;position:relative;cursor:pointer;transition:background .25s;flex:none}
+  .toggle::after{content:'';position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:14px;background:#fff;box-shadow:0 3px 8px rgba(0,0,0,.15),0 1px 1px rgba(0,0,0,.08);transition:left .25s cubic-bezier(.3,.9,.4,1.1)}
+  .toggle.on{background:#34C759}
+  .toggle.on::after{left:22px}
+  .prose{font-size:14.5px;line-height:1.6;color:var(--text)}
+  .prose h4{font-size:15.5px;font-weight:800;color:var(--navy);margin:16px 0 6px}
+  .prose p{margin-bottom:10px}
+  .pop-wrap{position:absolute;inset:0;z-index:86;visibility:hidden}
+  .pop-wrap.open{visibility:visible}
+  .pop-bg{position:absolute;inset:0;background:rgba(10,24,48,.26);opacity:0;transition:opacity .2s}
+  .pop-wrap.open .pop-bg{opacity:1}
+  .pop{position:absolute;top:106px;right:16px;width:258px;background:rgba(255,255,255,.8);
+    backdrop-filter:blur(36px) saturate(1.9);-webkit-backdrop-filter:blur(36px) saturate(1.9);
+    border:1px solid rgba(255,255,255,.9);border-radius:24px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 24px 60px rgba(15,43,84,.26);
+    padding:14px 15px 8px;transform:scale(.82) translateY(-8px);transform-origin:top right;opacity:0;
+    transition:all .22s cubic-bezier(.34,1.35,.5,1)}
+  .pop-wrap.open .pop{transform:scale(1) translateY(0);opacity:1}
+  .pop-head{display:flex;align-items:center;gap:11px;padding-bottom:12px;border-bottom:1px solid var(--line);margin-bottom:4px}
+  .pop-head b{font-size:15px;color:var(--navy);display:block}
+  .pop-head span{font-size:11.5px;color:var(--muted);font-weight:600}
+  .pop .act{padding:12px 2px;font-size:14.5px}
+  .pop .act .ic{width:34px;height:34px;border-radius:11px}
+  .otp{display:flex;gap:9px;justify-content:center;margin:20px 0 12px}
+  .otp input{width:46px;height:56px;text-align:center;font-size:22px;font-weight:800;border:1.5px solid var(--gline);
+    border-radius:13px;outline:none;background:var(--glass);box-shadow:inset 0 1px 0 var(--ghl);color:var(--navy)}
+  .otp input:focus{border-color:var(--blue)}
+
+  /* ============ iOS26 GLASS PANEL SYSTEM (reusable recipe) ============ */
+  :root{--gfill:rgba(255,255,255,.12);--gbrd:rgba(255,255,255,.28);
+    --gsh:0 8px 32px rgba(10,30,70,.15),inset 0 1px 0 rgba(255,255,255,.32)}
+  .frame{background:linear-gradient(168deg,#E8F0FB 0%,#F3F7FD 45%,#E9F1FC 100%)}
+  .screen{background:linear-gradient(168deg,#E8F0FB 0%,#F3F7FD 45%,#E9F1FC 100%)}
+  .screen::before{content:'';position:absolute;inset:0;pointer-events:none;background:
+    radial-gradient(330px 330px at 92% -6%,rgba(105,175,255,.42),transparent 70%),
+    radial-gradient(310px 310px at -12% 108%,rgba(172,150,255,.34),transparent 70%),
+    radial-gradient(270px 270px at 114% 56%,rgba(105,220,255,.26),transparent 72%)}
+  .nav{background:linear-gradient(rgba(236,243,252,.9) 62%,rgba(236,243,252,0))}
+  .cta{background:linear-gradient(rgba(236,243,252,0),rgba(236,243,252,.88) 46%)}
+  /* GlassPanel applied consistently */
+  .card,.row,.stat,.crow,.doc,.searchpill,.navbtn,.chip,.seg,.qty,.linkpill,.catchip,.btn-ghost,.fab,
+  .input input,.input select,.input textarea{
+    background:var(--gfill);
+    backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);
+    border:1px solid var(--gbrd);
+    box-shadow:var(--gsh)}
+  .card{border-radius:30px}
+  .row{border-radius:26px}
+  .stat{border-radius:26px}
+  .crow{border-radius:22px}
+  .searchpill{border-radius:26px}
+  .doc{border-radius:18px}
+  .linkpill{border:1.5px dashed rgba(46,124,246,.4)}
+  .chip.on{background:rgba(15,43,84,.85);border-color:rgba(255,255,255,.2);color:#fff;
+    box-shadow:0 6px 18px rgba(15,43,84,.3),inset 0 1px 0 rgba(255,255,255,.25)}
+  .seg{padding:3px;border-radius:16px}
+  .seg div.on{background:rgba(255,255,255,.6);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 3px 10px rgba(15,43,84,.14)}
+  .tabbar{background:rgba(255,255,255,.14);border-radius:36px;border:1px solid var(--gbrd);
+    backdrop-filter:blur(22px) saturate(180%);-webkit-backdrop-filter:blur(22px) saturate(180%);
+    box-shadow:0 8px 32px rgba(10,30,70,.2),inset 0 1px 0 rgba(255,255,255,.38)}
+  .tab.on::before{background:rgba(255,255,255,.4);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.65),inset 0 0 0 1px rgba(255,255,255,.3),0 4px 14px rgba(20,60,140,.16)}
+  .sheet{background:rgba(255,255,255,.34);border-radius:34px 34px 0 0;border:1px solid var(--gbrd);border-bottom:none;
+    backdrop-filter:blur(25px) saturate(180%);-webkit-backdrop-filter:blur(25px) saturate(180%);
+    box-shadow:0 -8px 40px rgba(10,30,70,.22),inset 0 1px 0 rgba(255,255,255,.4)}
+  .pop{background:rgba(255,255,255,.34);border-radius:30px;border:1px solid var(--gbrd);
+    backdrop-filter:blur(25px) saturate(180%);-webkit-backdrop-filter:blur(25px) saturate(180%);
+    box-shadow:0 8px 32px rgba(10,30,70,.24),inset 0 1px 0 rgba(255,255,255,.4)}
+  .fab{color:var(--navy)}
+  .fab svg{transition:transform .28s cubic-bezier(.34,1.3,.5,1)}
+  .fab.open svg{transform:rotate(45deg)}
+  .infonote{background:rgba(110,175,255,.14);border:1px solid rgba(255,255,255,.32);
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+  .note{background:rgba(255,205,110,.18);border:1px solid rgba(255,255,255,.32);
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+  .bub-them{background:rgba(255,255,255,.16);border:1px solid var(--gbrd);
+    backdrop-filter:blur(16px) saturate(170%);-webkit-backdrop-filter:blur(16px) saturate(170%)}
+  .bub-you{background:rgba(100,170,255,.2);border:1px solid var(--gbrd);
+    backdrop-filter:blur(16px) saturate(170%);-webkit-backdrop-filter:blur(16px) saturate(170%)}
+  .empty .eic{background:var(--gfill);border:1px solid var(--gbrd);
+    backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+  .act .ic{background:rgba(110,175,255,.16)}
+  .act.danger .ic{background:rgba(217,48,48,.12)}
+  .otp input{background:var(--gfill);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    border:1px solid var(--gbrd);box-shadow:inset 0 1px 0 rgba(255,255,255,.32)}
+  /* underline tabs (Network / Pending) */
+  .utab{padding:10px 2px 12px;font-size:15px;font-weight:800;color:var(--muted);display:flex;gap:8px;
+    align-items:center;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1.5px}
+  .utab.on{color:var(--blue);border-bottom-color:var(--blue)}
+  .ucount{min-width:22px;height:22px;padding:0 7px;border-radius:11px;background:rgba(15,43,84,.1);
+    font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;color:var(--navy)}
+  .utab.on .ucount{background:rgba(46,124,246,.18);color:var(--blue-d)}
+  /* FAB speed-dial menu */
+  .fabmenu{position:absolute;right:18px;bottom:193px;z-index:47;display:flex;flex-direction:column;gap:13px;align-items:flex-end}
+  .fabitem{display:flex;align-items:center;gap:11px;opacity:0;transform:translateY(16px) scale(.9);
+    transition:all .24s cubic-bezier(.34,1.25,.5,1);pointer-events:none}
+  .fabmenu.open .fabitem{opacity:1;transform:none;pointer-events:auto}
+  .fabmenu.open .fabitem:nth-child(1){transition-delay:.06s}
+  .fabitem span{background:var(--gfill);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);
+    border:1px solid var(--gbrd);box-shadow:var(--gsh);padding:9px 15px;border-radius:16px;
+    font-size:13.5px;font-weight:800;color:var(--navy);cursor:pointer}
+  .fabitem .mini{width:48px;height:48px;border-radius:24px;background:var(--gfill);
+    backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);
+    border:1px solid var(--gbrd);box-shadow:var(--gsh);display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .fabitem .mini:active,.fabitem span:active{opacity:.7}
+
+
+  /* ============ v7 refinements ============ */
+  .t1.wrap2{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.28}
+  .sheet{background:rgba(255,255,255,.68)}
+  .pop{background:rgba(255,255,255,.64)}
+  .input input,.input select,.input textarea,.qty{background:rgba(255,255,255,.42)}
+  .fsel{flex:1;min-width:0;height:42px;border:1px solid var(--gbrd);border-radius:13px;
+    background-color:rgba(255,255,255,.42);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.5);font-family:inherit;font-size:12.5px;font-weight:700;
+    color:var(--navy);padding:0 26px 0 11px;appearance:none;-webkit-appearance:none;outline:none;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2367768F' stroke-width='2.6' stroke-linecap='round'><path d='m6 9 6 6 6-6'/></svg>");
+    background-repeat:no-repeat;background-position:right 9px center}
+  .fabmenu{padding:14px;border-radius:26px;transition:background .22s}
+  .fabmenu.open{background:rgba(255,255,255,.62);backdrop-filter:blur(22px) saturate(180%);-webkit-backdrop-filter:blur(22px) saturate(180%);
+    border:1px solid var(--gbrd);box-shadow:var(--gsh)}
+
+</style>
+</head>
+<body>
+<div class="frame" id="frame">
+  <div class="statusbar"><span>9:41</span><div class="notch"></div><span style="letter-spacing:2px">&#9679;&#9679;&#9679;</span></div>
+  <div class="homebar"></div>
+  <div class="toast" id="toast">Done</div>
+</div>
+<script>
+const $=s=>document.querySelector(s);
+const frame=$('#frame');
+let stack=['welcome'];let activeTab='home';
+
+const G={nav:'linear-gradient(135deg,#0F2B54,#2E7CF6)',blue:'linear-gradient(135deg,#2E7CF6,#56C8FF)',
+ vio:'linear-gradient(135deg,#6D5BE8,#56C8FF)',teal:'linear-gradient(135deg,#0FA5A0,#56C8FF)',
+ rose:'linear-gradient(135deg,#B4638F,#E8A1C0)',slate:'linear-gradient(135deg,#33445F,#67768F)'};
+
+const ITEMS=[
+ {n:'ABDC',cat:'General',price:'Price on request',qty:808,av:808,res:0,sh:2,unit:'pcs',st:'Active',g:G.nav},
+ {n:'BURJ KHALIFA',cat:'General',price:'USD 50,00,000/unit',qty:225,av:163,res:62,sh:3,unit:'unit',st:'Partially Reserved',g:G.blue},
+ {n:'White Wood Pine',cat:'Timber',price:'AED 580/unit',qty:10000,av:10000,res:0,sh:1,unit:'unit',st:'Active',g:G.teal},
+ {n:'cards',cat:'General',price:'AED 9,500/pcs',qty:15500,av:15500,res:0,sh:1,unit:'pcs',st:'Active',g:G.slate},
+ {n:'AVENGERS',cat:'Collectibles',price:'AED 38,000/pcs',qty:20,av:18,res:2,sh:2,unit:'pcs',st:'Partially Reserved',g:G.vio},
+];
+const RECEIVED=[
+ {n:'WhiteWood Pine',from:'ADCB',loc:'London',qty:'50,000',unit:'unit',price:'AED 840/unit',t:'1d ago',g:G.teal,badge:'New'},
+ {n:'AVENGERS',from:'ADCB',loc:'California',qty:'20',unit:'pcs',price:'AED 50,000/pcs',t:'4d ago',g:G.vio,badge:''},
+ {n:'nitro car',from:'ADCB',loc:'Dubai',qty:'2,222',unit:'pcs',price:'AED 11,111/pcs',t:'4d ago',g:G.rose,badge:''},
+ {n:'cards',from:'eco',loc:'Sharjah',qty:'15,500',unit:'pcs',price:'AED 10,500/pcs',t:'6d ago',g:G.slate,badge:''},
+];
+const NETWORK=[
+ {n:'ADCB',p:'ADCB',c:'Abu Dhabi, UAE',ind:'Automotive Parts',st:'Connected',i:'AD',g:G.nav},
+ {n:'baz',p:'dharmesh',c:'Sharjah, UAE',ind:'Trading',st:'Manual',i:'B',g:G.blue},
+ {n:'darshil',p:'patel',c:'Muscat, Oman',ind:'Electronics',st:'Connected',i:'D',g:G.vio},
+ {n:'eco',p:'eco team',c:'Sharjah, UAE',ind:'General Trading',st:'Connected',i:'E',g:G.teal},
+];
+const INDUSTRIES=['Agriculture & Food','Textiles & Apparel','Chemicals & Petrochemicals','Metals & Mining','Electronics & Technology','Machinery & Equipment','Automotive','Timber & Wood','Others'];
+const CATEGORIES=['General','Industrial Chemicals','Specialty Chemicals','Polymers & Plastics','Auto Parts','Electronics','Timber','Collectibles','Others'];
+const UNITS=['pcs','unit','kg','ton','box','carton','sqm','ltr'];
+const CURRENCIES=['AED','USD','EUR','SAR','QAR','OMR'];
+function opts(a,sel){return a.map(o=>`<option ${o===sel?'selected':''}>${o}</option>`).join('')}
+
+function ic(name,c,w){
+ c=c||'currentColor'; w=w||20;
+ const P={
+  home:'<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/>',
+  box:'<path d="M21 8 12 3 3 8v8l9 5 9-5Z"/><path d="M3 8l9 5 9-5M12 13v8"/>',
+  inbox:'<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5 5h14l3 7v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6Z"/>',
+  cal:'<rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M8 3v4M16 3v4M3 10h18"/><path d="m9.5 15 2 2 3.5-3.5"/>',
+  net:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.5 3-5.5 6.5-5.5s6.5 2 6.5 5.5"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M17.5 14.7c2.4.6 4 2.3 4 5.3"/>',
+  back:'<path d="M15 5l-7 7 7 7"/>',
+  chev:'<path d="m9 5 7 7-7 7"/>',
+  search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  check:'<path d="m4 12.5 5 5L20 7"/>',
+  bell:'<path d="M18 9a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M10 21h4"/>',
+  share:'<circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="m8.3 10.8 7.4-4.3M8.3 13.2l7.4 4.3"/>',
+  copy:'<rect x="9" y="9" width="12" height="12" rx="2.5"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>',
+  wa:'<path d="M21 11.5a8.5 8.5 0 0 1-12.4 7.6L3 21l1.9-5.6A8.5 8.5 0 1 1 21 11.5Z"/>',
+  mail:'<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3 7 9 6 9-6"/>',
+  phone:'<path d="M5 4h4l2 5-2.5 1.5a12 12 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z"/>',
+  eye:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
+  edit:'<path d="M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17Z"/><path d="m13.5 6.5 3 3"/>',
+  trash:'<path d="M4 7h16M10 11v6M14 11v6"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13M9 7V4h6v3"/>',
+  lock:'<rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
+  camera:'<path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="14" r="4"/>',
+  doc:'<path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/><path d="M14 3v6h6"/>',
+  user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.5-6.5 8-6.5S20 17 20 21"/>',
+  gear:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1 7 17M17 7l2.1-2.1"/>',
+  help:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.8 2.1c-.8.5-1.3 1-1.3 1.9"/><circle cx="12" cy="17" r=".5" fill="currentColor"/>',
+  off:'<circle cx="12" cy="12" r="9"/><path d="M8 12h8"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  hand:'<path d="M7 11V6a1.5 1.5 0 0 1 3 0v4M10 10V4.5a1.5 1.5 0 0 1 3 0V10M13 10V6a1.5 1.5 0 0 1 3 0v6"/><path d="M16 12c2 0 3 1 3 3 0 3.5-2.5 6-6.5 6-3 0-4.6-1.3-6-3.5L4.3 14a1.4 1.4 0 0 1 2.3-1.6L8 14V7"/>',
+  bulk:'<path d="M12 3v12"/><path d="m7 8 5-5 5 5"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/>',
+  loc:'<path d="M12 21s7-6 7-11a7 7 0 1 0-14 0c0 5 7 11 7 11Z"/><circle cx="12" cy="10" r="2.6"/>',
+  shield:'<path d="M12 3 5 6v5c0 5 3 8.5 7 10 4-1.5 7-5 7-10V6Z"/><path d="m9 12 2 2 4-4"/>',
+  down:'<path d="m6 9 6 6 6-6"/>',
+  open:'<path d="M7 17 17 7"/><path d="M9 7h8v8"/>',
+  import:'<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>',
+  filter:'<path d="M4 5h16l-6.3 7.4v5.4l-3.4-2v-3.4Z"/>',
+  dots:'<circle cx="5" cy="12" r="1.8" fill="'+c+'" stroke="none"/><circle cx="12" cy="12" r="1.8" fill="'+c+'" stroke="none"/><circle cx="19" cy="12" r="1.8" fill="'+c+'" stroke="none"/>',
+ };
+ return `<svg width="${w}" height="${w}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${P[name]||''}</svg>`;
+}
+function waLogo(sz){return `<svg width="${sz}" height="${sz}" viewBox="0 0 32 32"><path fill="#25D366" d="M16 3A13 13 0 0 0 4.8 22.6L3.2 28.8l6.4-1.7A13 13 0 1 0 16 3Z"/><path fill="#fff" d="M22.3 19.4c-.3.9-1.7 1.7-2.4 1.8-.6.1-1.4.1-2.2-.1-.5-.2-1.2-.4-2-.8-3.6-1.6-5.9-5.2-6.1-5.5-.2-.2-1.5-1.9-1.5-3.7 0-1.8.9-2.6 1.3-3 .3-.3.7-.4 1-.4h.7c.2 0 .5-.1.8.6l1.1 2.7c.1.2.2.5 0 .8l-.4.7-.6.6c-.2.2-.4.4-.2.8.2.4 1 1.7 2.2 2.7 1.5 1.3 2.8 1.7 3.2 1.9.4.2.6.2.9-.1l1.3-1.5c.3-.4.6-.3.9-.2l2.6 1.2c.4.2.6.3.7.5.1.2.1.9-.2 1.7Z"/></svg>`}
+function mono(n){return n.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
+function stockbar(it,h){
+ const a=it.av/it.qty*100,r=it.res/it.qty*100;
+ return `<div class="stockbar" ${h?`style="height:${h}px;border-radius:${h/2}px"`:''}><i class="sb-av" style="width:${a}%"></i><i class="sb-res" style="width:${r}%"></i></div>`;
+}
+function stBadge(st){
+ return st==='Active'?'<span class="badge b-green">Active</span>'
+  :st==='Partially Reserved'?'<span class="badge b-amber">Partially Reserved</span>'
+  :st==='Sold Out'?'<span class="badge b-red">Sold Out</span>'
+  :st==='Pending'?'<span class="badge b-amber">Pending</span>'
+  :st==='Confirmed'?'<span class="badge b-green">Confirmed</span>'
+  :st==='Rejected'?'<span class="badge b-red">Rejected</span>'
+  :st==='Cancelled'?'<span class="badge b-gray">Cancelled</span>'
+  :st==='Connected'?'<span class="badge b-green">Connected</span>'
+  :st==='Manual'?'<span class="badge b-blue">Manual</span>'
+  :'<span class="badge b-gray">'+st+'</span>';
+}
+const SCREENS={};
+
+/* ================= AUTH + ONBOARDING ================= */
+SCREENS.welcome=`
+ <div class="scroll" style="display:flex;flex-direction:column;padding:0 26px">
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center">
+   <div style="width:98px;height:98px;border-radius:30px;background:${G.blue};display:flex;align-items:center;justify-content:center;box-shadow:0 22px 48px rgba(46,124,246,.4)">${ic('box','#fff',52)}</div>
+   <div style="font-size:36px;font-weight:800;letter-spacing:-1.2px;color:var(--navy);margin-top:24px">MyStokk</div>
+   <div style="font-size:16px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.55;max-width:290px">
+     Your stock. Your trusted network. Your terms.<br>Private B2B inventory sharing.</div>
+   <div style="display:flex;gap:22px;margin-top:34px">
+     ${[['lock','Private'],['clock','Live stock'],['hand','Negotiate']].map(f=>`
+     <div style="text-align:center">
+       <div style="width:52px;height:52px;border-radius:17px;background:rgba(46,124,246,.1);display:flex;align-items:center;justify-content:center;margin:0 auto 7px">${ic(f[0],'#2E7CF6',24)}</div>
+       <div style="font-size:12px;font-weight:800;color:var(--navy)">${f[1]}</div></div>`).join('')}
+   </div>
+  </div>
+  <div style="padding-bottom:54px">
+   <div class="btn btn-primary" onclick="push('login')">Log in</div>
+   <div class="btn btn-ghost" style="margin-top:11px" onclick="push('signup')">Create free account</div>
+  </div>
+ </div>`;
+
+SCREENS.login=`
+ ${nav('','pop()')}
+ <div class="scroll pt-nav pb-plain">
+  <div class="h1">Welcome back</div><div class="sub" style="margin-bottom:24px">Log in to continue</div>
+  <div class="btn btn-ghost" onclick="toast('Google sign-in (demo)')">
+   <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.5 12.3c0-.9-.1-1.5-.3-2.2H12v4.3h6.5c-.1 1.1-.8 2.7-2.4 3.8l3.7 2.9c2.3-2.1 3.7-5.2 3.7-8.8z"/><path fill="#34A853" d="M12 24c3.2 0 6-1.1 8-2.9l-3.8-2.9c-1 .7-2.4 1.2-4.2 1.2-3.2 0-6-2.2-6.9-5.2H1.2v3C3.2 21.3 7.3 24 12 24z"/><path fill="#FBBC05" d="M5.1 14.2a7.3 7.3 0 0 1 0-4.5v-3H1.2a12 12 0 0 0 0 10.6l3.9-3.1z"/><path fill="#EA4335" d="M12 4.7c1.8 0 3 .8 3.7 1.4l2.7-2.7C16.9 1.2 14.7 0 12 0 7.3 0 3.2 2.7 1.2 6.7l3.9 3C6 6.9 8.8 4.7 12 4.7z"/></svg>
+   Continue with Google</div>
+  <div style="display:flex;align-items:center;gap:12px;margin:20px 0;color:#A6B3C9;font-size:12.5px;font-weight:700">
+   <div style="flex:1;height:1px;background:var(--line)"></div>OR<div style="flex:1;height:1px;background:var(--line)"></div></div>
+  <div class="input"><label>Email</label><input type="email" placeholder="you@company.com"></div>
+  <div class="input"><label>Password</label><input type="password" placeholder="••••••••"></div>
+  <div style="text-align:right;font-size:13.5px;font-weight:800;color:var(--blue);margin:-4px 0 20px" onclick="push('forgot')">Forgot password?</div>
+  <div class="btn btn-primary" onclick="enterApp()">Log in</div>
+  <div style="text-align:center;font-size:14px;color:var(--muted);margin-top:18px">New to MyStokk? <b style="color:var(--blue)" onclick="replaceTop('signup')">Create account</b></div>
+ </div>`;
+
+SCREENS.signup=`
+ ${nav('','pop()')}
+ <div class="scroll pt-nav pb-plain">
+  <div class="h1">Create account</div><div class="sub" style="margin-bottom:24px">Start sharing stock in minutes</div>
+  <div class="input"><label>Work email <i>*</i></label><input type="email" placeholder="you@company.com"></div>
+  <div class="input"><label>Password <i>*</i></label><input type="password" placeholder="Minimum 8 characters"></div>
+  <div class="input"><label>Confirm password <i>*</i></label><input type="password" placeholder="Repeat password"></div>
+  <div class="btn btn-primary" style="margin-top:6px" onclick="push('otp')">Continue</div>
+  <div style="text-align:center;font-size:12.5px;color:var(--muted);margin-top:15px;line-height:1.5">By continuing you agree to the <b onclick="push('terms')" style="color:var(--blue)">Terms</b> and <b onclick="push('privacy')" style="color:var(--blue)">Privacy Policy</b></div>
+ </div>`;
+
+SCREENS.otp=`
+ ${nav('','pop()')}
+ <div class="scroll pt-nav pb-plain" style="text-align:center">
+  <div style="width:74px;height:74px;border-radius:37px;background:var(--ice);display:flex;align-items:center;justify-content:center;margin:26px auto 20px">${ic('mail','#2E7CF6',32)}</div>
+  <div class="h1small">Check your inbox</div>
+  <div class="sub" style="margin-top:8px">We sent a 6-digit code to <b style="color:var(--navy)">you@company.com</b></div>
+  <div class="otp">
+   ${[0,1,2,3,4,5].map(i=>`<input maxlength="1" inputmode="numeric" oninput="otpIn(this)">`).join('')}
+  </div>
+  <div style="font-size:13.5px;color:var(--muted);margin-bottom:22px">Code expires in <b style="color:var(--navy)">09:59</b></div>
+  <div class="btn btn-primary" onclick="push('onboard1')">Verify & Continue</div>
+  <div style="font-size:14px;color:var(--muted);margin-top:18px">Didn't get it? <b style="color:var(--blue)" onclick="toast('Code resent')">Resend code</b></div>
+ </div>`;
+
+SCREENS.onboard1=`
+ <div class="nav"><div class="side"></div><div class="title">Step 1 of 3</div><div class="side"></div></div>
+ <div class="scroll pt-nav pb-cta">
+  <div class="steps"><i class="on"></i><i></i><i></i></div>
+  <div class="h1small">Tell us about your company</div>
+  <div class="sub" style="margin-bottom:18px">This appears on every share you send to your network</div>
+  <div class="input"><label>Company name <i>*</i></label><input placeholder="Ever Global Trading LLC"></div>
+  <div class="input"><label>Contact person <i>*</i></label><input placeholder="Your name"></div>
+  <div class="input"><label>Industry <i>*</i></label><select>${opts(INDUSTRIES,'Chemicals & Petrochemicals')}</select></div>
+  <div class="input"><label>Categories</label>
+   <div style="font-size:12.5px;color:var(--muted);font-weight:600;margin:-2px 0 8px">Pick the categories you trade — these power share filters later.</div>
+   <div>${['Industrial Chemicals','Specialty Chemicals','Polymers & Plastics','Fertilizers','Paints & Coatings','Adhesives','Lubricants','Pharmaceutical Ingredients|on','Agrochemicals','Dyes & Pigments','Others'].map(c=>{const[t,on]=c.split('|');return `<span class="catchip ${on?'on':''}" onclick="this.classList.toggle('on')">${t}</span>`}).join('')}</div>
+  </div>
+ </div>
+ <div class="cta"><div class="btn btn-primary" onclick="push('onboard2')">Continue</div></div>`;
+
+SCREENS.onboard2=`
+ <div class="nav"><div class="side"><div class="navbtn" onclick="pop()">${ic('back','#0F2B54')}</div></div><div class="title">Step 2 of 3</div><div class="side"></div></div>
+ <div class="scroll pt-nav pb-cta">
+  <div class="steps"><i class="on"></i><i class="on"></i><i></i></div>
+  <div class="h1small">Where are you based?</div>
+  <div class="sub" style="margin-bottom:18px">Helps vendors filter their network by location</div>
+  <div class="input"><label>Country <i>*</i></label><select>${opts(['United Arab Emirates','Saudi Arabia','Qatar','Oman','Kuwait','Bahrain','Other'],'United Arab Emirates')}</select></div>
+  <div class="input"><label>City <i>*</i></label><input placeholder="Dubai"></div>
+  <div class="input"><label>Address</label><input placeholder="Street address, building, area"></div>
+  <div style="display:flex;gap:11px">
+   <div class="input" style="width:104px"><label>Code</label><select>${opts(['+971','+966','+974','+968','+965','+973'],'+971')}</select></div>
+   <div class="input" style="flex:1"><label>Mobile number <i>*</i></label><input inputmode="tel" placeholder="5X XXX XXXX"></div>
+  </div>
+  <div class="input"><label>Telephone (optional)</label><input inputmode="tel" placeholder="Telephone"></div>
+ </div>
+ <div class="cta" style="display:flex;gap:10px">
+  <div class="btn btn-ghost" style="width:110px" onclick="pop()">Back</div>
+  <div class="btn btn-primary" style="flex:1" onclick="push('onboard3')">Continue</div>
+ </div>`;
+
+SCREENS.onboard3=`
+ <div class="nav"><div class="side"><div class="navbtn" onclick="pop()">${ic('back','#0F2B54')}</div></div><div class="title">Step 3 of 3</div><div class="side"></div></div>
+ <div class="scroll pt-nav pb-cta">
+  <div class="steps"><i class="on"></i><i class="on"></i><i class="on"></i></div>
+  <div class="h1small">Add your company logo</div>
+  <div class="sub" style="margin-bottom:20px">Shown on share cards and your public profile</div>
+  <div style="width:132px;height:132px;border:2px dashed #B7CBEC;border-radius:22px;background:rgba(243,248,255,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;margin:0 auto 10px" onclick="toast('Choose from gallery (demo)')">
+   ${ic('camera','#2E7CF6',30)}</div>
+  <div style="text-align:center;font-size:13px;color:var(--muted);font-weight:600;margin-bottom:22px">Tap to choose from your gallery</div>
+  <div class="input"><label>Company description</label><textarea placeholder="A short description of what you trade…"></textarea></div>
+ </div>
+ <div class="cta" style="display:flex;gap:10px">
+  <div class="btn btn-ghost" style="width:110px" onclick="pop()">Back</div>
+  <div class="btn btn-primary" style="flex:1" onclick="enterApp();toast('Welcome to MyStokk!')">Finish setup</div>
+ </div>`;
+
+SCREENS.forgot=`
+ ${nav('','pop()')}
+ <div class="scroll pt-nav pb-plain">
+  <div class="h1small">Reset password</div>
+  <div class="sub" style="margin-bottom:24px">We'll email you a secure reset link</div>
+  <div class="input"><label>Email</label><input type="email" placeholder="you@company.com"></div>
+  <div class="btn btn-primary" onclick="pop();toast('Reset link sent')">Send reset link</div>
+ </div>`;
+
+/* ================= HOME ================= */
+SCREENS.home=`
+ <div class="scroll pt-tab pb-tab">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px">
+   <div><div style="font-size:12.5px;color:var(--muted);font-weight:700;letter-spacing:.4px">EVER GLOBAL</div>
+     <div style="font-size:23px;font-weight:800;color:var(--navy);letter-spacing:-.5px">Hi, Darshil</div></div>
+   ${cluster()}
+  </div>
+  <div class="stats" style="margin-top:18px">
+   <div class="stat" onclick="setTab('inventory')"><div class="ic" style="background:var(--ice)">${ic('box','#2E7CF6')}</div>
+     <div class="v">5</div><div class="l">My Inventory</div></div>
+   <div class="stat" onclick="setTab('received')"><div class="ic" style="background:var(--green-bg)">${ic('inbox','#149A54')}</div>
+     <div class="v">4</div><div class="l">Received Inventory</div></div>
+   <div class="stat" onclick="setTab('reserve')"><div class="ic" style="background:var(--violet-bg)">${ic('cal','#6D5BE8')}</div>
+     <div class="v">6</div><div class="l">Reservation Hub</div></div>
+   <div class="stat" onclick="setTab('network')"><div class="ic" style="background:var(--amber-bg)">${ic('net','#B26205')}</div>
+     <div class="v">9</div><div class="l">My Network</div></div>
+  </div>
+  <div class="sect" style="display:flex;justify-content:space-between;align-items:center">Needs your attention
+    <span style="text-transform:none;letter-spacing:0;color:var(--blue);cursor:pointer" onclick="setTab('reserve')">View all</span></div>
+  <div class="row" onclick="push('negotiation')">
+   <div class="thumb" style="background:${G.vio}">AV</div>
+   <div class="mid"><div class="t1">eco wants to reserve BURJ KHALIFA</div><div class="t2">50 unit · offered USD 40,00,000 · 1d ago</div></div>
+   <span class="badge b-amber">Pending</span>
+  </div>
+  <div class="row" onclick="push('receivedDetail')">
+   <div class="thumb" style="background:${G.teal}">WP</div>
+   <div class="mid"><div class="t1">ADCB shared WhiteWood Pine</div><div class="t2">50,000 unit @ AED 840 · London · 1d ago</div></div>
+   <span class="badge b-blue">New</span>
+  </div>
+  <div class="sect">Recent activity</div>
+  <div class="card" style="padding:5px 15px">
+   ${[['ADCB accepted the reservation — BURJ KHALIFA · Qty 12','1d ago','#149A54'],
+      ['eco sent a counter-offer — cards · 15,500 @ 10,500','2d ago','#2E7CF6'],
+      ['You shared cards with eco','2d ago','#6D5BE8']].map((a,i,arr)=>`
+   <div style="display:flex;gap:12px;padding:12.5px 0;${i<arr.length-1?'border-bottom:1px solid var(--line)':''};align-items:flex-start">
+     <div style="width:8px;height:8px;border-radius:4px;background:${a[2]};margin-top:6px;flex:none"></div>
+     <div style="flex:1"><div style="font-size:14px;font-weight:650;color:var(--navy);line-height:1.35">${a[0]}</div>
+     <div style="font-size:12px;color:var(--muted);margin-top:3px">${a[1]}</div></div></div>`).join('')}
+  </div>
+ </div>
+ ${tabbar('home')}`;
+
+/* ================= NOTIFICATIONS ================= */
+SCREENS.notifications=`
+ ${nav('Notifications','pop()',`<div class="navbtn" onclick="toast('All marked as read')" style="width:auto;padding:0 14px;font-size:12.5px;font-weight:800;color:var(--blue);white-space:nowrap;flex:none">Read all</div>`)}
+ <div class="scroll pt-nav pb-plain">
+  <div class="seg"><div class="on" onclick="segSwap(this,'nAll','nUn')">All</div><div onclick="segSwap(this,'nUn','nAll')">Unread · 9</div></div>
+  <div id="nAll">
+  ${[['inbox','ADCB shared an item with you','WhiteWood Pine','1d ago','#2E7CF6',"push('receivedDetail')"],
+     ['hand','eco wants to reserve BURJ KHALIFA','Qty 50 · offer 40,00,000','1d ago','#B26205',"push('negotiation')"],
+     ['check','ADCB accepted the reservation','BURJ KHALIFA · Qty 12','1d ago','#149A54',"push('negotiation')"],
+     ['hand','ADCB wants to reserve BURJ KHALIFA','Qty 12 · offer 45,00,000','1d ago','#B26205',"push('negotiation')"],
+     ['share','eco sent a counter-offer','cards · 15,500 @ 10,500','2d ago','#6D5BE8',"push('negotiation')"],
+     ['hand','eco wants to reserve cards','Qty 15,000 · offer 10,000','2d ago','#B26205',"push('negotiation')"]].map(n=>`
+  <div class="row" onclick="${n[5]}">
+    <div class="thumb" style="width:44px;height:44px;background:${n[4]}18;border-radius:14px">${ic(n[0],n[4],21)}</div>
+    <div class="mid"><div class="t1" style="font-size:14.5px;white-space:normal;line-height:1.3">${n[1]}</div>
+      <div class="t2">${n[2]} · ${n[3]}</div></div>
+  </div>`).join('')}
+  </div>
+  <div id="nUn" style="display:none">
+    <div class="empty"><div class="eic">${ic('bell','#2E7CF6',32)}</div><h4>You're all caught up</h4><p>Unread notifications will appear here.</p></div>
+  </div>
+ </div>`;
+
+/* ================= INVENTORY ================= */
+SCREENS.inventory=`
+ <div class="scroll pt-tab pb-tab">
+  <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-top:12px">
+   <div><div class="h1" style="font-size:27px">My Inventory</div><div class="sub">5 items</div></div>
+   ${cluster()}
+  </div>
+  <div style="display:flex;justify-content:flex-end;margin-top:14px;margin-bottom:12px">
+   <div class="btn btn-dark sm" style="padding:0 20px" onclick="push('editItem')">${ic('plus','#fff',18)} Add Item</div>
+  </div>
+  <div style="display:flex;gap:10px;align-items:center">
+   <div class="searchpill" style="flex:1;margin:0">${ic('search','#67768F',18)} Search items…</div>
+   <div class="navbtn" style="width:45px;height:45px;flex:none" onclick="openSheet('statusFilter')">${ic('filter','#0F2B54',19)}</div>
+  </div>
+  <div style="height:14px"></div>
+  ${ITEMS.map(it=>`
+  <div class="card" style="padding:14px;margin-bottom:12px;cursor:pointer" onclick="push('item')">
+   <div style="display:flex;gap:13px">
+    <div class="thumb" style="width:92px;height:92px;border-radius:16px;font-size:20px;background:${it.g}">${mono(it.n)}</div>
+    <div style="flex:1;min-width:0">
+      <div class="t1 wrap2" style="font-size:16.5px">${it.n}</div>
+      <div style="font-size:14px;margin-top:5px"><b style="color:var(--navy)">${it.av.toLocaleString()}</b><span style="color:var(--muted)">/${it.qty.toLocaleString()} ${it.unit}</span></div>
+      <div style="font-size:15px;font-weight:800;color:var(--green);margin-top:5px">${it.price}</div>
+    </div>
+   </div>
+   <div style="border-top:1px solid var(--line);margin-top:12px;padding-top:10px;display:flex;align-items:center;justify-content:space-between">
+    <span class="t2">${ic('clock','#9AA7BF',14)} updated today</span>
+    <div style="display:flex;gap:9px">
+      <div class="navbtn" style="width:38px;height:38px" onclick="event.stopPropagation();push('shareWho')">${ic('share','#0F2B54',17)}</div>
+      <div class="navbtn" style="width:38px;height:38px" onclick="event.stopPropagation();openSheet('invActions')">${ic('dots','#0F2B54',17)}</div>
+    </div>
+   </div>
+  </div>`).join('')}
+  <div style="height:6px"></div>
+ </div>
+ ${tabbar('inventory')}`;
+
+/* ================= ITEM DETAIL ================= */
+SCREENS.item=`
+ ${nav('Item','pop()')}
+ <div class="scroll pt-nav pb-plain">
+  <div style="height:268px;border-radius:20px;background:#F0F3F9;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden">
+   <div style="width:56%;height:100%;background:${G.blue};display:flex;align-items:center;justify-content:center;color:#fff;font-size:52px;font-weight:800">BK</div>
+   <div class="navbtn" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);background:rgba(88,98,116,.55);border:none" onclick="toast('Previous photo')">${ic('back','#fff',18)}</div>
+   <div class="navbtn" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:rgba(88,98,116,.55);border:none" onclick="toast('Next photo')">${ic('chev','#fff',18)}</div>
+   <span style="position:absolute;right:12px;bottom:12px;background:rgba(64,74,90,.78);color:#fff;font-size:12px;font-weight:800;padding:6px 12px;border-radius:12px;display:flex;gap:6px;align-items:center">${ic('camera','#fff',14)} 4 photos</span>
+  </div>
+  <div style="display:flex;gap:6px;justify-content:center;margin:10px 0 2px"><i style="width:18px;height:6px;border-radius:3px;background:var(--blue)"></i><i style="width:6px;height:6px;border-radius:3px;background:#C9D4E6"></i><i style="width:6px;height:6px;border-radius:3px;background:#C9D4E6"></i><i style="width:6px;height:6px;border-radius:3px;background:#C9D4E6"></i></div>
+
+  <div class="card" style="margin-top:12px">
+   <div style="font-size:11.5px;font-weight:800;letter-spacing:.7px;color:var(--muted)">SKU-10088 &bull; GENERAL &bull; TODAY</div>
+   <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:6px">
+     <div style="font-size:23px;font-weight:800;color:var(--navy);letter-spacing:-.4px">BURJ KHALIFA</div></div>
+   <div style="border-top:1px solid var(--line);margin-top:12px">
+    <div class="kv"><span class="k">Stock location</span><span class="v">Dubai, JAFZA W4</span></div>
+    <div class="kv"><span class="k">Origin</span><span class="v">UAE</span></div>
+    <div class="kv"><span class="k">Price</span><span class="v" style="color:var(--green)">USD 50,00,000 / unit</span></div>
+   </div>
+   <div style="display:flex;border:1px solid var(--line);border-radius:14px;margin-top:10px;overflow:hidden">
+    ${[['TOTAL QTY','225','unit','var(--navy)'],['AVAILABLE','163','unit','var(--green)'],['RESERVED','62','unit','#E08A00'],['SHARED WITH','3','contacts','var(--violet)']].map((s,i)=>`
+    <div style="flex:1;padding:11px 8px;${i?'border-left:1px solid var(--line)':''}">
+      <div style="font-size:9.5px;font-weight:800;letter-spacing:.4px;color:var(--muted)">${s[0]}</div>
+      <div style="font-size:19px;font-weight:800;color:${s[3]};margin-top:3px">${s[1]}</div>
+      <div style="font-size:11px;color:var(--muted);font-weight:600">${s[2]}</div></div>`).join('')}
+   </div>
+  </div>
+
+  <div style="display:flex;gap:10px;margin:16px 0 2px">
+   <div class="btn btn-dark" style="flex:2.3" onclick="push('shareWho')">${ic('share','#fff',19)} Share</div>
+   <div class="btn btn-ghost" style="flex:1" onclick="push('editItem')">${ic('edit','#0F2B54',18)} Edit</div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+   <div style="display:flex;gap:9px;align-items:center;font-size:16px;font-weight:800;color:var(--navy)">${ic('doc','#0F2B54',18)} Description</div>
+   <div style="font-size:14.5px;margin-top:10px;color:var(--text)">PREMIUM TOWER UNITS, DOCUMENTS READY</div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+   <div style="display:flex;gap:9px;align-items:center;font-size:16px;font-weight:800;color:var(--navy)">${ic('inbox','#0F2B54',18)} Documents</div>
+   ${[['spec-sheet.xlsx','#149A54'],['Export Packing List 1.pdf','#D93030']].map(d=>`
+   <div class="doc" style="margin:10px 0 0">${ic('doc',d[1],20)} <b style="font-size:14px">${d[0]}</b>
+     <span style="margin-left:auto;color:var(--blue);font-weight:800;font-size:13.5px;display:flex;gap:4px;align-items:center;cursor:pointer" onclick="event.stopPropagation();toast('Opening (demo)')">Open ${ic('open','#2E7CF6',14)}</span></div>`).join('')}
+  </div>
+
+  <div class="card" style="margin-top:14px">
+   <div style="display:flex;gap:9px;align-items:center;font-size:16px;font-weight:800;color:var(--navy)">${ic('clock','#0F2B54',18)} Activity</div>
+   <div style="display:flex;gap:12px;padding-top:12px;align-items:center">
+     <div style="width:8px;height:8px;border-radius:4px;background:#C9D4E6;flex:none"></div>
+     <div style="flex:1;font-size:14.5px;font-weight:650;color:var(--navy)">Create Inventory</div>
+     <div style="font-size:13px;color:var(--muted)">30/06/2026</div></div>
+  </div>
+
+  <div class="btn btn-danger" style="margin:16px 0 6px" onclick="goRoot();toast('Item deleted')">${ic('trash','#D93030',18)} Delete Item</div>
+ </div>`;
+
+/* ================= ADD / EDIT ITEM (reordered: sku top, dropdowns, uploads last) ================= */
+SCREENS.editItem=`
+ ${nav('Add item','pop()')}
+ <div class="scroll pt-nav pb-cta">
+  <div class="input"><label>Product code</label><input placeholder="e.g., SKU-001 (auto if blank)"></div>
+  <div class="input"><label>Title <i>*</i></label><input placeholder="e.g., Premium Cotton Fabric"></div>
+  <div class="input"><label>Industry</label><select><option value="">Select industry (optional)</option>${opts(INDUSTRIES)}</select></div>
+  <div class="input"><label>Category</label><select><option value="">Select an industry first</option>${opts(CATEGORIES)}</select></div>
+  <div style="display:flex;gap:11px">
+   <div class="input" style="flex:1.2"><label>Quantity <i>*</i></label>
+     <div class="qty"><div onclick="qch(-10)">−</div><input id="q1" value="100" inputmode="numeric"><div onclick="qch(10)">+</div></div></div>
+   <div class="input" style="flex:1"><label>Unit <i>*</i></label><select>${opts(UNITS,'pcs')}</select></div>
+  </div>
+  <div style="display:flex;gap:11px">
+   <div class="input" style="flex:1.4"><label>Price per unit</label><input inputmode="decimal" placeholder="Leave blank — on request"></div>
+   <div class="input" style="flex:1"><label>Currency</label><select>${opts(CURRENCIES,'AED')}</select></div>
+  </div>
+  <div class="input"><label>Stock location</label><input placeholder="e.g., Dubai, JAFZA Warehouse 4"></div>
+  <div class="input"><label>Origin</label><input placeholder="e.g., Shenzhen, China"></div>
+  <div class="input"><label>Description</label><textarea placeholder="Specs, packaging, MOQ…"></textarea></div>
+  <div class="sect">Photos</div>
+  <div style="height:112px;border:2px dashed #B7CBEC;border-radius:16px;background:rgba(243,248,255,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer" onclick="toast('Camera / gallery (demo)')">
+   ${ic('camera','#2E7CF6',26)}<span style="font-size:13px;font-weight:800;color:var(--blue)">Click to upload photos</span>
+   <span style="font-size:11.5px;color:var(--muted);font-weight:600">PNG or JPG, up to 8 images</span></div>
+  <div class="sect">Documents</div>
+  <div style="height:112px;border:2px dashed #D5DDEB;border-radius:16px;background:rgba(247,249,253,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;margin-bottom:8px" onclick="toast('File picker (demo)')">
+   ${ic('doc','#67768F',24)}<span style="font-size:13px;font-weight:800;color:var(--navy)">Click to upload documents</span>
+   <span style="font-size:11.5px;color:var(--muted);font-weight:600">PDF, Word, Excel, CSV</span></div>
+ </div>
+ <div class="cta"><div class="btn btn-primary" onclick="pop();toast('Item saved')">Save item</div></div>`;
+
+/* ================= SHARE OWN ITEM (contacts -> terms) ================= */
+SCREENS.shareWho=`
+ ${nav('Share "BURJ KHALIFA"','pop()')}
+ <div class="scroll pt-nav pb-cta">
+  <div class="h1small">Who sees it?</div>
+  <div class="sub" style="margin-bottom:14px">They'll see live stock — never your suppliers</div>
+  <div class="seg"><div class="on" onclick="segSwap(this,'shNet','shExt')">My Network · 9</div><div onclick="segSwap(this,'shExt','shNet')">Outside network</div></div>
+  <div id="shNet">
+   <div class="searchpill" style="margin-top:0">${ic('search','#67768F',18)} Search vendors…</div>
+   <div style="display:flex;gap:8px;margin-bottom:12px">
+     <select class="fsel">${opts(['All industries'].concat(INDUSTRIES))}</select>
+     <select class="fsel">${opts(['All countries','UAE','Saudi Arabia','Oman','Qatar','Kuwait','Bahrain'])}</select>
+     <select class="fsel">${opts(['All groups','VIP','Timber buyers','Electronics'])}</select>
+   </div>
+   <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:800;margin:2px 2px 10px">
+     <span style="color:var(--muted)" id="shCount">1 selected</span><span style="color:var(--blue)" onclick="document.querySelectorAll('#shNet .crow').forEach(r=>r.classList.add('on'));shCount()">Select all</span></div>
+   ${NETWORK.map((v,i)=>`
+   <div class="crow ${i===3?'on':''}" onclick="this.classList.toggle('on');shCount()">
+     <div class="cbox">${ic('check','#fff',14)}</div>
+     <div class="avatar" style="background:${v.g}">${v.i}</div>
+     <div class="mid"><div class="t1" style="font-size:15px">${v.n}</div><div class="t2">${v.p} · ${v.c}</div></div>
+   </div>`).join('')}
+  </div>
+  <div id="shExt" style="display:none">
+   <div class="sub" style="margin-bottom:12px">Share directly with anyone — they're added to your network when they sign up.</div>
+   <div class="btn btn-green" onclick="toast('Opening WhatsApp (demo)')">${ic('wa','#fff',20)} WhatsApp</div>
+   <div class="btn btn-ghost" style="margin-top:10px" onclick="toast('Opening Mail (demo)')">${ic('mail','#0F2B54',19)} Email</div>
+   <div class="btn btn-ghost" style="margin-top:10px" onclick="toast('Link copied')">${ic('copy','#0F2B54',19)} Copy link</div>
+   <div class="infonote" style="margin-top:14px">${ic('shield','#2E7CF6',20)}<span>Shared links show a rich preview card (image, title, company) on WhatsApp and social platforms.</span></div>
+  </div>
+ </div>
+ <div class="cta"><div class="btn btn-primary" onclick="push('shareDone')">Share now</div></div>`;
+
+SCREENS.shareTerms=`
+ ${nav('Share "BURJ KHALIFA"','pop()')}
+ <div class="scroll pt-nav pb-cta">
+  <div class="steps"><i class="on"></i><i class="on"></i></div>
+  <div class="h1small">Your terms</div>
+  <div class="sub" style="margin-bottom:14px">Set what this vendor sees</div>
+  <div class="input"><label>Your price (USD per unit) — optional</label><input inputmode="decimal" placeholder="Leave blank to share without price"></div>
+  <div class="input"><label>Remark — optional</label><textarea placeholder="e.g. MOQ 100 units, ready stock, lead time 2 weeks…"></textarea></div>
+  <div class="sect">Link expires</div>
+  <div class="chips"><div class="chip" onclick="chipOn(this)">24 h</div><div class="chip on" onclick="chipOn(this)">7 days</div><div class="chip" onclick="chipOn(this)">30 days</div><div class="chip" onclick="chipOn(this)">Never</div></div>
+ </div>
+ <div class="cta"><div class="btn btn-primary" onclick="push('shareDone')">Share now</div></div>`;
+
+SCREENS.shareDone=`
+ <div class="scroll" style="display:flex;flex-direction:column;justify-content:center;padding:0 26px">
+  <div style="text-align:center">
+   <div style="width:86px;height:86px;border-radius:43px;background:var(--green-bg);display:flex;align-items:center;justify-content:center;margin:0 auto 20px">${ic('check','#149A54',42)}</div>
+   <div style="font-size:25px;font-weight:800;color:var(--navy);letter-spacing:-.5px">Shared with eco</div>
+   <div class="sub" style="margin-top:8px;line-height:1.5">Live stock link · expires in 7 days.<br>They'll get a notification right away.</div>
+   <div class="linkpill" style="margin:24px 0 12px" onclick="toast('Link copied')">${ic('copy','#1E5FD0',18)} mystokk.com/s/bk-9x2f4</div>
+   <div style="display:flex;gap:10px">
+     <div class="btn btn-ghost" style="flex:1" onclick="toast('Link copied')">${ic('copy','#0F2B54',18)} Copy</div>
+     <div class="btn btn-green" style="flex:1" onclick="toast('Opening WhatsApp (demo)')">${ic('wa','#fff',19)} WhatsApp</div>
+   </div>
+   <div class="btn btn-soft" style="margin-top:11px" onclick="goRoot()">Done</div>
+  </div>
+ </div>`;
+
+/* ============ SHARE RECEIVED ITEM (terms FIRST -> contacts) ============ */
+SCREENS.shareTermsR=`
+ ${nav('Share "WhiteWood Pine"','pop()')}
+ <div class="scroll pt-nav pb-cta">
+  <div class="steps"><i class="on"></i><i></i></div>
+  <div class="h1small">Your terms</div>
+  <div class="sub" style="margin-bottom:14px">Set what your contacts see</div>
+  <div class="note">${ic('lock','#B26205',20)}<span>The original supplier's price will <b>not</b> be shared. Set your own price (optional) and a remark before sharing.</span></div>
+  <div class="input" style="margin-top:16px"><label>Your price (AED per unit) — optional</label><input inputmode="decimal" placeholder="Leave blank to share without price"></div>
+  <div class="input"><label>Remark — optional</label><textarea placeholder="e.g. MOQ 100 units, ready stock, lead time 2 weeks…"></textarea></div>
+  <div class="sect">Link expires</div>
+  <div class="chips"><div class="chip" onclick="chipOn(this)">24 h</div><div class="chip on" onclick="chipOn(this)">7 days</div><div class="chip" onclick="chipOn(this)">30 days</div><div class="chip" onclick="chipOn(this)">Never</div></div>
+  <div class="infonote" style="margin-top:6px">${ic('shield','#2E7CF6',20)}<span>ADCB's identity and original price stay hidden — the MyStokk privacy chain protects every link.</span></div>
+ </div>
+ <div class="cta"><div class="btn btn-primary" onclick="push('shareWhoR')">Continue</div></div>`;
+
+SCREENS.shareWhoR=`
+ ${nav('Share "WhiteWood Pine"','pop()')}
+ <div class="scroll pt-nav pb-cta">
+  <div class="steps"><i class="on"></i><i class="on"></i></div>
+  <div class="h1small">Who sees it?</div>
+  <div class="sub" style="margin-bottom:14px">They'll see live stock with your terms</div>
+  <div class="seg"><div class="on" onclick="segSwap(this,'shNetR','shExtR')">My Network · 9</div><div onclick="segSwap(this,'shExtR','shNetR')">Outside network</div></div>
+  <div id="shNetR">
+   <div class="searchpill" style="margin-top:0">${ic('search','#67768F',18)} Search vendors…</div>
+   ${NETWORK.map((v,i)=>`
+   <div class="crow ${i===2?'on':''}" onclick="this.classList.toggle('on')">
+     <div class="cbox">${ic('check','#fff',14)}</div>
+     <div class="avatar" style="background:${v.g}">${v.i}</div>
+     <div class="mid"><div class="t1" style="font-size:15px">${v.n}</div><div class="t2">${v.p} · ${v.c}</div></div>
+   </div>`).join('')}
+  </div>
+  <div id="shExtR" style="display:none">
+   <div class="btn btn-green" onclick="toast('Opening WhatsApp (demo)')">${ic('wa','#fff',20)} WhatsApp</div>
+   <div class="btn btn-ghost" style="margin-top:10px" onclick="toast('Opening Mail (demo)')">${ic('mail','#0F2B54',19)} Email</div>
+   <div class="btn btn-ghost" style="margin-top:10px" onclick="toast('Link copied')">${ic('copy','#0F2B54',19)} Copy link</div>
+  </div>
+ </div>
+ <div class="cta"><div class="btn btn-primary" onclick="push('shareDone')">Share now</div></div>`;
+
+/* ================= EDIT RECEIVED ITEM ================= */
+SCREENS.editReceived=`
+ ${nav('Edit received item','pop()')}
+ <div class="scroll pt-nav pb-cta">
+  <div class="note" style="margin-bottom:16px">${ic('shield','#B26205',20)}<span>This edited copy will be saved to your <b>My Inventory</b> page — you become its owner. The original stays in your <b>"Received Inventory"</b>.</span></div>
+  <div class="input"><label>Product code</label><input value="sku-10101"></div>
+  <div class="input"><label>Title <i>*</i></label><input value="WhiteWood Pine"></div>
+  <div class="input"><label>Industry</label><select><option value="">Select industry (optional)</option>${opts(INDUSTRIES,'Timber & Wood')}</select></div>
+  <div class="input"><label>Category</label><select>${opts(CATEGORIES,'Timber')}</select></div>
+  <div style="display:flex;gap:11px">
+   <div class="input" style="flex:1.2"><label>Quantity <i>*</i></label>
+     <div class="qty"><div onclick="qch(-1000)">−</div><input id="q1" value="50000" inputmode="numeric"><div onclick="qch(1000)">+</div></div></div>
+   <div class="input" style="flex:1"><label>Unit <i>*</i></label><select>${opts(UNITS,'unit')}</select></div>
+  </div>
+  <div style="display:flex;gap:11px">
+   <div class="input" style="flex:1.4"><label>Price per unit</label><input inputmode="decimal" value="840"></div>
+   <div class="input" style="flex:1"><label>Currency</label><select>${opts(CURRENCIES,'AED')}</select></div>
+  </div>
+  <div class="input"><label>Stock location</label><input value="London"></div>
+  <div class="input"><label>Origin</label><input value="Europe"></div>
+  <div class="input"><label>Description</label><textarea>I have 50K units of White Wood Pine.</textarea></div>
+  <div class="sect">Photos</div>
+  <div style="display:flex;gap:10px;margin-bottom:4px">
+   ${['WP','WP'].map(m=>`<div style="width:78px;height:78px;border-radius:14px;background:${G.teal};display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;position:relative">${m}
+     <span style="position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:11px;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;cursor:pointer" onclick="event.stopPropagation();this.parentElement.remove();toast('Photo removed')">×</span></div>`).join('')}
+   <div style="width:78px;height:78px;border:2px dashed #B7CBEC;border-radius:14px;background:rgba(243,248,255,.9);display:flex;align-items:center;justify-content:center;cursor:pointer" onclick="toast('Add photo (demo)')">${ic('plus','#2E7CF6',22)}</div>
+  </div>
+  <div class="sect">Documents</div>
+  ${['11111.csv|#149A54|CSV','11111.xlsx|#149A54|XLSX','VOIZZ DOCUMENTATION.docx|#1E5FD0|DOCX','Export Packing List 1.pdf|#D93030|PDF'].map(d=>{const[f,c,e]=d.split('|');return `
+  <div class="doc">${ic('doc',c,20)} <b style="font-size:14px">${f}</b><span class="ext" style="color:${c}">${e}</span>
+   <span style="margin-left:10px;color:var(--muted);font-weight:800;cursor:pointer" onclick="event.stopPropagation();this.parentElement.remove();toast('Removed')">×</span></div>`}).join('')}
+ </div>
+ <div class="cta" style="display:flex;gap:10px">
+  <div class="btn btn-ghost" style="flex:1" onclick="push('itemCopy');toast('Saved to My Inventory')">Save</div>
+  <div class="btn btn-primary" style="flex:1.3" onclick="push('itemCopy');toast('Saved to My Inventory')">Save & Share</div>
+ </div>`;
+
+/* ================= SAVED COPY IN MY INVENTORY ================= */
+SCREENS.itemCopy=`
+ ${nav('Item','goRoot()')}
+ <div class="scroll pt-nav pb-plain">
+  <div style="height:268px;border-radius:20px;background:#F0F3F9;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden">
+   <div style="width:56%;height:100%;background:${G.teal};display:flex;align-items:center;justify-content:center;color:#fff;font-size:52px;font-weight:800">WP</div>
+   <div class="navbtn" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);background:rgba(88,98,116,.55);border:none" onclick="toast('Previous photo')">${ic('back','#fff',18)}</div>
+   <div class="navbtn" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:rgba(88,98,116,.55);border:none" onclick="toast('Next photo')">${ic('chev','#fff',18)}</div>
+   <span style="position:absolute;right:12px;bottom:12px;background:rgba(64,74,90,.78);color:#fff;font-size:12px;font-weight:800;padding:6px 12px;border-radius:12px;display:flex;gap:6px;align-items:center">${ic('camera','#fff',14)} 2 photos</span>
+  </div>
+  <div style="display:flex;gap:6px;justify-content:center;margin:10px 0 2px"><i style="width:18px;height:6px;border-radius:3px;background:var(--blue)"></i><i style="width:6px;height:6px;border-radius:3px;background:#C9D4E6"></i></div>
+
+  <div class="card" style="margin-top:12px">
+   <div style="font-size:11.5px;font-weight:800;letter-spacing:.7px;color:var(--muted)">SKU-10101 &bull; TIMBER &bull; TODAY</div>
+   <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:6px">
+     <div style="font-size:23px;font-weight:800;color:var(--navy);letter-spacing:-.4px">WhiteWood Pine</div></div>
+   <div style="border-top:1px solid var(--line);margin-top:12px">
+    <div class="kv"><span class="k">Stock location</span><span class="v">London</span></div>
+    <div class="kv"><span class="k">Origin</span><span class="v">Europe</span></div>
+    <div class="kv"><span class="k">Price</span><span class="v" style="color:var(--green)">AED 840 / unit</span></div>
+   </div>
+   <div style="display:flex;border:1px solid var(--line);border-radius:14px;margin-top:10px;overflow:hidden">
+    ${[['TOTAL QTY','50,000','unit','var(--navy)'],['AVAILABLE','50,000','unit','var(--green)'],['RESERVED','0','unit','#E08A00'],['SHARED WITH','1','contacts','var(--violet)']].map((s,i)=>`
+    <div style="flex:1;padding:11px 6px;${i?'border-left:1px solid var(--line)':''}">
+      <div style="font-size:9.5px;font-weight:800;letter-spacing:.4px;color:var(--muted)">${s[0]}</div>
+      <div style="font-size:16.5px;font-weight:800;color:${s[3]};margin-top:3px">${s[1]}</div>
+      <div style="font-size:11px;color:var(--muted);font-weight:600">${s[2]}</div></div>`).join('')}
+   </div>
+  </div>
+
+  <div style="display:flex;gap:10px;margin:16px 0 2px">
+   <div class="btn btn-dark" style="flex:2.3" onclick="push('shareWho')">${ic('share','#fff',19)} Share</div>
+   <div class="btn btn-ghost" style="flex:1" onclick="push('editReceived')">${ic('edit','#0F2B54',18)} Edit</div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+   <div style="display:flex;gap:9px;align-items:center;font-size:16px;font-weight:800;color:var(--navy)">${ic('doc','#0F2B54',18)} Description</div>
+   <div style="font-size:14.5px;margin-top:10px;color:var(--text)">I have 50K units of White Wood Pine.</div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+   <div style="display:flex;gap:9px;align-items:center;font-size:16px;font-weight:800;color:var(--navy)">${ic('inbox','#0F2B54',18)} Documents</div>
+   ${[['11111.xlsx','#149A54'],['Export Packing List 1.pdf','#D93030']].map(d=>`
+   <div class="doc" style="margin:10px 0 0">${ic('doc',d[1],20)} <b style="font-size:14px">${d[0]}</b>
+     <span style="margin-left:auto;color:var(--blue);font-weight:800;font-size:13.5px;display:flex;gap:4px;align-items:center;cursor:pointer" onclick="event.stopPropagation();toast('Opening (demo)')">Open ${ic('open','#2E7CF6',14)}</span></div>`).join('')}
+  </div>
+
+  <div class="card" style="margin-top:14px">
+   <div style="display:flex;gap:9px;align-items:center;font-size:16px;font-weight:800;color:var(--navy)">${ic('clock','#0F2B54',18)} Activity</div>
+   <div style="display:flex;gap:12px;padding-top:12px;align-items:center">
+     <div style="width:8px;height:8px;border-radius:4px;background:#C9D4E6;flex:none"></div>
+     <div style="flex:1;font-size:14.5px;font-weight:650;color:var(--navy)">Create Inventory</div>
+     <div style="font-size:13px;color:var(--muted)">08/07/2026</div></div>
+  </div>
+
+  <div style="font-size:13px;color:var(--muted);margin-top:16px;padding:0 2px">Edited from the inventory shared by <b style="color:var(--navy)">ADCB</b> — WhiteWood Pine.
+   <b style="color:var(--blue);cursor:pointer" onclick="push('receivedDetail')">View inventory</b></div>
+
+  <div class="btn btn-danger" style="margin:14px 0 6px" onclick="goRoot();toast('Item deleted')">${ic('trash','#D93030',18)} Delete Item</div>
+ </div>`;
+
+/* ================= RECEIVED ================= */
+SCREENS.received=`
+ <div class="scroll pt-tab pb-tab">
+  <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-top:12px">
+   <div><div class="h1" style="font-size:26px">Received Inventory</div><div class="sub">4 items shared with you</div></div>
+   ${cluster()}
+  </div>
+  <div class="searchpill" style="margin-top:14px">${ic('search','#67768F',18)} Search by title or vendor…</div>
+  ${RECEIVED.map(r=>`
+  <div class="card" style="padding:14px;margin-bottom:12px;cursor:pointer" onclick="push('receivedDetail')">
+   <div style="display:flex;gap:13px">
+    <div class="thumb" style="width:92px;height:92px;border-radius:16px;font-size:20px;background:${r.g}">${mono(r.n)}</div>
+    <div style="flex:1;min-width:0">
+      <div class="t1 wrap2" style="font-size:16.5px">${r.n}</div>
+      <div style="font-size:14px;margin-top:4px"><b style="color:var(--navy)">${r.qty}</b><span style="color:var(--muted)">/${r.qty} ${r.unit}</span></div>
+      <div style="font-size:15px;font-weight:800;color:var(--green);margin-top:4px">${r.price}</div>
+    </div>
+   </div>
+   <div style="border-top:1px solid var(--line);margin-top:12px;padding-top:10px;display:flex;align-items:center;justify-content:space-between">
+    <span style="font-size:13.5px;color:var(--muted)">From: <b style="color:var(--navy)">${r.from}</b></span>
+    <span class="t2">${ic('clock','#9AA7BF',13)} ${r.t}</span>
+   </div>
+  </div>`).join('')}
+ </div>
+ ${tabbar('received')}`;
+
+/* ================= RECEIVED DETAIL ================= */
+SCREENS.receivedDetail=`
+ ${nav('','pop()')}
+ <div class="scroll pt-nav pb-plain">
+  <div style="height:268px;border-radius:20px;background:#F0F3F9;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden">
+   <div style="width:56%;height:100%;background:${G.teal};display:flex;align-items:center;justify-content:center;color:#fff;font-size:52px;font-weight:800">WP</div>
+   <div class="navbtn" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);background:rgba(88,98,116,.55);border:none" onclick="toast('Previous photo')">${ic('back','#fff',18)}</div>
+   <div class="navbtn" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:rgba(88,98,116,.55);border:none" onclick="toast('Next photo')">${ic('chev','#fff',18)}</div>
+   <span style="position:absolute;right:12px;bottom:12px;background:rgba(64,74,90,.78);color:#fff;font-size:12px;font-weight:800;padding:6px 12px;border-radius:12px;display:flex;gap:6px;align-items:center">${ic('camera','#fff',14)} 2 photos</span>
+  </div>
+  <div style="display:flex;gap:6px;justify-content:center;margin:10px 0 2px"><i style="width:18px;height:6px;border-radius:3px;background:var(--blue)"></i><i style="width:6px;height:6px;border-radius:3px;background:#C9D4E6"></i></div>
+
+  <div class="card" style="margin-top:12px">
+   <div style="font-size:11.5px;font-weight:800;letter-spacing:.7px;color:var(--muted)">SKU-10101 &bull; GENERAL &bull; RECEIVED 01/07/2026</div>
+   <div style="font-size:23px;font-weight:800;color:var(--navy);letter-spacing:-.4px;margin-top:6px">WhiteWood Pine</div>
+   <div style="border-top:1px solid var(--line);margin-top:12px">
+    <div class="kv"><span class="k">Stock location</span><span class="v">London</span></div>
+    <div class="kv"><span class="k">Origin</span><span class="v">Europe</span></div>
+    <div class="kv"><span class="k">Price</span><span class="v" style="color:var(--green)">AED 840 / unit</span></div>
+   </div>
+   <div style="display:flex;border:1px solid var(--line);border-radius:14px;margin-top:10px;overflow:hidden">
+    ${[['TOTAL QTY','50,000','unit','var(--navy)'],['AVAILABLE','50,000','unit','var(--green)'],['I RESERVED','0','unit','#E08A00'],['SHARED WITH','1','contacts','var(--violet)']].map((s,i)=>`
+    <div style="flex:1;padding:11px 6px;${i?'border-left:1px solid var(--line)':''}">
+      <div style="font-size:9px;font-weight:800;letter-spacing:.3px;color:var(--muted)">${s[0]}</div>
+      <div style="font-size:16px;font-weight:800;color:${s[3]};margin-top:3px">${s[1]}</div>
+      <div style="font-size:11px;color:var(--muted);font-weight:600">${s[2]}</div></div>`).join('')}
+   </div>
+  </div>
+
+  <div style="display:flex;gap:9px;margin:16px 0 2px">
+   <div class="btn btn-green" style="flex:1.7" onclick="openSheet('reserve')">${ic('box','#fff',18)} Reserve</div>
+   <div class="btn btn-ghost" style="flex:1" onclick="push('shareTermsR')">${ic('share','#0F2B54',17)} Share</div>
+   <div class="btn btn-ghost" style="flex:1" onclick="push('editReceived')">${ic('edit','#0F2B54',17)} Edit</div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+   <div style="display:flex;gap:9px;align-items:center;font-size:16px;font-weight:800;color:var(--navy)">${ic('doc','#0F2B54',18)} Details</div>
+   <div style="font-size:14.5px;margin-top:10px;color:var(--text)">I have 50K units of White Wood Pine.</div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+   <div style="display:flex;gap:9px;align-items:center;font-size:16px;font-weight:800;color:var(--navy)">${ic('doc','#0F2B54',18)} Packing list and spec sheets</div>
+   ${[['11111.csv','#149A54','CSV'],['11111.xlsx','#149A54','XLSX'],['VOIZZ DOCUMENTATION.docx','#1E5FD0','DOCX'],['Export Packing List 1.pdf','#D93030','PDF']].map(d=>`
+   <div class="doc" style="margin:10px 0 0">${ic('doc',d[1],20)} <b style="font-size:14px">${d[0]}</b><span class="ext" style="color:${d[1]}">${d[2]}</span></div>`).join('')}
+  </div>
+
+  <div class="card" style="margin-top:14px">
+   <div style="display:flex;gap:9px;align-items:center;font-size:16px;font-weight:800;color:var(--navy)">${ic('user','#0F2B54',18)} Shared by</div>
+   <div style="display:flex;align-items:center;gap:13px;margin-top:12px">
+     <div class="avatar" style="background:${G.nav}">AD</div>
+     <div class="mid"><div class="t1">ADCB</div><div class="t2">Contact: ADCB</div></div>
+   </div>
+   <div style="display:flex;gap:11px;margin-top:12px">
+     <div class="navbtn" style="width:46px;height:46px;background:rgba(20,154,84,.12);border-color:rgba(20,154,84,.2)" onclick="toast('Calling (demo)')">${ic('phone','#149A54',19)}</div>
+     <div class="navbtn" style="width:46px;height:46px;background:rgba(20,154,84,.12);border-color:rgba(20,154,84,.2)" onclick="toast('WhatsApp (demo)')">${waLogo(24)}</div>
+     <div class="navbtn" style="width:46px;height:46px;background:rgba(46,124,246,.12);border-color:rgba(46,124,246,.2)" onclick="toast('Email (demo)')">${ic('mail','#2E7CF6',19)}</div>
+   </div>
+  </div>
+  <div style="height:8px"></div>
+ </div>`;
+
+/* ================= RESERVE HUB ================= */
+SCREENS.reserve=`
+ <div class="scroll pt-tab pb-tab">
+  <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-top:12px">
+   <div><div class="h1" style="font-size:26px">Reservation Hub</div><div class="sub">Manage your reservation requests and negotiations</div></div>
+   ${cluster()}
+  </div>
+  <div style="display:flex;gap:10px;align-items:center;margin-top:14px">
+   <div class="searchpill" style="flex:1;margin:0">${ic('search','#67768F',18)} Search reservations…</div>
+   <div class="navbtn" style="width:45px;height:45px;flex:none" onclick="openSheet('resStatus')">${ic('filter','#0F2B54',19)}</div>
+  </div>
+  <div class="seg" style="max-width:300px"><div class="on" onclick="segSwap(this,'rvIn','rvOut')">${ic('down','currentColor',14)} Received (4)</div><div onclick="segSwap(this,'rvOut','rvIn')">${ic('up','currentColor',14)} Sent (2)</div></div>
+  <div id="rvIn">
+   ${[['BURJ KHALIFA','eco','50 unit','4,000,000/unit','29/06/2026','Confirmed',G.blue,'BK'],
+      ['BURJ KHALIFA','ADCB','12 unit','4,800,000/unit','29/06/2026','Confirmed',G.blue,'BK'],
+      ['cards','eco','15,000 pcs','10,000/pcs','28/06/2026','Rejected',G.slate,'CA'],
+      ['AVENGERS','ADCB','2 pcs','40,000/pcs','27/06/2026','Pending',G.vio,'AV']].map(r=>`
+   <div class="card" style="padding:14px;margin-bottom:12px;cursor:pointer" onclick="push('negotiation')">
+    <div style="display:flex;gap:13px">
+     <div class="thumb" style="width:92px;height:92px;border-radius:16px;font-size:20px;background:${r[6]}">${r[7]}</div>
+     <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+       <div class="t1 wrap2" style="font-size:16.5px">${r[0]}</div>
+       <div style="font-size:13.5px;color:var(--muted);margin-top:6px"><b style="color:var(--navy)">${r[1]}</b> requested</div>
+       <div style="font-size:14.5px;font-weight:800;color:var(--navy);margin-top:3px">${r[2]} <span style="color:var(--green)">@ ${r[3]}</span></div>
+       <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:auto;padding-top:9px">
+         <span style="font-size:12.5px;color:var(--muted)">${r[4]}</span>${stBadge(r[5])}
+       </div>
+     </div>
+    </div>
+   </div>`).join('')}
+  </div>
+  <div id="rvOut" style="display:none">
+   ${[['AVENGERS','You','2 pcs','40,000/pcs','27/06/2026','Pending',G.vio,'AV'],
+      ['AVENGERS','You','1 pcs','40,000/pcs','26/06/2026','Cancelled',G.vio,'AV']].map(r=>`
+   <div class="card" style="padding:14px;margin-bottom:12px;cursor:pointer" onclick="push('negotiationSent')">
+    <div style="display:flex;gap:13px">
+     <div class="thumb" style="width:92px;height:92px;border-radius:16px;font-size:20px;background:${r[6]}">${r[7]}</div>
+     <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+       <div class="t1 wrap2" style="font-size:16.5px">${r[0]}</div>
+       <div style="font-size:13.5px;color:var(--muted);margin-top:6px"><b style="color:var(--navy)">${r[1]}</b> requested</div>
+       <div style="font-size:14.5px;font-weight:800;color:var(--navy);margin-top:3px">${r[2]} <span style="color:var(--green)">@ ${r[3]}</span></div>
+       <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:auto;padding-top:9px">
+         <span style="font-size:12.5px;color:var(--muted)">${r[4]}</span>${stBadge(r[5])}
+       </div>
+     </div>
+    </div>
+   </div>`).join('')}
+  </div>
+ </div>
+ ${tabbar('reserve')}`;
+
+/* ================= NEGOTIATION (one merged card, no clock, no deal value) ================= */
+SCREENS.negotiation=`
+ ${nav('cards','pop()')}
+ <div class="scroll pt-nav pb-cta">
+  <div class="card" style="padding:14px 16px">
+   <div style="display:flex;align-items:center;gap:12px;padding-bottom:12px;border-bottom:1px solid var(--line)">
+    <div class="thumb" style="width:46px;height:46px;background:${G.slate}">CA</div>
+    <div class="mid"><div class="t1">cards</div><div class="t2">Buyer: eco</div></div>
+    ${stBadge('Pending')}
+   </div>
+   <div class="kv"><span class="k">Original quantity</span><span class="v">15,500 pcs</span></div>
+   <div class="kv"><span class="k">Original price</span><span class="v" style="color:var(--green)">AED 9,500 / pcs</span></div>
+  </div>
+  <div class="sect">Notes & messages</div>
+  <div class="bubble bub-them"><div class="who"><span>eco</span><span>REQUEST</span></div>
+   <div class="big">15,000 pcs @ AED 10,000</div><div class="note">"let's make it"</div><div class="time">28 Jun at 6:48 PM</div></div>
+  <div class="bubble bub-you"><div class="who"><span>You</span><span>COUNTER 1</span></div>
+   <div class="big">AED 11,000 · 15,500 pcs</div><div class="note">"fix it"</div><div class="time">28 Jun at 8:46 PM</div></div>
+  <div class="bubble bub-them"><div class="who"><span>eco</span><span>COUNTER 2</span></div>
+   <div class="big">AED 10,500 · 15,500 pcs</div><div class="note">"last"</div><div class="time">28 Jun at 8:47 PM</div></div>
+ </div>
+ <div class="cta" style="display:flex;gap:9px">
+  <div class="btn btn-danger" style="flex:1" onclick="goRoot();toast('Reservation rejected')">Reject</div>
+  <div class="btn btn-ghost" style="flex:1" onclick="openSheet('counter')">Counter</div>
+  <div class="btn btn-green" style="flex:1.4" onclick="goRoot();toast('Reservation confirmed')">Accept</div>
+ </div>`;
+
+/* ================= NEGOTIATION (SENT REQUEST) ================= */
+SCREENS.negotiationSent=`
+ ${nav('AVENGERS','pop()')}
+ <div class="scroll pt-nav pb-plain">
+  <div class="card" style="padding:14px 16px">
+   <div style="display:flex;align-items:center;gap:12px;padding-bottom:12px;border-bottom:1px solid var(--line)">
+    <div class="thumb" style="width:46px;height:46px;background:${G.vio}">AV</div>
+    <div class="mid"><div class="t1">AVENGERS</div><div class="t2">Seller: ADCB</div></div>
+    ${stBadge('Pending')}
+   </div>
+   <div class="kv"><span class="k">Original quantity</span><span class="v">20 pcs</span></div>
+   <div class="kv"><span class="k">Original price</span><span class="v" style="color:var(--green)">AED 50,000 / pcs</span></div>
+  </div>
+  <div class="sect">Notes & messages</div>
+  <div class="bubble bub-you"><div class="who"><span>You</span><span>REQUEST</span></div>
+   <div class="big">2 pcs @ AED 40,000</div><div class="time">27 Jun at 3:09 PM</div></div>
+  <div class="infonote" style="margin-top:10px">${ic('clock','#2E7CF6',18)}<span>Waiting for <b>ADCB</b> to respond… You'll get a notification when they accept, reject, or counter.</span></div>
+ </div>`;
+
+/* ================= NETWORK ================= */
+SCREENS.network=`
+ <div class="scroll pt-tab pb-tab">
+  <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-top:12px">
+   <div><div class="h1" style="font-size:27px">My Network</div><div class="sub">9 vendors in your network</div></div>
+   ${cluster()}
+  </div>
+  <div style="display:flex;gap:26px;border-bottom:1.5px solid var(--line);margin-top:16px">
+   <div class="utab on">Network <span class="ucount">9</span></div>
+  </div>
+  <div class="searchpill" style="margin-top:16px">${ic('search','#67768F',18)} Search vendors…</div>
+  <div id="ntA">
+  ${NETWORK.map(v=>`
+  <div class="card" style="padding:15px 16px;margin-bottom:12px;cursor:pointer" onclick="openSheet('vendor')">
+   <div style="display:flex;align-items:flex-start;gap:12px">
+    <div class="avatar" style="background:${v.g}">${v.i}</div>
+    <div style="flex:1;min-width:0">
+      <div class="t1" style="font-size:17px">${v.n}</div>
+      <div class="t2" style="margin-top:4px">${ic('user','#9AA7BF',13)} ${v.p}</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">${stBadge(v.st)}
+      <div class="navbtn" style="width:34px;height:34px" onclick="event.stopPropagation();openSheet('vendor')">${ic('dots','#0F2B54',16)}</div></div>
+   </div>
+   <div style="border-top:1px solid var(--line);margin-top:12px;padding-top:11px">
+     <span class="t2">${ic('loc','#9AA7BF',14)} ${v.c}</span>
+   </div>
+  </div>`).join('')}
+  </div>
+ </div>
+ <div class="fabmenu" id="fabMenu">
+  <div class="fabitem"><span onclick="toggleFab();push('addVendor')">Add manually</span>
+    <div class="mini" onclick="toggleFab();push('addVendor')">${ic('user','#0F2B54',20)}</div></div>
+  <div class="fabitem"><span onclick="toggleFab();openSheet('bulk')">Import contacts</span>
+    <div class="mini" onclick="toggleFab();openSheet('bulk')">${ic('import','#0F2B54',20)}</div></div>
+ </div>
+ <div class="fab" id="fabBtn" onclick="toggleFab()">${ic('plus','currentColor',26)}</div>
+ ${tabbar('network')}`;
+
+SCREENS.addVendor=`
+ ${nav('Add vendor','pop()')}
+ <div class="scroll pt-nav pb-cta">
+  <div class="input"><label>Company name</label><input placeholder="Company Ltd."></div>
+  <div class="input"><label>Contact person</label><input placeholder="John Smith"></div>
+  <div class="input"><label>Email <i>*</i></label><input type="email" placeholder="contact@company.com"></div>
+  <div style="display:flex;gap:11px">
+   <div class="input" style="width:104px"><label>Code</label><select>${opts(['+971','+966','+974','+968','+965','+973','+91'],'+971')}</select></div>
+   <div class="input" style="flex:1"><label>Mobile / WhatsApp</label><input inputmode="tel" placeholder="9876543210"></div>
+  </div>
+  <div style="display:flex;gap:11px">
+   <div class="input" style="width:104px"><label>Code</label><select>${opts(['+971','+966','+974','+968','+965','+973','+91'],'+971')}</select></div>
+   <div class="input" style="flex:1"><label>Telephone</label><input inputmode="tel" placeholder="Telephone (optional)"></div>
+  </div>
+  <div class="input"><label>Industry</label><select id="venInd" onchange="venCats(this)"><option value="">Select industry</option>${opts(INDUSTRIES)}</select></div>
+  <div class="input" id="venCatsWrap" style="display:none"><label>Categories</label><div>
+   ${CATEGORIES.map(c=>`<span class="catchip" onclick="this.classList.toggle('on')">${c}</span>`).join('')}
+  </div></div>
+  <div style="display:flex;gap:11px">
+   <div class="input" style="flex:1"><label>City</label><input placeholder="Dubai"></div>
+   <div class="input" style="flex:1"><label>Country</label><input placeholder="UAE"></div>
+  </div>
+  <div class="input"><label>Notes</label><textarea placeholder="Additional notes about this vendor…"></textarea></div>
+ </div>
+ <div class="cta"><div class="btn btn-primary" onclick="pop();toast('Vendor added to network')">Add vendor</div></div>`;
+
+/* ================= PROFILE/* ================= PROFILE / SETTINGS / LEGAL ================= */
+SCREENS.profile=`
+ ${nav('Business profile','pop()')}
+ <div class="scroll pt-nav pb-cta">
+  <div class="card" style="display:flex;align-items:center;gap:14px">
+   <div style="width:72px;height:72px;border-radius:20px;background:${G.nav};display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:22px;flex:none">EG</div>
+   <div style="flex:1"><div class="t1" style="font-size:17px">Ever Global</div><div class="t2">pateldarshil664@gmail.com · Vendor</div>
+     <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+       <span class="badge b-green">Email verified</span>
+       <span style="font-size:12.5px;font-weight:800;color:var(--blue);cursor:pointer" onclick="toast('Upload logo (demo)')">Change logo</span></div></div>
+  </div>
+  <div class="sect">Company</div>
+  <div class="input"><label>Company name <i>*</i></label><input value="Ever Global"></div>
+  <div class="input"><label>Contact person <i>*</i></label><input value="Darshil"></div>
+  <div class="input"><label>Industry <i>*</i></label><select>${opts(INDUSTRIES,'Automotive')}</select></div>
+  <div class="input"><label>Categories</label><div style="padding-top:2px">
+   ${['Vehicles|on','Auto Parts','Tires & Rubber','Automotive Electronics','Engine Components','Body Parts','Lubricants & Fluids','Others'].map(c=>{const[t,on]=c.split('|');return `<span class="catchip ${on?'on':''}" onclick="this.classList.toggle('on')">${t}</span>`}).join('')}
+  </div></div>
+  <div style="display:flex;gap:11px">
+   <div class="input" style="flex:1"><label>City <i>*</i></label><input value="Dubai"></div>
+   <div class="input" style="flex:1"><label>Country <i>*</i></label><select>${opts(['United Arab Emirates','Saudi Arabia','Qatar','Oman','Kuwait','Bahrain'],'United Arab Emirates')}</select></div>
+  </div>
+  <div class="input"><label>Mobile / WhatsApp <i>*</i></label><input value="+971 526 630 872"></div>
+  <div class="input"><label>Description</label><textarea>hello</textarea></div>
+  <div style="display:flex;gap:10px;margin-top:4px">
+   <div class="btn btn-ghost sm" style="flex:1" onclick="toast('Password reset email sent')">Change password</div>
+   <div class="btn btn-danger sm" style="flex:1" onclick="toast('Contact support to delete account')">Delete account</div>
+  </div>
+ </div>
+ <div class="cta"><div class="btn btn-primary" onclick="pop();toast('Profile saved')">Save profile</div></div>`;
+
+SCREENS.settings=`
+ ${nav('Settings','pop()')}
+ <div class="scroll pt-nav pb-plain">
+  <div class="sect" style="margin-top:4px">Notifications</div>
+  <div class="card" style="display:flex;align-items:center;gap:13px">
+   <div class="act" style="border:none;padding:2px 0;flex:1"><div class="ic">${ic('bell','#1E5FD0',19)}</div>
+     <div style="flex:1"><div style="font-size:15px">Push notifications</div>
+     <div style="font-size:12.5px;color:var(--muted);font-weight:600;margin-top:2px">Alerts for shares & reservations</div></div></div>
+   <div class="toggle on" onclick="this.classList.toggle('on');toast(this.classList.contains('on')?'Push enabled':'Push disabled')"></div>
+  </div>
+  <div class="sect">Help & legal</div>
+  <div class="card" style="padding:2px 16px">
+   ${[['help','FAQ','faq'],['shield','Privacy Policy','privacy'],['doc','Terms of Service','terms'],['mail','Contact support','contact']].map(r=>`
+   <div class="act" onclick="push('${r[2]}')"><div class="ic">${ic(r[0],'#1E5FD0',19)}</div>${r[1]}<span class="chev" style="margin-left:auto">${ic('chev','#C3CDDF',17)}</span></div>`).join('')}
+  </div>
+  <div class="card" style="padding:2px 16px;margin-top:14px">
+   <div class="act danger" onclick="signOut()"><div class="ic">${ic('off','#D93030',19)}</div>Log out</div>
+  </div>
+  <div style="text-align:center;font-size:12px;color:#A6B3C9;margin-top:16px">MyStokk v1.0 · Ever Global Trading LLC</div>
+ </div>`;
+
+SCREENS.faq=`
+ ${nav('FAQ','pop()')}
+ <div class="scroll pt-nav pb-plain prose">
+  <h4>What is MyStokk?</h4>
+  <p>MyStokk is a private B2B platform for trading and distribution businesses to share live stock, reserve and negotiate inventory, and pass offers along to trusted contacts — never to the open market.</p>
+  <h4>Who can see my inventory?</h4>
+  <p>Only the vendors you explicitly share an item with, or anyone you send a public share link to. Your catalog is never publicly listed or searchable.</p>
+  <h4>How do reservations and negotiation work?</h4>
+  <p>A buyer reserves a quantity at your listed or an offered price. From there each side can counter, accept, or reject. Negotiation is capped at 3 rounds per side, and the full history is kept on the reservation.</p>
+  <h4>What happens when I share a received item?</h4>
+  <p>Your contact sees the item with your price and remark. The original supplier's identity and price are never revealed — that's the MyStokk privacy chain.</p>
+ </div>`;
+
+SCREENS.privacy=`
+ ${nav('Privacy Policy','pop()')}
+ <div class="scroll pt-nav pb-plain prose">
+  <p>Your privacy matters. This policy explains what we collect and how we use it. By using MyStokk you agree to the practices described here.</p>
+  <h4>Information we collect</h4>
+  <p>Account details (company name, contact person, email), the inventory and documents you upload, your network connections, and reservation/negotiation activity. We also collect basic usage and device information to operate the service.</p>
+  <h4>How we use it</h4>
+  <p>To provide the platform: showing your inventory to the contacts you choose, delivering share and reservation notifications, and keeping your account secure. We do not sell your data, and we never list your inventory on a public marketplace.</p>
+ </div>`;
+
+SCREENS.terms=`
+ ${nav('Terms of Service','pop()')}
+ <div class="scroll pt-nav pb-plain prose">
+  <p>These terms govern your use of MyStokk. By creating an account you agree to them.</p>
+  <h4>Using the service</h4>
+  <p>You must provide accurate company information and are responsible for activity under your account. Use MyStokk only for legitimate B2B trading and distribution purposes.</p>
+  <h4>Your content</h4>
+  <p>You retain ownership of the inventory, photos, and documents you upload. You grant MyStokk the rights needed to display that content to the contacts you share it with and to operate the service.</p>
+  <h4>Reservations & negotiations</h4>
+  <p>Reservations and counter-offers made on the platform reflect commercial intent between businesses; each party is responsible for fulfilment, payment, and disputes.</p>
+ </div>`;
+
+SCREENS.contact=`
+ ${nav('Contact','pop()')}
+ <div class="scroll pt-nav pb-plain">
+  <div class="h1small" style="margin-top:2px">We're here to help</div>
+  <div class="sub" style="margin-bottom:18px">Questions, feedback, or need a hand getting set up?</div>
+  <div class="card prose">
+   <h4 style="margin-top:0">Support</h4>
+   <p>For account help, bugs, or general questions, email us using the button below.</p>
+   <h4>Business hours</h4>
+   <p style="margin-bottom:0">We typically respond within one business day, Sunday–Thursday.</p>
+  </div>
+  <div class="btn btn-dark" style="margin-top:16px" onclick="toast('Opening Mail (demo)')">${ic('mail','#fff',19)} Email support@mystokk.app</div>
+ </div>`;
+
+/* ================= SHEETS ================= */
+const SHEETS={
+ itemActions:`<h3>BURJ KHALIFA</h3><div class="desc">SKU-10088 · 163/225 unit available</div>
+  <div class="act" onclick="closeSheet();push('shareWho')"><div class="ic">${ic('share','#1E5FD0',19)}</div>Share item</div>
+  <div class="act" onclick="closeSheet();push('editItem')"><div class="ic">${ic('edit','#1E5FD0',19)}</div>Edit item</div>
+  <div class="act danger" onclick="closeSheet();pop();toast('Item deleted')"><div class="ic">${ic('trash','#D93030',19)}</div>Delete item</div>`,
+
+ recActions:`<h3>WhiteWood Pine</h3><div class="desc">Shared by ADCB · live link</div>
+  <div class="act" onclick="closeSheet();openSheet('reserve')"><div class="ic">${ic('cal','#1E5FD0',19)}</div>Reserve quantity</div>
+  <div class="act" onclick="closeSheet();push('shareTermsR')"><div class="ic">${ic('share','#1E5FD0',19)}</div>Share</div>
+  <div class="act" onclick="closeSheet();push('editReceived')"><div class="ic">${ic('edit','#1E5FD0',19)}</div>Edit as my copy</div>`,
+
+ reserve:`<h3>Reserve quantity</h3><div class="desc">Reserve directly here — no need to call.</div>
+  <div class="input"><label>Quantity (unit) <i>*</i></label>
+   <div class="qty"><div onclick="qch2(-100)">−</div><input id="q2" value="1000" inputmode="numeric" oninput="chkQty()"><div onclick="qch2(100)">+</div></div>
+   <div style="font-size:12.5px;color:var(--muted);font-weight:600;margin-top:6px">Available: 50,000 unit</div>
+   <div class="err" id="qErr">Exceeds available quantity (max 50,000 unit)</div></div>
+  <div class="input"><label>Your offered price (AED per unit)</label><input inputmode="decimal" placeholder="AED 840/unit (listed price)"></div>
+  <div class="input"><label>Message — optional</label><textarea placeholder="Any special requirements…"></textarea></div>
+  <div class="btn btn-green" id="resBtn" onclick="closeSheet();toast('Reservation request sent to ADCB')">Request reservation</div>
+  <div class="btn btn-ghost" style="margin-top:10px" onclick="closeSheet()">Cancel</div>`,
+
+ counter:`<h3>Counter offer</h3><div class="desc">Round 2 of 3 · replying to eco's AED 10,500</div>
+  <div style="display:flex;gap:11px">
+   <div class="input" style="flex:1"><label>Your price (AED)</label><input inputmode="decimal" value="10,800"></div>
+   <div class="input" style="flex:1"><label>Quantity (pcs)</label><input inputmode="numeric" value="15,500"></div>
+  </div>
+  <div class="input"><label>Note — optional</label><input placeholder='e.g. "final price, ready stock"'></div>
+  <div class="btn btn-primary" onclick="closeSheet();toast('Counter offer sent to eco')">Send counter</div>
+  <div class="btn btn-ghost" style="margin-top:10px" onclick="closeSheet()">Cancel</div>`,
+
+ vendor:`<div style="text-align:center;padding-top:4px">
+   <div class="avatar" style="width:74px;height:74px;border-radius:26px;background:${G.nav};margin:0 auto;font-size:24px">AD</div>
+   <h3 style="margin-top:12px">ADCB</h3>
+   <div class="desc" style="margin-bottom:6px">ADCB · <span class="badge b-green">Connected</span></div></div>
+  <div class="card" style="margin:10px 0 14px">
+   <div class="kv"><span class="k">Email</span><span class="v" style="font-size:13px">dp24499.jobs@gmail.com</span></div>
+   <div class="kv"><span class="k">Mobile / WhatsApp</span><span class="v">+971 52 52 52 30</span></div>
+   <div class="kv"><span class="k">City</span><span class="v">Abu Dhabi, UAE</span></div>
+   <div class="kv"><span class="k">Industry</span><span class="v">Automotive Parts</span></div>
+  </div>
+  <div style="display:flex;gap:10px">
+   <div class="btn btn-ghost" style="flex:1" onclick="closeSheet();toast('Calling (demo)')">${ic('phone','#0F2B54',18)}</div>
+   <div class="btn btn-green" style="flex:2" onclick="closeSheet();toast('WhatsApp (demo)')">${ic('wa','#fff',18)} WhatsApp</div>
+   <div class="btn btn-ghost" style="flex:1" onclick="closeSheet();toast('Email (demo)')">${ic('mail','#0F2B54',18)}</div>
+  </div>
+  <div style="display:flex;gap:10px;margin-top:10px">
+   <div class="btn btn-ghost sm" style="flex:1" onclick="closeSheet();push('addVendor')">${ic('edit','#0F2B54',16)} Edit</div>
+   <div class="btn btn-danger sm" style="flex:1" onclick="closeSheet();toast('Vendor removed')">${ic('trash','#D93030',16)} Delete</div>
+  </div>`,
+
+ invActions:`<h3>Item actions</h3><div class="desc">Choose an action for this item</div>
+  <div class="act" onclick="closeSheet();push('item')"><div class="ic">${ic('eye','#1E5FD0',19)}</div>View</div>
+  <div class="act" onclick="closeSheet();push('editItem')"><div class="ic">${ic('edit','#1E5FD0',19)}</div>Edit</div>
+  <div class="act" onclick="closeSheet();push('shareWho')"><div class="ic">${ic('share','#1E5FD0',19)}</div>Share</div>
+  <div class="act danger" onclick="closeSheet();toast('Item deleted')"><div class="ic">${ic('trash','#D93030',19)}</div>Delete</div>`,
+
+ statusFilter:`<h3>Filter by status</h3><div class="desc">Show items with status</div>
+  ${['All','Active','Partially Reserved','Sold Out','Archived'].map((s,i)=>`
+  <div class="act" onclick="closeSheet();toast('Filter: ${s}')">${s}${i===0?`<span style="margin-left:auto">${ic('check','#2E7CF6',18)}</span>`:''}</div>`).join('')}`,
+
+ resStatus:`<h3>Filter by status</h3><div class="desc">Show reservations with status</div>
+  ${['All','Pending','Confirmed','Rejected','Cancelled'].map((s,i)=>`
+  <div class="act" onclick="closeSheet();toast('Filter: ${s}')">${s}${i===0?`<span style="margin-left:auto">${ic('check','#2E7CF6',18)}</span>`:''}</div>`).join('')}`,
+
+ bulk:`<h3>Import contacts</h3>
+  <div class="desc">Download the Excel template, fill in your vendors, and upload it to add them all at once. Phone columns are pre-formatted as numbers so they never turn into 9.7E+11.</div>
+  <div class="btn btn-ghost" onclick="toast('Template downloaded')">${ic('doc','#0F2B54',19)} Download Excel template</div>
+  <div style="text-align:center;font-size:12px;font-weight:800;color:var(--blue);margin:12px 0;letter-spacing:1px">THEN</div>
+  <div style="border:2px dashed #B7CBEC;border-radius:16px;background:rgba(243,248,255,.9);padding:26px;text-align:center;cursor:pointer" onclick="closeSheet();toast('Contacts imported')">
+    ${ic('bulk','#2E7CF6',26)}<div style="font-size:13.5px;font-weight:800;color:var(--blue);margin-top:8px">Upload your filled template (.xls or .csv)</div></div>
+  <div class="btn btn-ghost" style="margin-top:14px" onclick="closeSheet()">Cancel</div>`,
+};
+
+/* ================= CHROME ================= */
+function nav(title,back,right){
+ return `<div class="nav"><div class="side">${back?`<div class="navbtn" onclick="${back}">${ic('back','#0F2B54')}</div>`:''}</div>
+   <div class="title">${title}</div><div class="side" style="justify-content:flex-end">${right||''}</div></div>`;
+}
+function cluster(){
+ return `<div style="display:flex;gap:9px;align-items:center">
+   <div class="navbtn" onclick="push('notifications')">${ic('bell','#0F2B54')}<div class="dot"></div></div>
+   <div class="avatar" style="width:42px;height:42px;border-radius:21px;background:${G.nav};font-size:13px;cursor:pointer" onclick="openMenu()">EG</div></div>`;
+}
+function tabbar(on){
+ const t=(id,icn,lbl,badge,fx)=>`<div class="tab ${on===id?'on':''}" style="flex:${fx}" onclick="setTab('${id}')">${badge?'<span class="tbadge">'+badge+'</span>':''}${ic(icn,'currentColor',24)}<span>${lbl}</span></div>`;
+ return `<div class="tabbar">
+   ${t('home','home','Home',0,'.78')}${t('inventory','box','My inventory',0,'1.08')}${t('received','inbox','Received',1,'.88')}${t('reserve','cal','Reservation Hub',2,'1.26')}
+ </div>`;
+}
+
+/* ================= ENGINE ================= */
+const TABS=['home','inventory','received','reserve','network'];
+function el(id){
+ let d=frame.querySelector(`[data-s="${id}"]`);
+ if(!d){
+  d=document.createElement('div');
+  d.className='screen'+((TABS.includes(id)||['welcome','shareDone'].includes(id))?' fade':'');
+  d.dataset.s=id; d.innerHTML=SCREENS[id];
+  frame.insertBefore(d,$('#toast'));
+ }
+ return d;
+}
+function render(){
+ frame.querySelectorAll('.screen').forEach(s=>s.classList.remove('active','under'));
+ const cur=el(stack[stack.length-1]);
+ if(!cur.classList.contains('fade')){void cur.offsetWidth;}
+ cur.classList.add('active');
+ if(stack.length>1){
+  const prev=el(stack[stack.length-2]);
+  if(!cur.classList.contains('fade'))prev.classList.add('under');
+ }
+}
+function push(id){stack.push(id);render()}
+function pop(){if(stack.length>1){stack.pop();render()}}
+function replaceTop(id){stack[stack.length-1]=id;const old=frame.querySelector(`[data-s="${id}"]`);if(old)old.remove();render()}
+function setTab(id){activeTab=id;stack=[id];render()}
+function enterApp(){activeTab='home';stack=['home'];render()}
+function signOut(){stack=['welcome'];render()}
+function goRoot(){stack=[activeTab||'home'];render()}
+
+let sheetWrap=null;
+function openSheet(id){
+ if(sheetWrap)sheetWrap.remove();
+ sheetWrap=document.createElement('div');
+ sheetWrap.className='sheet-wrap';
+ sheetWrap.innerHTML=`<div class="sheet-bg" onclick="closeSheet()"></div><div class="sheet"><div class="grab"></div>${SHEETS[id]}</div>`;
+ frame.appendChild(sheetWrap);
+ requestAnimationFrame(()=>requestAnimationFrame(()=>sheetWrap.classList.add('open')));
+}
+function closeSheet(){
+ if(!sheetWrap)return;
+ sheetWrap.classList.remove('open');
+ setTimeout(()=>{sheetWrap&&sheetWrap.remove();sheetWrap=null;},320);
+}
+let popWrap=null;
+function openMenu(){
+ if(popWrap)popWrap.remove();
+ popWrap=document.createElement('div');
+ popWrap.className='pop-wrap';
+ popWrap.innerHTML=`<div class="pop-bg" onclick="closeMenu()"></div><div class="pop">
+   <div class="pop-head"><div class="avatar" style="width:42px;height:42px;background:${G.nav}">EG</div>
+     <div><b>Ever Global</b><span>pateldarshil664@gmail.com</span></div></div>
+   ${[['user','Business profile','profile'],['gear','Settings','settings'],['bell','Notifications','notifications'],['mail','Contact','contact']].map(r=>`
+   <div class="act" onclick="closeMenu();push('${r[2]}')"><div class="ic">${ic(r[0],'#1E5FD0',18)}</div>${r[1]}<span class="chev" style="margin-left:auto">${ic('chev','#C3CDDF',16)}</span></div>`).join('')}
+   <div class="act danger" onclick="closeMenu();signOut()"><div class="ic">${ic('off','#D93030',18)}</div>Log out</div>
+ </div>`;
+ frame.appendChild(popWrap);
+ requestAnimationFrame(()=>requestAnimationFrame(()=>popWrap.classList.add('open')));
+}
+function closeMenu(){
+ if(!popWrap)return;
+ popWrap.classList.remove('open');
+ setTimeout(()=>{popWrap&&popWrap.remove();popWrap=null;},230);
+}
+let toastT=null;
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),1800)}
+function chipOn(e){e.parentElement.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));e.classList.add('on')}
+function segSwap(e,showId,hideId){
+ e.parentElement.querySelectorAll('div').forEach(d=>d.classList.remove('on'));e.classList.add('on');
+ const sc=e.closest('.screen')||frame;
+ const s=sc.querySelector('#'+showId),h=sc.querySelector('#'+hideId);
+ if(s)s.style.display='';if(h)h.style.display='none';
+}
+function shCount(){
+ const n=document.querySelectorAll('#shNet .crow.on').length;
+ const c=document.getElementById('shCount');if(c)c.textContent=n+' selected';
+}
+function qch(d){const q=document.getElementById('q1');if(q)q.value=Math.max(0,(parseInt(q.value.replace(/,/g,''))||0)+d)}
+function qch2(d){const q=document.getElementById('q2');if(q){q.value=Math.max(0,(parseInt(q.value.replace(/,/g,''))||0)+d);chkQty()}}
+function chkQty(){
+ const q=document.getElementById('q2'),e=document.getElementById('qErr'),b=document.getElementById('resBtn');
+ if(!q||!e||!b)return;
+ const v=parseInt(q.value.replace(/,/g,''))||0;
+ const over=v>50000;
+ e.style.display=over?'block':'none';
+ q.style.color=over?'var(--red)':'var(--navy)';
+ b.classList.toggle('disabled',over||v<1);
+}
+function otpIn(el){
+ el.value=el.value.replace(/\D/g,'');
+ if(el.value&&el.nextElementSibling&&el.nextElementSibling.tagName==='INPUT')el.nextElementSibling.focus();
+}
+function venCats(sel){
+ const w=sel.closest('.screen').querySelector('#venCatsWrap');
+ if(w)w.style.display=sel.value?'':'none';
+}
+function toggleFab(){
+ const sc=frame.querySelector('[data-s="network"]');if(!sc)return;
+ const b=sc.querySelector('#fabBtn'),m=sc.querySelector('#fabMenu');
+ if(b)b.classList.toggle('open');if(m)m.classList.toggle('open');
+}
+render();
+</script>
+</body>
+</html>
