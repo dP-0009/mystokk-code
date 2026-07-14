@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../services/supabase/client';
 import { countReservationsAwaitingMe } from '../services/supabase/reservations';
@@ -23,6 +23,14 @@ export function useReservationAttention(): number {
   // lifecycle so the effect can build + tear down the channel without an async gap.
   const userId = useAuthStore((s) => s.session?.user.id);
 
+  // Per-mount suffix for the channel topic — same reason as useUnreadCount.
+  // Every screen renders its own <MainLayout>, and the tab navigator keeps
+  // visited tabs mounted, so this hook can be live in two places at once. Without
+  // a unique topic they'd share one channel instance: the second .on() after
+  // subscribe throws, and the first unmount would remove the channel (removeChannel
+  // matches by topic) out from under the other consumer.
+  const instanceId = useRef(Math.random().toString(36).slice(2)).current;
+
   const { data } = useQuery({
     queryKey: RESERVATION_ATTENTION_KEY,
     queryFn: countReservationsAwaitingMe,
@@ -37,7 +45,7 @@ export function useReservationAttention(): number {
     // never be deferred behind an await — otherwise a re-render/hot-reload can run
     // this effect against a channel the previous run already subscribed.
     const channel = supabase
-      .channel(`reservation-attention:${userId}`)
+      .channel(`reservation-attention:${userId}:${instanceId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'notifications', filter: `vendor_id=eq.${userId}` },

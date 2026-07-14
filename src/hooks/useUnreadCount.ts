@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../services/supabase/client';
 import { getUnreadCount } from '../services/supabase/notifications';
@@ -18,6 +18,16 @@ export function useUnreadCount(): number {
   // lifecycle so the effect can build + tear down the channel without an async gap.
   const userId = useAuthStore((s) => s.session?.user.id);
 
+  // Per-mount suffix for the channel topic. supabase.channel() returns the
+  // EXISTING channel for a topic it already has, so several components using
+  // this hook at once (bell, profile menu, menu sheet, profile screen) would all
+  // get one instance — and the second .on() after it subscribed throws
+  // "cannot add postgres_changes callbacks after subscribe()". removeChannel()
+  // also matches by topic, so a shared channel would be torn down by whichever
+  // consumer unmounted first. A unique topic per mount gives each consumer its
+  // own channel and its own clean teardown.
+  const instanceId = useRef(Math.random().toString(36).slice(2)).current;
+
   const { data } = useQuery({
     queryKey: UNREAD_COUNT_KEY,
     queryFn: getUnreadCount,
@@ -32,7 +42,7 @@ export function useUnreadCount(): number {
     // never be deferred behind an await — otherwise a re-render/hot-reload can run
     // this effect against a channel the previous run already subscribed.
     const channel = supabase
-      .channel(`notifications:${userId}`)
+      .channel(`notifications:${userId}:${instanceId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'notifications', filter: `vendor_id=eq.${userId}` },
