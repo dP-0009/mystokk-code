@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useFocusEffect } from '@react-navigation/native';
@@ -20,12 +20,12 @@ import {
   Icon,
   NavButton,
   ScreenBackground,
-  SearchPill,
   Sheet,
   SheetAction,
   TabHeader,
   Thumb,
   colors,
+  glass,
   radii,
   relativeTimeShort,
   spacing,
@@ -114,11 +114,17 @@ export function InventoryListScreen({ navigation }: Props): React.JSX.Element {
         />
       </View>
       <View style={styles.searchRow}>
-        <SearchPill
-          placeholder="Search items…"
-          onPress={() => undefined}
-          style={styles.searchFlex}
-        />
+        <GlassPanel effect="clear" radius={radii.row} fill={glass.fillInput} style={styles.searchPill}>
+          <Icon name="search" size={18} color={colors.muted} />
+          <TextInput
+            value={searchInput}
+            onChangeText={setSearchInput}
+            placeholder="Search items…"
+            placeholderTextColor={colors.placeholder}
+            style={styles.searchInput}
+            autoCorrect={false}
+          />
+        </GlassPanel>
         {/* Icon-only funnel filter button → status sheet. */}
         <NavButton icon="filter" size={45} onPress={() => setFilterOpen(true)} />
       </View>
@@ -314,7 +320,8 @@ const styles = StyleSheet.create({
   addRow: { alignItems: 'flex-end', marginBottom: 12 },
   addBtn: { paddingHorizontal: 20 },
   searchRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  searchFlex: { flex: 1 },
+  searchPill: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 9, height: 45, paddingHorizontal: 14 },
+  searchInput: { flex: 1, fontSize: 15, color: colors.text },
   activeFilter: { marginTop: 10, fontSize: 12.5, fontWeight: '700', color: colors.blueDark },
 
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14, padding: 40 },

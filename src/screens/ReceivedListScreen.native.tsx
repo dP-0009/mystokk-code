@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, StyleSheet, Text, TextInput, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { useFocusEffect } from '@react-navigation/native';
@@ -12,12 +12,14 @@ import { getReceivedShares, type ReceivedListItem } from '../services/supabase/r
 import {
   Card,
   EmptyState,
+  GlassPanel,
   Icon,
   ScreenBackground,
-  SearchPill,
   TabHeader,
   Thumb,
   colors,
+  glass,
+  radii,
   relativeTimeShort,
   spacing,
   useTabBarSpace,
@@ -90,7 +92,17 @@ export function ReceivedListScreen({ navigation }: Props): React.JSX.Element {
           keyExtractor={(it) => it.share_id}
           ListHeaderComponent={
             <View style={styles.headerBlock}>
-              <SearchPill placeholder="Search by title or vendor…" onPress={() => undefined} />
+              <GlassPanel effect="clear" radius={radii.row} fill={glass.fillInput} style={styles.searchPill}>
+                <Icon name="search" size={18} color={colors.muted} />
+                <TextInput
+                  value={searchInput}
+                  onChangeText={setSearchInput}
+                  placeholder="Search by title or vendor…"
+                  placeholderTextColor={colors.placeholder}
+                  style={styles.searchInput}
+                  autoCorrect={false}
+                />
+              </GlassPanel>
             </View>
           }
           contentContainerStyle={{ paddingHorizontal: spacing.gutter, paddingBottom: bottomPad }}
@@ -160,6 +172,8 @@ function ReceivedItemCard({ item, onPress }: { item: ReceivedListItem; onPress: 
 
 const styles = StyleSheet.create({
   headerBlock: { paddingTop: 14, paddingBottom: 2 },
+  searchPill: { flexDirection: 'row', alignItems: 'center', gap: 9, height: 45, paddingHorizontal: 14 },
+  searchInput: { flex: 1, fontSize: 15, color: colors.text },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
   errorText: { color: colors.muted, fontSize: 14, textAlign: 'center' },
 
