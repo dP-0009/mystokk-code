@@ -27,8 +27,7 @@
 6. Approved dependencies (already installed): expo-glass-effect,
    @gorhom/bottom-sheet, expo-haptics, react-native-reanimated,
    @shopify/flash-list, expo-linear-gradient, react-native-svg,
-   react-native-gesture-handler, expo-blur, react-native-awesome-gallery.
-   Anything else: ask first.
+   react-native-gesture-handler, expo-blur. Anything else: ask first.
 7. TAB BAR SPEC: the bottom tab bar has FOUR tabs only — Home,
    "My inventory", Received, "Reservation Hub". There is NO Network
    tab. Tab slots are PROPORTIONAL (flex .78 / 1.08 / .88 / 1.26) so
