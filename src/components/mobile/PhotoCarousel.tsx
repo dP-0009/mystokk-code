@@ -25,10 +25,14 @@ import { colors } from './theme';
  */
 export function PhotoCarousel({
   urls,
+  fullUrls,
   fallbackName,
   height = 268,
 }: {
+  /** Display URLs shown in the carousel (may be resized). */
   urls: string[];
+  /** Original full-quality URLs opened in the lightbox. Defaults to `urls`. */
+  fullUrls?: string[];
   fallbackName: string;
   height?: number;
 }): React.JSX.Element {
@@ -36,6 +40,7 @@ export function PhotoCarousel({
   const [width, setWidth] = React.useState(0);
   const scrollRef = React.useRef<ScrollView>(null);
   const { open: openLightbox } = useLightbox();
+  const originals = fullUrls && fullUrls.length === urls.length ? fullUrls : urls;
 
   const count = urls.length;
 
@@ -71,7 +76,7 @@ export function PhotoCarousel({
           onMomentumScrollEnd={onScroll}
         >
           {urls.map((uri, i) => (
-            <Pressable key={uri} onPress={() => openLightbox(urls, i)}>
+            <Pressable key={uri} onPress={() => openLightbox(originals, i)}>
               <Image source={{ uri }} style={{ width, height }} resizeMode="cover" />
             </Pressable>
           ))}

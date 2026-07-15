@@ -10,6 +10,7 @@ import {
   getInventoryDetail,
   type InventoryDetail,
 } from '../services/supabase/inventory';
+import { toFullUrl } from '../services/supabase/storage';
 import { ShareModal } from '../components/share/ShareModal';
 import { confirmAction } from '../utils/confirm';
 import { toast } from '../stores/toast';
@@ -137,8 +138,11 @@ function Body({
   /** Set only when this item was created by editing a received share. */
   onViewOriginal?: () => void;
 }): React.JSX.Element {
-  const { item, photoUrls, documents, shareActivity } = data;
+  const { item, photoUrls, photoPaths, documents, shareActivity } = data;
   const reserved = Math.max(item.quantity - item.quantity_available, 0);
+  // Lightbox loads the ORIGINAL uploaded file (public URL, no resize transform);
+  // the carousel keeps the resized display URLs.
+  const originalUrls = photoPaths.map((p) => toFullUrl(p)).filter(Boolean);
 
   const meta = [item.product_code, item.category, relativeTimeShort(item.created_at).toUpperCase()]
     .filter(Boolean)
@@ -153,7 +157,7 @@ function Body({
 
   return (
     <>
-      <PhotoCarousel urls={photoUrls} fallbackName={item.title} />
+      <PhotoCarousel urls={photoUrls} fullUrls={originalUrls} fallbackName={item.title} />
 
       <Card style={styles.card}>
         <Text style={styles.meta}>{meta}</Text>

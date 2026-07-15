@@ -6,6 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import type { InventoryInput } from '../../services/supabase/inventory';
 import { toFullUrl, type UploadFile } from '../../services/supabase/storage';
+import { useLightbox } from '../shared/Lightbox';
 import { CURRENCIES, UNITS } from '../../constants/inventory';
 import { SETTINGS_INDUSTRIES, SETTINGS_INDUSTRY_CATEGORIES } from '../../constants/industries';
 import {
@@ -160,6 +161,11 @@ export function AddItemForm({
 
   const visiblePhotos = (existingPhotos ?? []).filter((p) => !removedPhotoPaths.includes(p.path));
   const visibleDocs = (existingDocs ?? []).filter((d) => !removedDocPaths.includes(d.path));
+
+  // Full-screen viewer opens ORIGINAL files: saved photos via their storage path
+  // (public URL, no transform), new photos via their local uri.
+  const { open: openLightbox } = useLightbox();
+  const lightboxImages = [...visiblePhotos.map((p) => toFullUrl(p.path)), ...photos.map((p) => p.uri)];
 
   const addAssets = (assets: ImagePicker.ImagePickerAsset[]): void => {
     setPhotos((prev) => [
@@ -344,9 +350,11 @@ export function AddItemForm({
       </Pressable>
       {visiblePhotos.length > 0 || photos.length > 0 ? (
         <View style={styles.thumbs}>
-          {visiblePhotos.map((p) => (
+          {visiblePhotos.map((p, i) => (
             <View key={p.path} style={styles.thumbWrap}>
-              <Image source={{ uri: toFullUrl(p.url) }} style={styles.thumb} />
+              <Pressable onPress={() => openLightbox(lightboxImages, i)}>
+                <Image source={{ uri: toFullUrl(p.url) }} style={styles.thumb} />
+              </Pressable>
               <Pressable style={styles.thumbX} onPress={() => setRemovedPhotoPaths((prev) => [...prev, p.path])} hitSlop={6}>
                 <Text style={styles.thumbXText}>×</Text>
               </Pressable>
@@ -354,7 +362,9 @@ export function AddItemForm({
           ))}
           {photos.map((p, i) => (
             <View key={`${p.uri}-${i}`} style={styles.thumbWrap}>
-              <Image source={{ uri: p.uri }} style={styles.thumb} />
+              <Pressable onPress={() => openLightbox(lightboxImages, visiblePhotos.length + i)}>
+                <Image source={{ uri: p.uri }} style={styles.thumb} />
+              </Pressable>
               <Pressable style={styles.thumbX} onPress={() => setPhotos((prev) => prev.filter((_, j) => j !== i))} hitSlop={6}>
                 <Text style={styles.thumbXText}>×</Text>
               </Pressable>
