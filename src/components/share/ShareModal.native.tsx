@@ -5,6 +5,7 @@ import {
   Modal,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -59,7 +60,6 @@ interface ShareModalProps {
   card?: ShareCard;
 }
 
-type Step = 'who' | 'done';
 type Segment = 'network' | 'outside';
 type FacetId = 'industry' | 'country' | 'group' | null;
 
@@ -103,14 +103,12 @@ function buildEmailBody(
 export function ShareModal({ visible, inventoryId, onClose, onShared, forward, card }: ShareModalProps): React.JSX.Element {
   const queryClient = useQueryClient();
 
-  const [step, setStep] = React.useState<Step>('who');
   const [segment, setSegment] = React.useState<Segment>('network');
   const [search, setSearch] = React.useState('');
   const [selected, setSelected] = React.useState<Record<string, NetworkVendor>>({});
   const [facet, setFacet] = React.useState<{ industry?: string; country?: string; group?: string }>({});
   const [openFacet, setOpenFacet] = React.useState<FacetId>(null);
   const [link, setLink] = React.useState<string | null>(null);
-  const [linkLoading, setLinkLoading] = React.useState(false);
 
   const networkQuery = useQuery({ queryKey: ['network'], queryFn: getNetwork, enabled: visible, staleTime: 30_000 });
   const network = networkQuery.data ?? [];
@@ -135,7 +133,6 @@ export function ShareModal({ visible, inventoryId, onClose, onShared, forward, c
   const allSelected = shareableFiltered.length > 0 && shareableFiltered.every((v) => selected[rowKey(v)]);
 
   const reset = (): void => {
-    setStep('who');
     setSegment('network');
     setSearch('');
     setSelected({});
@@ -168,7 +165,6 @@ export function ShareModal({ visible, inventoryId, onClose, onShared, forward, c
   /** Ensure the public/forward link exists (lazily) and return it. */
   const ensureLink = async (): Promise<string | null> => {
     if (link) return link;
-    setLinkLoading(true);
     try {
       const { url } = forward ? await createForwardLink(forward) : await createPublicLink(inventoryId);
       setLink(url);
@@ -176,35 +172,36 @@ export function ShareModal({ visible, inventoryId, onClose, onShared, forward, c
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Could not create share link.');
       return null;
-    } finally {
-      setLinkLoading(false);
     }
   };
 
   const shareMutation = useMutation({
     mutationFn: () => (forward ? forwardToNetwork(forward, selectedList) : shareToNetwork(inventoryId, selectedList)),
-    onSuccess: async () => {
+    onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['inventoryDetail', inventoryId] });
       void queryClient.invalidateQueries({ queryKey: ['inventory'] });
       onShared?.();
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      await ensureLink();
-      setStep('done');
+      // No success screen — just confirm and close (user request).
+      toast.success(`Shared with ${selectedCount} contact${selectedCount === 1 ? '' : 's'}`);
+      close();
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : 'Could not share.'),
   });
 
-  const onShareNow = async (): Promise<void> => {
-    if (segment === 'network') {
-      if (selectedCount === 0) return;
-      shareMutation.mutate();
-    } else {
-      // Outside network: no recipients to record — just prepare the link.
-      const url = await ensureLink();
-      if (url) {
-        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        setStep('done');
-      }
+  const onShareNow = (): void => {
+    if (selectedCount === 0) return;
+    shareMutation.mutate();
+  };
+
+  /** Open the OS share sheet with the public link. */
+  const onDeviceShare = async (): Promise<void> => {
+    const url = await ensureLink();
+    if (!url) return;
+    try {
+      await Share.share({ message: url });
+    } catch {
+      // user dismissed the share sheet
     }
   };
 
@@ -241,16 +238,7 @@ export function ShareModal({ visible, inventoryId, onClose, onShared, forward, c
       <ScreenBackground>
         <NavBar title={`Share "${title}"`} onBack={close} />
 
-        {step === 'done' ? (
-          <DoneView
-            link={link}
-            count={segment === 'network' ? selectedCount : 0}
-            onCopy={() => void onCopy()}
-            onWhatsApp={() => void onWhatsApp()}
-            onDone={close}
-          />
-        ) : (
-          <>
+        <>
             <ScrollView
               contentContainerStyle={styles.scroll}
               keyboardShouldPersistTaps="handled"
@@ -365,6 +353,12 @@ export function ShareModal({ visible, inventoryId, onClose, onShared, forward, c
                       icon={<Icon name="copy" size={19} color={colors.navy} />}
                       onPress={() => void onCopy()}
                     />
+                    <Button
+                      label="Share via device"
+                      variant="ghost"
+                      icon={<Icon name="share" size={19} color={colors.navy} />}
+                      onPress={() => void onDeviceShare()}
+                    />
                   </View>
                   <InfoNote>
                     Shared links show a rich preview card (image, title, company) on WhatsApp and social platforms.
@@ -373,27 +367,22 @@ export function ShareModal({ visible, inventoryId, onClose, onShared, forward, c
               )}
             </ScrollView>
 
-            {/* Sticky primary CTA. */}
-            <View style={styles.cta}>
-              <Button
-                label={
-                  shareMutation.isPending || linkLoading
-                    ? 'Sharing…'
-                    : segment === 'network' && selectedCount > 0
-                      ? `Share now (${selectedCount})`
-                      : 'Share now'
-                }
-                variant="primary"
-                onPress={() => void onShareNow()}
-                disabled={
-                  shareMutation.isPending ||
-                  linkLoading ||
-                  (segment === 'network' && selectedCount === 0)
-                }
-              />
-            </View>
-          </>
-        )}
+            {/* Sticky CTA — network tab only (outside uses the direct buttons above). */}
+            {segment === 'network' ? (
+              <View style={styles.cta}>
+                <Button
+                  label={
+                    shareMutation.isPending
+                      ? 'Sharing…'
+                      : `Share with ${selectedCount} contact${selectedCount === 1 ? '' : 's'}`
+                  }
+                  variant="primary"
+                  onPress={onShareNow}
+                  disabled={shareMutation.isPending || selectedCount === 0}
+                />
+              </View>
+            ) : null}
+        </>
 
         <PickerSheet
           open={openFacet === 'industry'}
@@ -409,7 +398,6 @@ export function ShareModal({ visible, inventoryId, onClose, onShared, forward, c
           title="Country"
           options={[ALL_COUNTRIES, ...facets.countries]}
           value={facet.country ?? ALL_COUNTRIES}
-          searchable
           onSelect={(v) => setFacet((f) => ({ ...f, country: v === ALL_COUNTRIES ? undefined : v }))}
         />
         <PickerSheet
@@ -422,46 +410,6 @@ export function ShareModal({ visible, inventoryId, onClose, onShared, forward, c
         />
       </ScreenBackground>
     </Modal>
-  );
-}
-
-/** Success screen (prototype SCREENS.shareDone). */
-function DoneView({
-  link,
-  count,
-  onCopy,
-  onWhatsApp,
-  onDone,
-}: {
-  link: string | null;
-  count: number;
-  onCopy: () => void;
-  onWhatsApp: () => void;
-  onDone: () => void;
-}): React.JSX.Element {
-  return (
-    <View style={styles.done}>
-      <View style={styles.doneIcon}>
-        <Icon name="check" size={42} color={colors.green} />
-      </View>
-      <Text style={styles.doneTitle}>{count > 0 ? `Shared with ${count} contact${count === 1 ? '' : 's'}` : 'Share link ready'}</Text>
-      <Text style={styles.doneSub}>Live stock link — they&apos;ll get a notification right away.</Text>
-
-      {link ? (
-        <Pressable onPress={onCopy} style={styles.linkPill}>
-          <Icon name="copy" size={18} color={colors.blueDark} />
-          <Text style={styles.linkText} numberOfLines={1}>
-            {link}
-          </Text>
-        </Pressable>
-      ) : null}
-
-      <View style={styles.doneBtns}>
-        <Button label="Copy" variant="ghost" icon={<Icon name="copy" size={18} color={colors.navy} />} onPress={onCopy} style={styles.doneBtn} />
-        <Button label="WhatsApp" variant="green" icon={<WhatsAppLogo size={19} variant="glyph" />} onPress={onWhatsApp} style={styles.doneBtn} />
-      </View>
-      <Button label="Done" variant="soft" onPress={onDone} style={styles.doneDone} />
-    </View>
   );
 }
 

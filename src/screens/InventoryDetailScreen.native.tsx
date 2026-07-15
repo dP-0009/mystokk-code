@@ -67,7 +67,7 @@ export function InventoryDetailScreen({ navigation, route }: Props): React.JSX.E
 
   return (
     <ScreenBackground>
-      <NavBar title="Item" onBack={() => navigation.goBack()} />
+      <NavBar onBack={() => navigation.goBack()} />
 
       {isLoading ? (
         <View style={styles.center}>
@@ -86,7 +86,17 @@ export function InventoryDetailScreen({ navigation, route }: Props): React.JSX.E
           ]}
           showsVerticalScrollIndicator={false}
         >
-          <Body data={data} onShare={() => setShareOpen(true)} onEdit={() => navigation.navigate('InventoryEdit', { inventoryId })} onDelete={confirmDelete} />
+          <Body
+            data={data}
+            onShare={() => setShareOpen(true)}
+            onEdit={() => navigation.navigate('InventoryEdit', { inventoryId })}
+            onDelete={confirmDelete}
+            onViewOriginal={
+              data.item.edited_from_share_id
+                ? () => navigation.navigate('ReceivedDetail', { shareId: data.item.edited_from_share_id as string })
+                : undefined
+            }
+          />
         </ScrollView>
       )}
 
@@ -118,11 +128,14 @@ function Body({
   onShare,
   onEdit,
   onDelete,
+  onViewOriginal,
 }: {
   data: InventoryDetail;
   onShare: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  /** Set only when this item was created by editing a received share. */
+  onViewOriginal?: () => void;
 }): React.JSX.Element {
   const { item, photoUrls, documents, shareActivity } = data;
   const reserved = Math.max(item.quantity - item.quantity_available, 0);
@@ -225,6 +238,17 @@ function Body({
         ))}
       </Card>
 
+      {onViewOriginal ? (
+        <Text style={styles.provenance}>
+          Edited from the inventory shared by{' '}
+          <Text style={styles.provStrong}>{item.edited_from_company ?? 'a vendor'}</Text>
+          {item.edited_from_title ? ` — ${item.edited_from_title}` : ''}.{' '}
+          <Text style={styles.provLink} onPress={onViewOriginal}>
+            View inventory
+          </Text>
+        </Text>
+      ) : null}
+
       <Button
         label="Delete Item"
         variant="danger"
@@ -262,4 +286,8 @@ const styles = StyleSheet.create({
   activityTime: { fontSize: 13, color: colors.muted },
 
   deleteBtn: { marginTop: 16, marginBottom: 6 },
+  provenance: { fontSize: 13, color: colors.muted, marginTop: 16, paddingHorizontal: 2, lineHeight: 19 },
+  provStrong: { fontWeight: '800', color: colors.navy },
+  provLink: { fontWeight: '800', color: colors.blue },
 });
+

@@ -464,7 +464,6 @@ export function OnboardingScreen(_props: Props): React.JSX.Element {
         title="Country"
         options={COUNTRIES}
         value={watch('country')}
-        searchable
         onSelect={(v) => setValue('country', v, { shouldValidate: true })}
       />
       <PickerSheet
@@ -472,7 +471,6 @@ export function OnboardingScreen(_props: Props): React.JSX.Element {
         onClose={() => setPicker(null)}
         title="Country code"
         options={DIAL_OPTIONS}
-        searchable
         onSelect={(opt) =>
           setValue('mobileNumber', combinePhone(dialFromOption(opt), mobile.number), {
             shouldValidate: true,
@@ -484,7 +482,6 @@ export function OnboardingScreen(_props: Props): React.JSX.Element {
         onClose={() => setPicker(null)}
         title="Country code"
         options={DIAL_OPTIONS}
-        searchable
         onSelect={(opt) => setValue('telNumber', combinePhone(dialFromOption(opt), tel.number))}
       />
     </ScreenBackground>

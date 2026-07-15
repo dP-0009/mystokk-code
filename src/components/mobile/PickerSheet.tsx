@@ -8,8 +8,9 @@ import { colors, glass, radii } from './theme';
 
 /**
  * Option list in a bottom sheet — the native stand-in for the prototype's
- * <select> dropdowns (industry, country, dial code). Optionally searchable,
- * matching DropdownSelectField's `searchable` behaviour on web.
+ * <select> dropdowns (industry, unit, currency, country, dial code). Opens to
+ * ~half the screen with a search bar always pinned on top; the list scrolls
+ * within, clearing the floating tab bar.
  */
 export function PickerSheet({
   open,
@@ -18,7 +19,6 @@ export function PickerSheet({
   options,
   value,
   onSelect,
-  searchable = false,
 }: {
   open: boolean;
   onClose: () => void;
@@ -26,7 +26,6 @@ export function PickerSheet({
   options: readonly string[];
   value?: string;
   onSelect: (option: string) => void;
-  searchable?: boolean;
 }): React.JSX.Element {
   const [query, setQuery] = React.useState('');
 
@@ -41,20 +40,18 @@ export function PickerSheet({
   };
 
   return (
-    <Sheet open={open} onClose={onClose} title={title}>
-      {searchable ? (
-        <GlassPanel effect="clear" radius={radii.input} fill={glass.fillInput} style={styles.search}>
-          <Icon name="search" size={18} color={colors.muted} />
-          <TextInput
-            value={query}
-            onChangeText={setQuery}
-            placeholder="Search…"
-            placeholderTextColor={colors.placeholder}
-            style={styles.searchInput}
-            autoCorrect={false}
-          />
-        </GlassPanel>
-      ) : null}
+    <Sheet open={open} onClose={onClose} title={title} half>
+      <GlassPanel effect="clear" radius={radii.input} fill={glass.fillInput} style={styles.search}>
+        <Icon name="search" size={18} color={colors.muted} />
+        <TextInput
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Search…"
+          placeholderTextColor={colors.placeholder}
+          style={styles.searchInput}
+          autoCorrect={false}
+        />
+      </GlassPanel>
 
       {filtered.map((option) => {
         const selected = option === value;

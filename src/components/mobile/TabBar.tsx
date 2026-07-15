@@ -72,7 +72,7 @@ export function TabBar({
             {on ? <View style={styles.highlight} /> : null}
 
             <View style={styles.iconWrap}>
-              <Icon name={t.icon} size={24} color={on ? colors.blueDark : colors.tabInactive} />
+              <Icon name={t.icon} size={24} color={on ? colors.blue : colors.text} />
               {t.badge ? (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>{t.badge > 99 ? '99+' : t.badge}</Text>
@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
   badgeText: { color: '#FFFFFF', fontSize: 10.5, fontWeight: '800' },
   // 9.5px, single line, tight tracking — never wraps (rule 9a).
   label: { fontSize: 9.5, fontWeight: '700', letterSpacing: -0.15 },
-  labelOff: { color: colors.tabInactive },
-  labelOn: { color: colors.blueDark, fontWeight: '800' },
+  labelOff: { color: colors.text },
+  labelOn: { color: colors.blue, fontWeight: '800' },
   pressed: { opacity: 0.55 },
 });

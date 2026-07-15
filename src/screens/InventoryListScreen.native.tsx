@@ -10,6 +10,9 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainTabParamList, RootStackParamList } from '../navigation';
 import { deleteInventory, listInventory, type InventoryListItem } from '../services/supabase/inventory';
 import { INVENTORY_FILTERS, type InventoryStatus } from '../constants/inventory';
+
+/** Status filter options minus "Archived" (not offered in the mobile UI). */
+const STATUS_OPTIONS = INVENTORY_FILTERS.filter((f) => f.status !== 'archived');
 import { ShareModal } from '../components/share/ShareModal';
 import { confirmAction } from '../utils/confirm';
 import { toast } from '../stores/toast';
@@ -105,9 +108,8 @@ export function InventoryListScreen({ navigation }: Props): React.JSX.Element {
     <View style={styles.headerBlock}>
       <View style={styles.addRow}>
         <Button
-          label="Add Item"
+          label="Add Inventory"
           variant="dark"
-          size="sm"
           icon={<Icon name="plus" size={18} color="#FFFFFF" />}
           onPress={() => navigation.navigate('InventoryCreate')}
           style={styles.addBtn}
@@ -182,14 +184,14 @@ export function InventoryListScreen({ navigation }: Props): React.JSX.Element {
         title="Filter by status"
         description="Show items with status"
       >
-        {INVENTORY_FILTERS.map((f, i) => {
+        {STATUS_OPTIONS.map((f, i) => {
           const selected = f.status === filter;
           return (
             <SheetAction
               key={f.label}
               icon={selected ? 'check' : 'box'}
               label={f.label}
-              last={i === INVENTORY_FILTERS.length - 1}
+              last={i === STATUS_OPTIONS.length - 1}
               onPress={() => {
                 setFilter(f.status);
                 setFilterOpen(false);
@@ -318,7 +320,7 @@ function ItemCard({
 const styles = StyleSheet.create({
   headerBlock: { paddingTop: 14 },
   addRow: { alignItems: 'flex-end', marginBottom: 12 },
-  addBtn: { paddingHorizontal: 20 },
+  addBtn: { paddingHorizontal: 24, alignSelf: 'flex-end' },
   searchRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   searchPill: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 9, height: 45, paddingHorizontal: 14 },
   searchInput: { flex: 1, fontSize: 15, color: colors.text },

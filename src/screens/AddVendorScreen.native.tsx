@@ -192,7 +192,6 @@ export function AddVendorScreen({ navigation }: Props): React.JSX.Element {
         onClose={() => setPicker(null)}
         title="Country code"
         options={DIAL_OPTIONS}
-        searchable
         onSelect={(opt) => setMobile(combine(dialFromOption(opt), mobileParts.number))}
       />
       <PickerSheet
@@ -200,7 +199,6 @@ export function AddVendorScreen({ navigation }: Props): React.JSX.Element {
         onClose={() => setPicker(null)}
         title="Country code"
         options={DIAL_OPTIONS}
-        searchable
         onSelect={(opt) => setTel(combine(dialFromOption(opt), telParts.number))}
       />
       <PickerSheet open={picker === 'industry'} onClose={() => setPicker(null)} title="Industry" options={SETTINGS_INDUSTRIES} value={industry} onSelect={onIndustry} />
@@ -210,7 +208,6 @@ export function AddVendorScreen({ navigation }: Props): React.JSX.Element {
         title="Country"
         options={COUNTRIES}
         value={country}
-        searchable
         onSelect={setCountry}
       />
     </ScreenBackground>

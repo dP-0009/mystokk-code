@@ -1,18 +1,43 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import BottomSheet, { BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BlurView } from 'expo-blur';
+import BottomSheet, { BottomSheetBackdrop, BottomSheetScrollView, type BottomSheetBackgroundProps } from '@gorhom/bottom-sheet';
 
-import { GlassPanel } from './GlassPanel';
 import { Icon, type IconName } from './Icon';
-import { colors, glass, radii, spacing } from './theme';
+import { colors, layout, radii, spacing } from './theme';
 
 /**
- * Bottom sheet (.sheet) — the prototype's 8 sheets (reserve, counter, vendor,
- * item actions, filters, bulk import) all land here.
- *
- * Fill is the BRIGHT 0.68 glass: a sheet sits above cards, so a card-weight
- * fill would read as dull. Swipe-to-dismiss and the drag handle come from
- * @gorhom/bottom-sheet.
+ * Frosted white-glass background for every sheet/popover. A light BlurView with
+ * a translucent white tint on top — frosted, but not so opaque it reads as a
+ * plain white card. Shared so all popups look identical.
+ */
+function FrostedBackground({
+  style,
+  radius = radii.sheet,
+  children,
+}: {
+  style?: StyleProp<ViewStyle>;
+  radius?: number;
+  children?: React.ReactNode;
+}): React.JSX.Element {
+  return (
+    <View style={[style, { borderRadius: radius, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.6)' }]}>
+      <BlurView intensity={36} tint="light" style={StyleSheet.absoluteFill} />
+      <View style={[StyleSheet.absoluteFill, styles.tint]} />
+      {children}
+    </View>
+  );
+}
+
+function SheetBg({ style }: BottomSheetBackgroundProps): React.JSX.Element {
+  return <FrostedBackground style={style} />;
+}
+
+/**
+ * Bottom sheet — frosted white glass, slides from the bottom, backdrop dims the
+ * WHOLE screen. Its content clears the floating tab bar so the last row is never
+ * hidden behind it. Pickers pass `half` to open pinned to ~half the screen.
  */
 export function Sheet({
   open,
@@ -20,14 +45,17 @@ export function Sheet({
   title,
   description,
   children,
+  half = false,
 }: {
   open: boolean;
   onClose: () => void;
   title?: string;
   description?: string;
   children?: React.ReactNode;
+  half?: boolean;
 }): React.JSX.Element | null {
   const ref = React.useRef<BottomSheet>(null);
+  const insets = useSafeAreaInsets();
 
   React.useEffect(() => {
     if (open) ref.current?.expand();
@@ -36,19 +64,27 @@ export function Sheet({
 
   if (!open) return null;
 
+  // Clear the floating tab bar (height + its bottom offset + safe area) + margin.
+  const bottomClear = insets.bottom + layout.tabBarHeight + 24;
+
   return (
     <BottomSheet
       ref={ref}
       enablePanDownToClose
-      onClose={onClose}
+      enableDynamicSizing={!half}
+      snapPoints={half ? ['55%', '92%'] : undefined}
       index={0}
+      onClose={onClose}
       handleIndicatorStyle={styles.grab}
-      backgroundStyle={styles.sheetBg}
+      backgroundComponent={SheetBg}
       backdropComponent={(props) => (
-        <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} opacity={0.4} />
+        <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} opacity={0.4} pressBehavior="close" />
       )}
     >
-      <BottomSheetScrollView contentContainerStyle={styles.body}>
+      <BottomSheetScrollView
+        contentContainerStyle={[styles.body, { paddingBottom: bottomClear }]}
+        keyboardShouldPersistTaps="handled"
+      >
         {title ? <Text style={styles.title}>{title}</Text> : null}
         {description ? <Text style={styles.desc}>{description}</Text> : null}
         {children}
@@ -87,8 +123,8 @@ export function SheetAction({
 }
 
 /**
- * Anchored popover (.pop) — the avatar menu on the dashboard header. Brighter
- * than a card (0.64) for the same reason sheets are.
+ * Anchored popover (the avatar menu). Frosted white glass, rendered over an
+ * absolute full-screen layer so it overlaps ALL content including the tab bar.
  */
 export function Popover({
   open,
@@ -99,46 +135,37 @@ export function Popover({
   onClose: () => void;
   children: React.ReactNode;
 }): React.JSX.Element | null {
+  const insets = useSafeAreaInsets();
   if (!open) return null;
 
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+    <View style={styles.popLayer} pointerEvents="box-none">
       <Pressable style={[StyleSheet.absoluteFill, styles.popBg]} onPress={onClose} />
-      <GlassPanel effect="regular" radius={30} fill={glass.fillPopover} style={styles.pop}>
-        {children}
-      </GlassPanel>
+      <FrostedBackground style={[styles.pop, { top: insets.top + 52 }]} radius={26}>
+        <View style={styles.popInner}>{children}</View>
+      </FrostedBackground>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  sheetBg: {
-    backgroundColor: glass.fillSheet,
-    borderTopLeftRadius: radii.sheet,
-    borderTopRightRadius: radii.sheet,
-    borderWidth: 1,
-    borderColor: glass.border,
-  },
-  grab: { backgroundColor: 'rgba(15,43,84,0.2)', width: 40, height: 5, borderRadius: 3 },
-  body: { paddingHorizontal: spacing.xl, paddingBottom: 38 },
-  title: { fontSize: 19, fontWeight: '800', color: colors.navy },
+  tint: { backgroundColor: 'rgba(255,255,255,0.55)' },
+  grab: { backgroundColor: 'rgba(15,43,84,0.25)', width: 40, height: 5, borderRadius: 3 },
+  body: { paddingHorizontal: spacing.xl },
+  title: { fontSize: 19, fontWeight: '800', color: colors.navy, marginTop: 6 },
   desc: { fontSize: 13.5, color: colors.muted, marginTop: 3, marginBottom: 14, lineHeight: 20 },
 
   act: { flexDirection: 'row', alignItems: 'center', gap: 13, paddingVertical: 14, paddingHorizontal: 2 },
-  actBorder: { borderBottomWidth: 1, borderBottomColor: colors.line },
-  actIcon: {
-    width: 37,
-    height: 37,
-    borderRadius: 12,
-    backgroundColor: 'rgba(110,175,255,0.16)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  actBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(15,43,84,0.08)' },
+  actIcon: { width: 37, height: 37, borderRadius: 12, backgroundColor: 'rgba(110,175,255,0.16)', alignItems: 'center', justifyContent: 'center' },
   actIconDanger: { backgroundColor: 'rgba(217,48,48,0.12)' },
   actLabel: { flex: 1, fontSize: 15.5, fontWeight: '700', color: colors.navy },
   actLabelDanger: { color: colors.red },
 
+  // Popover — full-screen layer so it overlaps everything, including the tab bar.
+  popLayer: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000, elevation: 1000 },
   popBg: { backgroundColor: 'rgba(10,24,48,0.26)' },
-  pop: { position: 'absolute', top: 106, right: 16, width: 258, paddingHorizontal: 15, paddingTop: 14, paddingBottom: 8 },
+  pop: { position: 'absolute', right: 16, width: 258 },
+  popInner: { paddingHorizontal: 15, paddingTop: 14, paddingBottom: 8 },
   pressed: { opacity: 0.55 },
 });

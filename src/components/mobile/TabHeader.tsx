@@ -55,6 +55,10 @@ export function TabHeader({
   const { company } = useIdentity();
   const unread = useUnreadCount();
 
+  // Close the popover whenever this screen loses focus, so it never lingers open
+  // after navigating away and back.
+  React.useEffect(() => navigation.addListener('blur', () => setMenuOpen(false)), [navigation]);
+
   return (
     <>
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>

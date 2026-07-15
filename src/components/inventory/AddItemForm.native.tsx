@@ -10,11 +10,15 @@ import { CURRENCIES, UNITS } from '../../constants/inventory';
 import { SETTINGS_INDUSTRIES, SETTINGS_INDUSTRY_CATEGORIES } from '../../constants/industries';
 import {
   Button,
+  CategoryChip,
+  CategoryChipGroup,
   GlassPanel,
   Icon,
   PickerSheet,
   QtyStepper,
   Select,
+  Sheet,
+  SheetAction,
   TextArea,
   TextField,
   colors,
@@ -87,7 +91,7 @@ interface AddItemFormProps {
 }
 
 type Errors = Partial<Record<'title' | 'quantity' | 'price', string>>;
-type PickerId = 'industry' | 'category' | 'unit' | 'currency' | null;
+type PickerId = 'industry' | 'unit' | 'currency' | null;
 
 /**
  * Native item form (prototype SCREENS.editItem) — ONE form for Add and Edit, in
@@ -113,7 +117,11 @@ export function AddItemForm({
   const [productCode, setProductCode] = React.useState(initial?.productCode ?? '');
   const [title, setTitle] = React.useState(initial?.title ?? '');
   const [industry, setIndustry] = React.useState(initial?.industry ?? '');
-  const [category, setCategory] = React.useState(initial?.category ?? '');
+  // Multi-select categories, stored as a comma-joined string in the single
+  // `category` column (no schema change).
+  const [categories, setCategories] = React.useState<string[]>(
+    initial?.category ? initial.category.split(',').map((s) => s.trim()).filter(Boolean) : [],
+  );
   const [quantity, setQuantity] = React.useState(() => Number(initial?.quantity ?? '') || 0);
   const [unit, setUnit] = React.useState(initial?.unit ?? 'pcs');
   const [price, setPrice] = React.useState(initial?.price ?? '');
@@ -127,6 +135,7 @@ export function AddItemForm({
   const [removedPhotoPaths, setRemovedPhotoPaths] = React.useState<string[]>([]);
   const [removedDocPaths, setRemovedDocPaths] = React.useState<string[]>([]);
   const [picker, setPicker] = React.useState<PickerId>(null);
+  const [photoMenu, setPhotoMenu] = React.useState(false);
 
   const isEditing = initial?.currency !== undefined;
   React.useEffect(() => {
@@ -144,28 +153,51 @@ export function AddItemForm({
   const onIndustryChange = (next: string): void => {
     setIndustry(next);
     const allowed = SETTINGS_INDUSTRY_CATEGORIES[next] ?? [];
-    setCategory((c) => (allowed.includes(c) ? c : ''));
+    setCategories((cur) => cur.filter((c) => allowed.includes(c)));
   };
+  const toggleCategory = (c: string): void =>
+    setCategories((cur) => (cur.includes(c) ? cur.filter((x) => x !== c) : [...cur, c]));
 
   const visiblePhotos = (existingPhotos ?? []).filter((p) => !removedPhotoPaths.includes(p.path));
   const visibleDocs = (existingDocs ?? []).filter((d) => !removedDocPaths.includes(d.path));
 
-  const pickPhotos = async (): Promise<void> => {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) return;
-    const res = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsMultipleSelection: true,
-      quality: 0.8,
-    });
-    if (res.canceled) return;
+  const addAssets = (assets: ImagePicker.ImagePickerAsset[]): void => {
     setPhotos((prev) => [
       ...prev,
-      ...res.assets.map((a) => ({
+      ...assets.map((a) => ({
         uri: a.uri,
         name: a.fileName ?? `photo-${Date.now()}.jpg`,
         mimeType: a.mimeType ?? 'image/jpeg',
       })),
+    ]);
+  };
+
+  /** Camera — take a photo and upload it immediately. */
+  const pickCamera = async (): Promise<void> => {
+    setPhotoMenu(false);
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) return;
+    const res = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.8 });
+    if (!res.canceled) addAssets(res.assets);
+  };
+
+  /** Photos — pick from the photo library. */
+  const pickLibrary = async (): Promise<void> => {
+    setPhotoMenu(false);
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) return;
+    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: true, quality: 0.8 });
+    if (!res.canceled) addAssets(res.assets);
+  };
+
+  /** Files — pick image files from the file system. */
+  const pickImageFiles = async (): Promise<void> => {
+    setPhotoMenu(false);
+    const res = await DocumentPicker.getDocumentAsync({ type: 'image/*', multiple: true, copyToCacheDirectory: true });
+    if (res.canceled) return;
+    setPhotos((prev) => [
+      ...prev,
+      ...res.assets.map((a) => ({ uri: a.uri, name: a.name, mimeType: a.mimeType ?? 'image/jpeg' })),
     ]);
   };
 
@@ -204,7 +236,7 @@ export function AddItemForm({
       title: title.trim(),
       productCode: productCode.trim() || undefined,
       industry: industry || null,
-      category: category || null,
+      category: categories.length ? categories.join(', ') : null,
       quantity,
       unit,
       price: price.trim() ? Number(price) : null,
@@ -247,12 +279,22 @@ export function AddItemForm({
       />
 
       <Select label="Industry" placeholder="Select industry (optional)" value={industry || undefined} onPress={() => setPicker('industry')} />
-      <Select
-        label="Category"
-        placeholder={industry ? 'Select category (optional)' : 'Select an industry first'}
-        value={category || undefined}
-        onPress={() => industry && setPicker('category')}
-      />
+
+      {/* Categories — glass multi-select chips, filtered to the chosen industry. */}
+      {industry ? (
+        <View style={styles.catsBlock}>
+          <Text style={styles.label}>Categories</Text>
+          {categoryOptions.length === 0 ? (
+            <Text style={styles.catsHint}>No categories for this industry.</Text>
+          ) : (
+            <CategoryChipGroup>
+              {categoryOptions.map((c) => (
+                <CategoryChip key={c} label={c} selected={categories.includes(c)} onPress={() => toggleCategory(c)} />
+              ))}
+            </CategoryChipGroup>
+          )}
+        </View>
+      ) : null}
 
       <View style={styles.row}>
         <View style={styles.colWide}>
@@ -293,11 +335,11 @@ export function AddItemForm({
 
       {/* Photos */}
       <Text style={styles.section}>PHOTOS</Text>
-      <Pressable onPress={() => void pickPhotos()}>
+      <Pressable onPress={() => setPhotoMenu(true)}>
         <View style={styles.upload}>
           <Icon name="camera" size={26} color={colors.blue} />
-          <Text style={styles.uploadTitle}>Click to upload photos</Text>
-          <Text style={styles.uploadHint}>PNG or JPG, up to 8 images</Text>
+          <Text style={styles.uploadTitle}>Add photos</Text>
+          <Text style={styles.uploadHint}>Camera, Photos, or Files</Text>
         </View>
       </Pressable>
       {visiblePhotos.length > 0 || photos.length > 0 ? (
@@ -374,9 +416,15 @@ export function AddItemForm({
       ) : null}
 
       <PickerSheet open={picker === 'industry'} onClose={() => setPicker(null)} title="Industry" options={SETTINGS_INDUSTRIES} value={industry} onSelect={onIndustryChange} />
-      <PickerSheet open={picker === 'category'} onClose={() => setPicker(null)} title="Category" options={categoryOptions} value={category} onSelect={setCategory} />
       <PickerSheet open={picker === 'unit'} onClose={() => setPicker(null)} title="Unit" options={UNITS} value={unit} onSelect={setUnit} />
       <PickerSheet open={picker === 'currency'} onClose={() => setPicker(null)} title="Currency" options={CURRENCIES} value={currency} onSelect={setCurrency} />
+
+      {/* Photo source chooser: Camera / Photos / Files. */}
+      <Sheet open={photoMenu} onClose={() => setPhotoMenu(false)} title="Add photos">
+        <SheetAction icon="camera" label="Take photo" onPress={() => void pickCamera()} />
+        <SheetAction icon="eye" label="Choose from Photos" onPress={() => void pickLibrary()} />
+        <SheetAction icon="doc" label="Choose from Files" last onPress={() => void pickImageFiles()} />
+      </Sheet>
     </View>
   );
 }
@@ -400,6 +448,8 @@ const styles = StyleSheet.create({
   colWide: { flex: 1.2 },
   label: { fontSize: 13, fontWeight: '800', color: colors.navy },
   err: { color: colors.red, fontSize: 12.5, fontWeight: '700', marginTop: 6 },
+  catsBlock: { marginBottom: 14 },
+  catsHint: { fontSize: 12.5, color: colors.muted, marginTop: 6 },
 
   section: { fontSize: 12.5, fontWeight: '800', letterSpacing: 0.7, color: colors.muted, marginTop: 22, marginBottom: 10 },
   upload: {

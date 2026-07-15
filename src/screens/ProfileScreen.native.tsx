@@ -251,8 +251,8 @@ function PickerSheetsHost({
   return (
     <>
       <PickerSheet open={picker === 'industry'} onClose={() => setPicker(null)} title="Industry" options={SETTINGS_INDUSTRIES} value={industry} onSelect={onIndustry} />
-      <PickerSheet open={picker === 'country'} onClose={() => setPicker(null)} title="Country" options={COUNTRIES} value={country} searchable onSelect={setCountry} />
-      <PickerSheet open={picker === 'mobileDial'} onClose={() => setPicker(null)} title="Country code" options={DIAL_OPTIONS} searchable onSelect={(opt) => setMobile(combine(dialFromOption(opt), mobileParts.number))} />
+      <PickerSheet open={picker === 'country'} onClose={() => setPicker(null)} title="Country" options={COUNTRIES} value={country} onSelect={setCountry} />
+      <PickerSheet open={picker === 'mobileDial'} onClose={() => setPicker(null)} title="Country code" options={DIAL_OPTIONS} onSelect={(opt) => setMobile(combine(dialFromOption(opt), mobileParts.number))} />
     </>
   );
 }

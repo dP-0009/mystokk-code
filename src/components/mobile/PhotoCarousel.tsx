@@ -11,7 +11,7 @@ import {
   type NativeSyntheticEvent,
 } from 'react-native';
 
-import { GlassPanel } from './GlassPanel';
+import { useLightbox } from '../shared/Lightbox';
 import { Icon } from './Icon';
 import { Thumb } from './Avatar';
 import { colors } from './theme';
@@ -35,6 +35,7 @@ export function PhotoCarousel({
   const [index, setIndex] = React.useState(0);
   const [width, setWidth] = React.useState(0);
   const scrollRef = React.useRef<ScrollView>(null);
+  const { open: openLightbox } = useLightbox();
 
   const count = urls.length;
 
@@ -69,8 +70,10 @@ export function PhotoCarousel({
           showsHorizontalScrollIndicator={false}
           onMomentumScrollEnd={onScroll}
         >
-          {urls.map((uri) => (
-            <Image key={uri} source={{ uri }} style={{ width, height }} resizeMode="cover" />
+          {urls.map((uri, i) => (
+            <Pressable key={uri} onPress={() => openLightbox(urls, i)}>
+              <Image source={{ uri }} style={{ width, height }} resizeMode="cover" />
+            </Pressable>
           ))}
         </ScrollView>
 
