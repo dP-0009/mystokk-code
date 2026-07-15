@@ -5,6 +5,7 @@
  * *.native.tsx forks; the web build keeps rendering the untouched *.tsx files.
  */
 export * from './theme';
+export * from './time';
 export * from './GlassPanel';
 export * from './ScreenBackground';
 export * from './Icon';
@@ -18,6 +19,8 @@ export * from './PickerSheet';
 export * from './QtyStepper';
 export * from './Avatar';
 export * from './NavBar';
+export * from './PhotoCarousel';
+export * from './StatsStrip';
 export * from './TabBar';
 export * from './TabHeader';
 export * from './Fab';
