@@ -1,13 +1,20 @@
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import type { RootStackParamList } from '../navigation';
 import { useAuthStore } from '../stores/authStore';
-import { usePushStore } from '../stores/pushStore';
 import { toast } from '../stores/toast';
+// Native push fork (explicit path): keeps the web push shim untouched — these
+// grant-aware helpers exist only in the native implementation.
+import {
+  clearPushToken,
+  getNotificationPermission,
+  requestPushPermissionAndRegister,
+} from '../services/push/index.native';
 import {
   Card,
   Icon,
@@ -31,29 +38,128 @@ const LEGAL_ROWS: ReadonlyArray<{ icon: IconName; label: string; page: LegalPage
   { icon: 'mail', label: 'Contact support', page: 'contact' },
 ];
 
-/** Settings (prototype SCREENS.settings): push toggle + Help & legal + Log out. */
+/** Per-category alert preferences — persisted locally (no DB columns added). */
+type CatKey = 'newShares' | 'reservationRequests' | 'reservationUpdates' | 'counterOffers';
+const CATEGORIES: ReadonlyArray<{ key: CatKey; label: string; icon: IconName }> = [
+  { key: 'newShares', label: 'New shares received', icon: 'inbox' },
+  { key: 'reservationRequests', label: 'Reservation requests', icon: 'hand' },
+  { key: 'reservationUpdates', label: 'Reservation updates', icon: 'check' },
+  { key: 'counterOffers', label: 'Counter offers', icon: 'share' },
+];
+type CatPrefs = Record<CatKey, boolean>;
+const DEFAULT_CATS: CatPrefs = {
+  newShares: true,
+  reservationRequests: true,
+  reservationUpdates: true,
+  counterOffers: true,
+};
+
+const MASTER_KEY = 'mystokk.pushEnabled'; // same key the shared push flow uses
+const CATS_KEY = 'mystokk.notifyCategories';
+
+/** Settings (prototype SCREENS.settings): push + per-category alerts + legal + log out. */
 export function SettingsScreen({ navigation }: Props): React.JSX.Element {
   const insets = useSafeAreaInsets();
   const signOut = useAuthStore((s) => s.signOut);
 
-  const pushEnabled = usePushStore((s) => s.enabled);
-  const pushBusy = usePushStore((s) => s.busy);
-  const hydratePush = usePushStore((s) => s.hydrate);
-  const setPushEnabled = usePushStore((s) => s.setEnabled);
+  const [master, setMaster] = React.useState(false);
+  const [busy, setBusy] = React.useState(false);
+  const [blocked, setBlocked] = React.useState(false); // OS-level denied → show "Open settings"
+  const [cats, setCats] = React.useState<CatPrefs>(DEFAULT_CATS);
 
-  React.useEffect(() => {
-    void hydratePush();
-  }, [hydratePush]);
-
-  const togglePush = async (): Promise<void> => {
-    if (pushBusy) return;
-    const next = !pushEnabled;
-    void Haptics.selectionAsync();
+  const persistMaster = React.useCallback(async (value: boolean): Promise<void> => {
     try {
-      await setPushEnabled(next);
-      toast(next ? 'Push enabled' : 'Push disabled');
+      if (value) await AsyncStorage.setItem(MASTER_KEY, '1');
+      else await AsyncStorage.removeItem(MASTER_KEY);
     } catch {
-      toast('Could not update notifications.');
+      /* ignore persistence errors */
+    }
+  }, []);
+
+  // Hydrate saved prefs + reconcile with the real OS permission on mount.
+  React.useEffect(() => {
+    let active = true;
+    void (async () => {
+      const [storedMaster, storedCats, perm] = await Promise.all([
+        AsyncStorage.getItem(MASTER_KEY),
+        AsyncStorage.getItem(CATS_KEY),
+        getNotificationPermission(),
+      ]);
+      if (!active) return;
+      if (storedCats) {
+        try {
+          setCats({ ...DEFAULT_CATS, ...(JSON.parse(storedCats) as Partial<CatPrefs>) });
+        } catch {
+          /* keep defaults */
+        }
+      }
+      if (perm === 'denied') {
+        // Permission revoked/denied at OS level — push can't work; reflect that.
+        setMaster(false);
+        setBlocked(true);
+        if (storedMaster === '1') void persistMaster(false);
+      } else {
+        setMaster(storedMaster === '1');
+        setBlocked(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [persistMaster]);
+
+  const toggleMaster = (): void => {
+    if (busy) return;
+    const next = !master;
+    void Haptics.selectionAsync();
+    if (next) {
+      // Enabling: bring the sub-toggles back — restore last saved states, or
+      // default all ON if none were on (e.g. they were all turned off earlier).
+      const restored = CATEGORIES.some((c) => cats[c.key]) ? cats : DEFAULT_CATS;
+      setCats(restored);
+      void AsyncStorage.setItem(CATS_KEY, JSON.stringify(restored));
+      setBlocked(false);
+    }
+    // Optimistic: flip instantly, do permission/registration in the background.
+    setMaster(next);
+    void persistMaster(next);
+    setBusy(true);
+    void (async () => {
+      try {
+        if (next) {
+          const granted = await requestPushPermissionAndRegister();
+          if (!granted) {
+            setMaster(false); // revert
+            setBlocked(true);
+            await persistMaster(false);
+            toast('Enable notifications in system settings to turn on push.');
+            return;
+          }
+        } else {
+          await clearPushToken();
+        }
+      } catch {
+        setMaster(!next); // revert on unexpected failure
+        await persistMaster(!next);
+        toast('Could not update notifications.');
+      } finally {
+        setBusy(false);
+      }
+    })();
+  };
+
+  const toggleCat = (key: CatKey): void => {
+    if (!master) return;
+    void Haptics.selectionAsync();
+    const nextCats = { ...cats, [key]: !cats[key] };
+    setCats(nextCats);
+    void AsyncStorage.setItem(CATS_KEY, JSON.stringify(nextCats));
+    // Turning off every category turns off the master push toggle too.
+    if (CATEGORIES.every((c) => !nextCats[c.key])) {
+      setMaster(false);
+      void persistMaster(false);
+      void clearPushToken();
+      toast('Push notifications turned off.');
     }
   };
 
@@ -76,8 +182,36 @@ export function SettingsScreen({ navigation }: Props): React.JSX.Element {
             <Text style={styles.pushTitle}>Push notifications</Text>
             <Text style={styles.pushSub}>Alerts for shares & reservations</Text>
           </View>
-          <Toggle value={pushEnabled} onChange={() => void togglePush()} />
+          <Toggle value={master} onChange={toggleMaster} />
         </Card>
+
+        {blocked ? (
+          <Pressable
+            onPress={() => void Linking.openSettings()}
+            style={({ pressed }) => [styles.blockedNote, pressed && styles.pressed]}
+          >
+            <Icon name="shield" size={16} color={colors.amber} />
+            <Text style={styles.blockedText}>
+              Notifications are turned off for MyStokk.{' '}
+              <Text style={styles.blockedLink}>Open settings</Text>
+            </Text>
+          </Pressable>
+        ) : null}
+
+        <SectionLabel>Notify me about</SectionLabel>
+        <View pointerEvents={master ? 'auto' : 'none'} style={!master ? styles.disabled : undefined}>
+          <Card style={styles.rowsCard}>
+            {CATEGORIES.map((c, i) => (
+              <View key={c.key} style={[styles.row, i < CATEGORIES.length - 1 && styles.rowBorder]}>
+                <View style={styles.rowIcon}>
+                  <Icon name={c.icon} size={18} color={colors.blueDark} />
+                </View>
+                <Text style={styles.rowLabel}>{c.label}</Text>
+                <Toggle value={master && cats[c.key]} onChange={() => toggleCat(c.key)} />
+              </View>
+            ))}
+          </Card>
+        </View>
 
         <SectionLabel>Help & legal</SectionLabel>
         <Card style={styles.rowsCard}>
@@ -125,6 +259,23 @@ const styles = StyleSheet.create({
   pushText: { flex: 1, minWidth: 0 },
   pushTitle: { fontSize: 15, fontWeight: '700', color: colors.navy },
   pushSub: { fontSize: 12.5, color: colors.muted, fontWeight: '600', marginTop: 2 },
+
+  blockedNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+    marginTop: 10,
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,205,110,0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(240,224,188,0.9)',
+  },
+  blockedText: { flex: 1, fontSize: 12.5, color: '#6B5518', fontWeight: '600', lineHeight: 18 },
+  blockedLink: { color: colors.blueDark, fontWeight: '800' },
+
+  disabled: { opacity: 0.4 },
 
   rowsCard: { padding: 0, paddingHorizontal: 16 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 13, paddingVertical: 14 },

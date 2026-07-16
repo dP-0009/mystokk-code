@@ -38,14 +38,20 @@ async function saveToken(token: string): Promise<void> {
 /**
  * Request notification permission and register the FCM token. Call this AFTER
  * the user's first meaningful action (onboarding complete) — never on launch.
+ *
+ * Returns whether permission was granted (and the token registered). On iOS and
+ * Android 13+ this shows the real OS permission dialog when the status is still
+ * undetermined; if the user previously denied at OS level it resolves to `false`
+ * WITHOUT a dialog, so callers can steer the user to system settings. Existing
+ * fire-and-forget callers simply ignore the boolean.
  */
-export async function requestPushPermissionAndRegister(): Promise<void> {
+export async function requestPushPermissionAndRegister(): Promise<boolean> {
   try {
     const settings = await messaging().requestPermission();
     const granted =
       settings === messaging.AuthorizationStatus.AUTHORIZED ||
       settings === messaging.AuthorizationStatus.PROVISIONAL;
-    if (!granted) return;
+    if (!granted) return false;
 
     await ensureAndroidChannel();
     if (Platform.OS === 'ios') await messaging().registerDeviceForRemoteMessages();
@@ -57,8 +63,27 @@ export async function requestPushPermissionAndRegister(): Promise<void> {
     messaging().onTokenRefresh((t: string) => {
       void saveToken(t);
     });
+    return true;
   } catch {
-    // permission denied / no Play services — silently skip
+    // permission denied / no Play services — treat as not granted
+    return false;
+  }
+}
+
+/** Current OS notification-permission status, without prompting. */
+export async function getNotificationPermission(): Promise<'granted' | 'denied' | 'undetermined'> {
+  try {
+    const status = await messaging().hasPermission();
+    if (
+      status === messaging.AuthorizationStatus.AUTHORIZED ||
+      status === messaging.AuthorizationStatus.PROVISIONAL
+    ) {
+      return 'granted';
+    }
+    if (status === messaging.AuthorizationStatus.NOT_DETERMINED) return 'undetermined';
+    return 'denied';
+  } catch {
+    return 'undetermined';
   }
 }
 
