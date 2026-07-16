@@ -85,7 +85,9 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   side: { width: 42, flexDirection: 'row' },
-  sideRight: { justifyContent: 'flex-end' },
+  // Right slot fits its content (e.g. a "Read all" pill wider than an icon
+  // button) instead of clipping to 42px; minWidth keeps icon buttons balanced.
+  sideRight: { width: 'auto', minWidth: 42, flexShrink: 0, justifyContent: 'flex-end' },
   title: { flex: 1, textAlign: 'center' },
   navBtn: { alignItems: 'center', justifyContent: 'center' },
   dot: {

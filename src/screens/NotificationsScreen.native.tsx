@@ -116,7 +116,7 @@ export function NotificationsScreen({ navigation }: Props): React.JSX.Element {
             testID="notifications-mark-all"
           >
             {/* Single-line glass pill — never wraps (rule 9). */}
-            <GlassPanel effect="clear" radius={radii.button} style={styles.readAll}>
+            <GlassPanel effect="clear" radius={radii.pill} style={styles.readAll}>
               <Text
                 style={[styles.readAllText, unread === 0 && styles.readAllDisabled]}
                 numberOfLines={1}
@@ -201,7 +201,8 @@ export function NotificationsScreen({ navigation }: Props): React.JSX.Element {
 
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: spacing.gutter },
-  readAll: { paddingHorizontal: 14, height: 42, alignItems: 'center', justifyContent: 'center' },
+  // Even padding on all sides; single line, never wrapped (rule 9).
+  readAll: { paddingVertical: 8, paddingHorizontal: 14, flexShrink: 0, alignItems: 'center', justifyContent: 'center' },
   readAllText: { fontSize: 12.5, fontWeight: '800', color: colors.blue },
   readAllDisabled: { color: colors.muted },
 
