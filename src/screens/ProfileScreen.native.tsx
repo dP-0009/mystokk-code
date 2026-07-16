@@ -158,10 +158,10 @@ function ProfileForm({ vendor, insetsTop, insetsBottom }: { vendor: VendorProfil
                 {email} · Vendor
               </Text>
               <View style={styles.headerBadges}>
-                {emailVerified ? <Badge label="Email verified" tone="green" /> : <Badge label="Unverified" tone="amber" />}
                 <Text style={styles.changeLogo} onPress={() => void pickLogo()}>
                   Change logo
                 </Text>
+                {emailVerified ? <Badge label="Email verified" tone="green" /> : <Badge label="Unverified" tone="amber" />}
               </View>
             </View>
           </GlassPanel>
