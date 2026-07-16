@@ -10,8 +10,8 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BlurView } from 'expo-blur';
 
+import { FrostedFill, FROST_BORDER } from './FrostedBackground';
 import { Icon, type IconName } from './Icon';
 import { colors, radii, spacing } from './theme';
 
@@ -106,8 +106,7 @@ export function Sheet({
         </Animated.View>
 
         <Animated.View style={[styles.panel, { height: panelH, transform: [{ translateY }] }]}>
-          <BlurView intensity={36} tint="light" style={StyleSheet.absoluteFill} />
-          <View style={[StyleSheet.absoluteFill, styles.panelTint]} />
+          <FrostedFill />
 
           <View style={styles.grabWrap}>
             <View style={styles.grab} />
@@ -175,18 +174,17 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: radii.sheet,
     borderTopRightRadius: radii.sheet,
     borderTopWidth: 1,
-    borderColor: 'rgba(255,255,255,0.6)',
+    borderColor: FROST_BORDER,
     overflow: 'hidden',
   },
-  panelTint: { backgroundColor: 'rgba(255,255,255,0.55)' },
 
   grabWrap: { alignItems: 'center', paddingTop: 10, paddingBottom: 2 },
   grab: { backgroundColor: 'rgba(15,43,84,0.25)', width: 40, height: 5, borderRadius: 3 },
 
   body: { paddingHorizontal: spacing.xl },
-  // Pinned region sits on the frosted surface; a matching tint keeps scrolling
-  // rows from showing through behind the pinned search.
-  pinned: { paddingHorizontal: spacing.xl, backgroundColor: 'rgba(255,255,255,0.55)', paddingBottom: 8 },
+  // Pinned region — transparent so it blends into the one continuous frosted
+  // surface; only the search input keeps its own pill background.
+  pinned: { paddingHorizontal: spacing.xl, backgroundColor: 'transparent', paddingBottom: 8 },
   title: { fontSize: 19, fontWeight: '800', color: colors.navy, marginTop: 6 },
   desc: { fontSize: 13.5, color: colors.muted, marginTop: 3, marginBottom: 14, lineHeight: 20 },
 

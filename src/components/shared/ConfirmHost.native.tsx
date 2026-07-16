@@ -1,7 +1,7 @@
 import React from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { BlurView } from 'expo-blur';
 
+import { FrostedFill, FROST_BORDER } from '../mobile/FrostedBackground';
 import { useConfirmStore } from '../../stores/confirm';
 import { colors } from '../mobile/theme';
 
@@ -23,8 +23,7 @@ export function ConfirmHost(): React.JSX.Element {
     <Modal visible={visible} transparent animationType="fade" onRequestClose={close}>
       <Pressable style={styles.overlay} onPress={close}>
         <Pressable onPress={(e) => e.stopPropagation()} style={styles.cardWrap}>
-          <BlurView intensity={40} tint="light" style={StyleSheet.absoluteFill} />
-          <View style={[StyleSheet.absoluteFill, styles.tint]} />
+          <FrostedFill />
           <View style={styles.cardInner}>
             <Text style={styles.title}>{current?.title}</Text>
             {current?.message ? <Text style={styles.body}>{current.message}</Text> : null}
@@ -55,9 +54,8 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.6)',
+    borderColor: FROST_BORDER,
   },
-  tint: { backgroundColor: 'rgba(255,255,255,0.6)' },
   cardInner: { padding: 22 },
   title: { fontSize: 17, fontWeight: '800', color: colors.navy, marginBottom: 8 },
   body: { fontSize: 14, color: colors.muted, lineHeight: 21, marginBottom: 20 },

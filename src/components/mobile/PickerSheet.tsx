@@ -89,7 +89,7 @@ export function PickerSheet({
 }
 
 const styles = StyleSheet.create({
-  search: { flexDirection: 'row', alignItems: 'center', gap: 9, height: 45, paddingHorizontal: 14, marginBottom: 8 },
+  search: { flexDirection: 'row', alignItems: 'center', gap: 9, height: 45, paddingHorizontal: 14, marginTop: 12, marginBottom: 8 },
   searchInput: { flex: 1, fontSize: 15, color: colors.text },
   row: {
     flexDirection: 'row',
