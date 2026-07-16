@@ -12,7 +12,7 @@ import { getReceivedShareDetail } from '../services/supabase/received';
 import { createInventory, type InventoryInput } from '../services/supabase/inventory';
 import { uploadInventoryDocument, uploadInventoryPhoto, type UploadFile } from '../services/supabase/storage';
 import { toast } from '../stores/toast';
-import { Button, NavBar, ScreenBackground, colors, layout, spacing } from '../components/mobile';
+import { Button, Icon, NavBar, ScreenBackground, colors, layout, spacing } from '../components/mobile';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ReceivedEdit'>;
 
@@ -158,11 +158,17 @@ export function ReceivedEditScreen({ navigation, route }: Props): React.JSX.Elem
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
+            <View style={styles.warn}>
+              <Icon name="shield" size={20} color={colors.amber} />
+              <Text style={styles.warnText}>
+                This edited copy will be saved to your <Text style={styles.warnBold}>My Inventory</Text> page — you
+                become its owner. The original stays in your <Text style={styles.warnBold}>“Received Inventory”</Text>.
+              </Text>
+            </View>
             <AddItemForm
               initial={initial}
               initialPhotos={initialPhotos}
               initialDocs={initialDocs}
-              warning="This edited copy will be saved to your “My Inventory” page — you become its owner. The original stays with the sender."
               submitLabel="Save"
               secondarySubmitLabel="Save & Share"
               submitting={submitting}
@@ -202,4 +208,19 @@ const styles = StyleSheet.create({
   scroll: { paddingHorizontal: spacing.gutter },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14, padding: 40 },
   errorText: { color: colors.muted, fontSize: 14, textAlign: 'center' },
+  // Amber ownership note — mirrors the AddItemForm native `warning` styling, but
+  // rendered here so the copy can carry bold spans (the shared prop is a string).
+  warn: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    backgroundColor: 'rgba(255,205,110,0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(240,224,188,0.9)',
+    borderRadius: 14,
+    padding: 13,
+    marginBottom: 16,
+  },
+  warnText: { flex: 1, fontSize: 13, color: '#6B5518', lineHeight: 19.5 },
+  warnBold: { fontWeight: '700' },
 });
