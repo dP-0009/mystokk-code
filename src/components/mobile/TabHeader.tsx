@@ -13,7 +13,8 @@ import { useAuthStore } from '../../stores/authStore';
 
 import { Avatar } from './Avatar';
 import { NavButton } from './NavBar';
-import { Popover, SheetAction } from './Sheet';
+import { Popover } from './Popover';
+import { SheetAction } from './Sheet';
 import { colors, spacing } from './theme';
 
 type Nav = CompositeNavigationProp<

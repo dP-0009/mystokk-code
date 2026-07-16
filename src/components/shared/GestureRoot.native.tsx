@@ -6,9 +6,10 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
  * Gesture root — NATIVE VARIANT. Metro resolves this over GestureRoot.tsx for
  * iOS/Android; the web bundle never sees it.
  *
- * @gorhom/bottom-sheet's pan gestures (drag-to-dismiss, the grab handle) are
- * inert without this at the root — sheets render but won't respond to touch.
- * It must wrap the whole tree, hence App.tsx.
+ * Wraps the whole tree in GestureHandlerRootView, which other gesture-driven
+ * features (swipeable rows, the photo lightbox pan/pinch) require at the root.
+ * The Sheet system is now pure React Native, so no bottom-sheet provider is
+ * mounted here anymore.
  */
 export function GestureRoot({ children }: { children: React.ReactNode }): React.JSX.Element {
   return <GestureHandlerRootView style={styles.root}>{children}</GestureHandlerRootView>;

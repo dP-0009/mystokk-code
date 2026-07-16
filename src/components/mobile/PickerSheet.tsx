@@ -29,6 +29,12 @@ export function PickerSheet({
 }): React.JSX.Element {
   const [query, setQuery] = React.useState('');
 
+  // The Sheet never unmounts (canonical modal pattern), so reset the search on
+  // each open here rather than relying on conditional mounting to clear it.
+  React.useEffect(() => {
+    if (open) setQuery('');
+  }, [open]);
+
   const filtered = query
     ? options.filter((o) => o.toLowerCase().includes(query.toLowerCase()))
     : options;
@@ -40,19 +46,25 @@ export function PickerSheet({
   };
 
   return (
-    <Sheet open={open} onClose={onClose} title={title} half>
-      <GlassPanel effect="clear" radius={radii.input} fill={glass.fillInput} style={styles.search}>
-        <Icon name="search" size={18} color={colors.muted} />
-        <TextInput
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Search…"
-          placeholderTextColor={colors.placeholder}
-          style={styles.searchInput}
-          autoCorrect={false}
-        />
-      </GlassPanel>
-
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title={title}
+      half
+      stickyHeader={
+        <GlassPanel effect="clear" radius={radii.input} fill={glass.fillInput} style={styles.search}>
+          <Icon name="search" size={18} color={colors.muted} />
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search…"
+            placeholderTextColor={colors.placeholder}
+            style={styles.searchInput}
+            autoCorrect={false}
+          />
+        </GlassPanel>
+      }
+    >
       {filtered.map((option) => {
         const selected = option === value;
         return (

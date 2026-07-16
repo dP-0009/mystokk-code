@@ -24,5 +24,7 @@ export * from './StatsStrip';
 export * from './TabBar';
 export * from './TabHeader';
 export * from './Fab';
+export * from './FrostedBackground';
 export * from './Sheet';
+export * from './Popover';
 export * from './Display';
