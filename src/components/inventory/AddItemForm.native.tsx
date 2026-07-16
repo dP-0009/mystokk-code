@@ -335,7 +335,7 @@ export function AddItemForm({
         </View>
       </View>
 
-      <TextField label="Stock location" value={stockLocation} onChangeText={setStockLocation} placeholder="e.g., Dubai, JAFZA Warehouse 4" autoCapitalize="words" />
+      <TextField label="Stock location" value={stockLocation} onChangeText={setStockLocation} placeholder="e.g., Central Warehouse, Zone B" autoCapitalize="words" />
       <TextField label="Origin" value={origin} onChangeText={setOrigin} placeholder="e.g., Shenzhen, China" autoCapitalize="words" />
       <TextArea label="Description" value={description} onChangeText={setDescription} placeholder="Specs, packaging, MOQ…" autoCapitalize="sentences" />
 

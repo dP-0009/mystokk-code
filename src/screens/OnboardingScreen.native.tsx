@@ -219,7 +219,7 @@ export function OnboardingScreen(_props: Props): React.JSX.Element {
                   <TextField
                     label="Company name"
                     required
-                    placeholder="Ever Global Trading LLC"
+                    placeholder="e.g., Amazon"
                     value={value}
                     onChangeText={onChange}
                     onBlur={onBlur}

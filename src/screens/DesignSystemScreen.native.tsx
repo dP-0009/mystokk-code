@@ -131,7 +131,7 @@ export function DesignSystemScreen(): React.JSX.Element {
 
         <SectionLabel>Cards & rows</SectionLabel>
         <Card>
-          <KeyValue label="Stock location" value="Dubai, JAFZA W4" />
+          <KeyValue label="Stock location" value="Central Warehouse, Zone B" />
           <KeyValue label="Origin" value="UAE" />
           <KeyValue label="Price" value="USD 50,00,000 / unit" valueColor={colors.green} last />
           <StockBar total={225} available={163} reserved={62} />
