@@ -247,7 +247,7 @@ function Detail({
           <Text style={styles.headTitle}>Shared by</Text>
         </View>
         <View style={styles.sharedRow}>
-          <Avatar name={data.shared_by_company ?? 'Vendor'} size={45} gradient="nav" />
+          <Avatar name={data.shared_by_company ?? 'Vendor'} size={45} gradient="nav" logoUrl={data.shared_by_logo_url} />
           <View style={styles.sharedInfo}>
             <Text style={styles.sharedName} numberOfLines={1}>
               {data.shared_by_company ?? 'A vendor'}

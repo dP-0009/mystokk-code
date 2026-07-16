@@ -78,7 +78,7 @@ export function NetworkScreen({ navigation }: Props): React.JSX.Element {
             <Pressable key={v.row_id} onPress={() => setSelected(v)} style={({ pressed }) => pressed && styles.pressed}>
               <Card style={styles.card}>
                 <View style={styles.row}>
-                  <Avatar name={v.company_name} size={45} />
+                  <Avatar name={v.company_name} size={45} logoUrl={v.logo_url} />
                   <View style={styles.mid}>
                     <Text style={styles.name} numberOfLines={1}>
                       {v.company_name}

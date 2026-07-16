@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
+import { Image, StyleSheet, Text, type ImageStyle, type StyleProp, type ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { gradients, type GradientName } from './theme';
@@ -22,18 +22,34 @@ export function gradientFor(name: string): GradientName {
   return names[hash % names.length] as GradientName;
 }
 
-/** Round gradient avatar (.avatar) — vendors and people. */
+/**
+ * Round company/person avatar (.avatar). If `logoUrl` is set, the ACTUAL
+ * uploaded logo fills the circle; otherwise it falls back to the initials
+ * monogram on a deterministic gradient.
+ */
 export function Avatar({
   name,
   size = 45,
   gradient,
+  logoUrl,
   style,
 }: {
   name: string;
   size?: number;
   gradient?: GradientName;
+  /** Uploaded company logo URL — shown instead of the monogram when present. */
+  logoUrl?: string | null;
   style?: StyleProp<ViewStyle>;
 }): React.JSX.Element {
+  if (logoUrl) {
+    return (
+      <Image
+        source={{ uri: logoUrl }}
+        resizeMode="cover"
+        style={[{ width: size, height: size, borderRadius: size / 2 }, style as StyleProp<ImageStyle>]}
+      />
+    );
+  }
   return (
     <LinearGradient
       colors={[...gradients[gradient ?? gradientFor(name)]]}

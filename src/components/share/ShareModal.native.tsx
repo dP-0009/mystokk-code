@@ -313,7 +313,7 @@ export function ShareModal({ visible, inventoryId, onClose, onShared, forward, c
                             <View style={[styles.cbox, checked && styles.cboxOn]}>
                               {checked ? <Icon name="check" size={14} color="#FFFFFF" /> : null}
                             </View>
-                            <Avatar name={v.company_name} size={45} />
+                            <Avatar name={v.company_name} size={45} logoUrl={v.logo_url} />
                             <View style={styles.vendorInfo}>
                               <Text style={styles.vendorName} numberOfLines={1}>
                                 {v.company_name}

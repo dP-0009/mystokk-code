@@ -8,6 +8,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import type { MainTabParamList, RootStackParamList } from '../../navigation';
 import { getDashboardData } from '../../services/supabase/dashboard';
+import { getMyVendor } from '../../services/supabase/vendor';
 import { useUnreadCount } from '../../hooks/useUnreadCount';
 import { useAuthStore } from '../../stores/authStore';
 
@@ -27,11 +28,14 @@ type Nav = CompositeNavigationProp<
  * key, 60s staleTime) rather than adding a fetch — the auth store only carries
  * flags, not the company name.
  */
-export function useIdentity(): { company: string; firstName: string } {
+export function useIdentity(): { company: string; firstName: string; logoUrl: string | null } {
   const { data } = useQuery({ queryKey: ['dashboard'], queryFn: getDashboardData, staleTime: 60_000 });
+  // Company logo lives on the vendor profile (shared ['myVendor'] cache with the
+  // Profile screen), so the header/popover avatar can show the real logo.
+  const { data: myVendor } = useQuery({ queryKey: ['myVendor'], queryFn: getMyVendor, staleTime: 30_000 });
   const company = data?.vendor.companyName ?? '';
   const contact = data?.vendor.contactPerson ?? '';
-  return { company, firstName: contact.split(' ')[0] ?? '' };
+  return { company, firstName: contact.split(' ')[0] ?? '', logoUrl: myVendor?.logo_url ?? null };
 }
 
 /**
@@ -53,7 +57,7 @@ export function TabHeader({
   const insets = useSafeAreaInsets();
   const [menuOpen, setMenuOpen] = React.useState(false);
   const navigation = useNavigation<Nav>();
-  const { company } = useIdentity();
+  const { company, logoUrl } = useIdentity();
   const unread = useUnreadCount();
 
   // Close the popover whenever this screen loses focus, so it never lingers open
@@ -78,7 +82,7 @@ export function TabHeader({
         <View style={styles.cluster}>
           <NavButton icon="bell" badge={unread > 0} onPress={() => navigation.navigate('Notifications')} />
           <Pressable onPress={() => setMenuOpen(true)} accessibilityRole="button">
-            <Avatar name={company || 'MyStokk'} size={42} gradient="nav" />
+            <Avatar name={company || 'MyStokk'} size={42} gradient="nav" logoUrl={logoUrl} />
           </Pressable>
         </View>
       </View>
@@ -95,7 +99,7 @@ export function TabHeader({
 export function ProfilePopover({ open, onClose }: { open: boolean; onClose: () => void }): React.JSX.Element {
   const navigation = useNavigation<Nav>();
   const signOut = useAuthStore((s) => s.signOut);
-  const { company, firstName } = useIdentity();
+  const { company, firstName, logoUrl } = useIdentity();
 
   const go = (fn: () => void): void => {
     onClose();
@@ -105,7 +109,7 @@ export function ProfilePopover({ open, onClose }: { open: boolean; onClose: () =
   return (
     <Popover open={open} onClose={onClose}>
       <View style={styles.popHead}>
-        <Avatar name={company || 'MyStokk'} size={42} gradient="nav" />
+        <Avatar name={company || 'MyStokk'} size={42} gradient="nav" logoUrl={logoUrl} />
         <View style={styles.popHeadText}>
           <Text style={styles.popName} numberOfLines={1}>
             {company || 'MyStokk'}

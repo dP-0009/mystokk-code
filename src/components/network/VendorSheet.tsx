@@ -72,7 +72,7 @@ export function VendorSheet({ vendor, onClose, onEdit }: VendorSheetProps): Reac
       {vendor ? (
         <>
           <View style={styles.head}>
-            <Avatar name={vendor.company_name} size={74} gradient="nav" />
+            <Avatar name={vendor.company_name} size={74} gradient="nav" logoUrl={vendor.logo_url} />
             <Text style={styles.name}>{vendor.company_name}</Text>
             <View style={styles.statusRow}>
               {vendor.contact_person ? <Text style={styles.contact}>{vendor.contact_person} · </Text> : null}
