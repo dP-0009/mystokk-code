@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  Keyboard,
   Pressable,
   StyleSheet,
   Text,
@@ -105,9 +106,17 @@ export function Select({
   onPress?: () => void;
   style?: StyleProp<ViewStyle>;
 }): React.JSX.Element {
+  // Dismiss the keyboard FIRST, then open the caller's picker/sheet — so a field
+  // that was focused doesn't leave the keyboard stuck over (or fighting) the
+  // sheet. Centralised here, so every Select-based dropdown behaves the same.
+  const handlePress = (): void => {
+    Keyboard.dismiss();
+    onPress?.();
+  };
+
   return (
     <Field label={label} required={required} error={error} style={style}>
-      <Pressable onPress={onPress}>
+      <Pressable onPress={handlePress}>
         <GlassPanel effect="clear" radius={radii.input} fill={glass.fillInput} style={styles.control}>
           <View style={[styles.selectRow, { height: layout.inputHeight }]}>
             <Text style={[styles.input, styles.selectText, !value && styles.selectPlaceholder]} numberOfLines={1}>
