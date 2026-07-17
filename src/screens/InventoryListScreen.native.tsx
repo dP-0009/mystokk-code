@@ -108,7 +108,7 @@ export function InventoryListScreen({ navigation }: Props): React.JSX.Element {
     <View style={styles.headerBlock}>
       <View style={styles.addRow}>
         <Button
-          label="Add Inventory"
+          label="Add Item"
           variant="dark"
           icon={<Icon name="plus" size={18} color="#FFFFFF" />}
           onPress={() => navigation.navigate('InventoryCreate')}
@@ -320,7 +320,7 @@ function ItemCard({
 const styles = StyleSheet.create({
   headerBlock: { paddingTop: 14 },
   addRow: { alignItems: 'flex-end', marginBottom: 12 },
-  addBtn: { paddingHorizontal: 24, alignSelf: 'flex-end' },
+  addBtn: { alignSelf: 'flex-end' },
   searchRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   searchPill: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 9, height: 45, paddingHorizontal: 14 },
   searchInput: { flex: 1, fontSize: 15, color: colors.text },

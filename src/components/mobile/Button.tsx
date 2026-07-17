@@ -81,7 +81,9 @@ export function Button({
 }
 
 const styles = StyleSheet.create({
-  inner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  // Internal horizontal padding so content-sized buttons have even breathing room
+  // between the label/icon and the pill edge (full-width buttons stay centred).
+  inner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 18 },
   solid: { overflow: 'hidden' },
   disabled: { opacity: 0.42 },
   pressed: { opacity: 0.9, transform: [{ scale: 0.98 }] },
