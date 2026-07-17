@@ -3,8 +3,9 @@ import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { colors, radius, spacing } from '../../theme/tokens';
 import { webOnly } from './web';
+import { BrandWordmark } from '../shared/BrandWordmark';
 
-const LOGO = require('../../../assets/mystokk-logo.png');
+const LOGO = require('../../../assets/branding/mystokk-logo.png');
 
 type SidebarProps = {
   /** Nav items, rendered in the scrollable middle region. */
@@ -26,7 +27,7 @@ export function Sidebar({ children, footer }: SidebarProps): React.JSX.Element {
     <View style={styles.sidebar}>
       <View style={styles.logo}>
         <Image source={LOGO} style={styles.logoIcon} resizeMode="contain" />
-        <Text style={styles.logoText}>MyStokk</Text>
+        <BrandWordmark size={15} />
       </View>
 
       <ScrollView style={styles.nav} contentContainerStyle={styles.navContent}>

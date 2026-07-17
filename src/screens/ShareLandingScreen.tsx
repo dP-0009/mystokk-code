@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { MystokkLoader } from '../components/shared/MystokkLoader';
+import { BrandWordmark } from '../components/shared/BrandWordmark';
+
+const LOGO = require('../../assets/branding/mystokk-logo.png');
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -137,10 +140,8 @@ export function ShareLandingScreen({ navigation, route }: Props): React.JSX.Elem
       {/* Top header bar — logo only (no Login / Sign Up buttons by request). */}
       <View style={styles.topbar}>
         <View style={styles.logo}>
-          <View style={styles.logoMark}>
-            <Text style={styles.logoMarkText}>📦</Text>
-          </View>
-          <Text style={styles.logoText}>MyStokk</Text>
+          <Image source={LOGO} style={styles.logoMark} resizeMode="contain" />
+          <BrandWordmark size={16} />
         </View>
       </View>
 
@@ -321,13 +322,7 @@ const styles = StyleSheet.create({
   logoMark: {
     width: 32,
     height: 32,
-    borderRadius: radius.md,
-    backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  logoMarkText: { fontSize: 14 },
-  logoText: { fontSize: 16, fontWeight: '700', color: colors.textPrimary },
 
   // Loading / error
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 30 },

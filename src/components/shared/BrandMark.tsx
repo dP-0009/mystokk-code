@@ -1,9 +1,9 @@
 import React from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 
-import { colors } from '../../theme/tokens';
+import { BrandWordmark } from './BrandWordmark';
 
-const LOGO = require('../../../assets/mystokk-logo.png');
+const LOGO = require('../../../assets/branding/mystokk-logo.png');
 
 interface BrandMarkProps {
   /** Diameter of the rounded icon tile. */
@@ -27,16 +27,12 @@ export function BrandMark({
   return (
     <View style={styles.row}>
       <Image source={LOGO} style={{ width: size, height: size }} resizeMode="contain" />
-      {labelSize ? (
-        <Text style={[styles.word, { fontSize: labelSize, color: light ? '#FFFFFF' : colors.textPrimary }]}>
-          MyStokk
-        </Text>
-      ) : null}
+      {labelSize ? <BrandWordmark size={labelSize} style={light ? styles.light : undefined} /> : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  word: { fontWeight: '800', letterSpacing: -0.3 },
+  light: { color: '#FFFFFF' },
 });

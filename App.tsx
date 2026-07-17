@@ -8,6 +8,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { RootNavigator } from './src/navigation';
 import { ErrorBoundary } from './src/components/shared/ErrorBoundary';
 import { GestureRoot } from './src/components/shared/GestureRoot';
+import { ColdStartGate } from './src/components/shared/ColdStartGate';
 import { ToastHost } from './src/components/shared/ToastHost';
 import { ConfirmHost } from './src/components/shared/ConfirmHost';
 import { LightboxProvider } from './src/components/shared/Lightbox';
@@ -32,6 +33,10 @@ export default function App(): React.JSX.Element {
             </LightboxProvider>
             <ConfirmHost />
             <ToastHost />
+            {/* Native: branded cold-start loader overlay (hands off from the
+                native splash). Web: ColdStartGate.tsx is a pure passthrough that
+                renders null, so the web tree is unchanged (CLAUDE.md rule 1). */}
+            <ColdStartGate />
             <StatusBar style="dark" />
           </SafeAreaProvider>
         </QueryClientProvider>
