@@ -8,6 +8,7 @@ import { VendorAvatar } from '../shared/VendorAvatar';
 import { webOnly } from '../layout/web';
 import { toast } from '../../stores/toast';
 import { colors } from '../../theme/tokens';
+import { MystokkLoader } from '../shared/MystokkLoader';
 
 interface ManageSharesModalProps {
   visible: boolean;
@@ -108,7 +109,9 @@ export function ManageSharesModal({
 
           {/* List */}
           {isLoading ? (
-            <ActivityIndicator color={colors.accent} style={styles.loading} />
+            <View style={styles.loading}>
+              <MystokkLoader size={48} />
+            </View>
           ) : shares.length === 0 ? (
             <View style={styles.empty}>
               <Text style={styles.emptyTitle}>Not shared yet</Text>

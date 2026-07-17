@@ -35,6 +35,7 @@ import {
   spacing,
   type BadgeTone,
 } from '../components/mobile';
+import { MystokkLoader } from '../components/shared/MystokkLoader';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ReservationDetail'>;
 
@@ -209,7 +210,9 @@ export function ReservationDetailScreen({ navigation, route }: Props): React.JSX
         <Text style={styles.section}>NOTES & MESSAGES</Text>
 
         {roundsQuery.isLoading ? (
-          <ActivityIndicator color={colors.blue} style={styles.loading} />
+          <View style={styles.loading}>
+            <MystokkLoader size={48} />
+          </View>
         ) : (
           <>
             {/* Original request bubble. */}

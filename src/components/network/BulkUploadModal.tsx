@@ -18,6 +18,7 @@ import { bulkImportVendors } from '../../services/supabase/network';
 import { buildTemplateXlsx, parseVendorFile, TEMPLATE_FILENAME, TEMPLATE_MIME } from '../../utils/csv';
 import { webOnly } from '../layout/web';
 import { colors, radius, shadows } from '../../theme/tokens';
+import { MystokkLoader } from '../shared/MystokkLoader';
 import { toast } from '../../stores/toast';
 
 interface BulkUploadModalProps {
@@ -159,7 +160,7 @@ export function BulkUploadModal({ visible, onClose, onImported }: BulkUploadModa
             >
               {importing ? (
                 <>
-                  <ActivityIndicator color={colors.accent} />
+                  <MystokkLoader size={36} />
                   <Text style={styles.dropText}>Importing…</Text>
                 </>
               ) : (

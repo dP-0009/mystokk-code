@@ -41,6 +41,7 @@ import {
   radii,
   spacing,
 } from '../mobile';
+import { MystokkLoader } from '../shared/MystokkLoader';
 
 /** Item facts used to compose the WhatsApp/Email share message (mirrors web). */
 export interface ShareCard {
@@ -293,7 +294,9 @@ export function ShareModal({ visible, inventoryId, onClose, onShared, forward, c
                   </View>
 
                   {networkQuery.isLoading ? (
-                    <ActivityIndicator color={colors.blue} style={styles.loading} />
+                    <View style={styles.loading}>
+                      <MystokkLoader size={48} />
+                    </View>
                   ) : filtered.length === 0 ? (
                     <Text style={styles.empty}>No vendors match. Add vendors in My Network.</Text>
                   ) : (

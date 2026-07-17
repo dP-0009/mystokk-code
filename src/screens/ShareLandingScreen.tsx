@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import { MystokkLoader } from '../components/shared/MystokkLoader';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -144,7 +146,7 @@ export function ShareLandingScreen({ navigation, route }: Props): React.JSX.Elem
 
       {resolvingCode || isLoading || checkingOwner ? (
         <View style={styles.center}>
-          <ActivityIndicator color={colors.accent} size="large" />
+          <MystokkLoader showText />
         </View>
       ) : isError || !token || !data ? (
         <View style={styles.center}>

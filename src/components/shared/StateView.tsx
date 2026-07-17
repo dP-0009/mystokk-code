@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { colors, radius } from '../../theme/tokens';
 import { webOnly } from '../layout/web';
+import { MystokkLoader } from './MystokkLoader';
 
 /**
  * Standardized loading + error states, so every screen presents these the same
@@ -14,7 +15,7 @@ import { webOnly } from '../layout/web';
 export function LoadingState({ label }: { label?: string }): React.JSX.Element {
   return (
     <View style={styles.center} accessibilityRole="progressbar">
-      <ActivityIndicator color={colors.accent} size="large" />
+      <MystokkLoader showText />
       {label ? <Text style={styles.sub}>{label}</Text> : null}
     </View>
   );

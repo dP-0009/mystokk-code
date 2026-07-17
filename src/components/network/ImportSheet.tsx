@@ -9,6 +9,7 @@ import { bulkImportVendors } from '../../services/supabase/network';
 import { buildTemplateXlsx, parseVendorFile, TEMPLATE_FILENAME, TEMPLATE_MIME } from '../../utils/csv';
 import { toast } from '../../stores/toast';
 import { Button, Icon, Sheet, colors, radii } from '../mobile';
+import { MystokkLoader } from '../shared/MystokkLoader';
 
 /**
  * Import contacts sheet (prototype SHEETS.bulk) — download the template, then a
@@ -103,7 +104,7 @@ export function ImportSheet({ visible, onClose }: { visible: boolean; onClose: (
       <Pressable onPress={() => void pickAndImport()} disabled={importing}>
         <View style={styles.dropzone}>
           {importing ? (
-            <ActivityIndicator color={colors.blue} />
+            <MystokkLoader size={36} />
           ) : (
             <>
               <Icon name="bulk" size={26} color={colors.blue} />

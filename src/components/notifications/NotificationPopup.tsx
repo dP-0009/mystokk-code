@@ -15,6 +15,7 @@ import {
 } from '../../services/supabase/notifications';
 import { UNREAD_COUNT_KEY } from '../../hooks/useUnreadCount';
 import { colors } from '../../theme/tokens';
+import { MystokkLoader } from '../shared/MystokkLoader';
 import { webOnly } from '../layout/web';
 import { toast } from '../../stores/toast';
 import { NotificationRow } from './NotificationRow';
@@ -111,7 +112,7 @@ export function NotificationPopup({ onClose, inline = false }: NotificationPopup
       {/* Body */}
       {isLoading ? (
         <View style={styles.center}>
-          <ActivityIndicator color={colors.accent} />
+          <MystokkLoader size={48} />
         </View>
       ) : items.length === 0 ? (
         <View style={styles.empty}>

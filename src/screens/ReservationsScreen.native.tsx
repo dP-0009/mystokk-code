@@ -1,5 +1,7 @@
 import React from 'react';
-import { ActivityIndicator, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+
+import { MystokkLoader } from '../components/shared/MystokkLoader';
 import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { useFocusEffect } from '@react-navigation/native';
@@ -169,7 +171,7 @@ export function ReservationsScreen({ navigation }: Props): React.JSX.Element {
 
       {loading ? (
         <View style={styles.center}>
-          <ActivityIndicator color={colors.blue} size="large" />
+          <MystokkLoader showText />
         </View>
       ) : (
         <FlashList

@@ -23,6 +23,7 @@ import {
 } from '../../services/supabase/reservations';
 import { StatusChip } from '../shared/StatusChip';
 import { colors } from '../../theme/tokens';
+import { MystokkLoader } from '../shared/MystokkLoader';
 import { webOnly } from '../layout/web';
 import { toast } from '../../stores/toast';
 
@@ -246,7 +247,9 @@ export function NegotiationModal({ visible, side, data, onClose }: NegotiationMo
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Notes & messages</Text>
               {roundsQuery.isLoading ? (
-                <ActivityIndicator color={colors.accent} style={styles.loading} />
+                <View style={styles.loading}>
+                  <MystokkLoader size={48} />
+                </View>
               ) : (
                 <View style={styles.thread}>
                   {messages.map((m) => (

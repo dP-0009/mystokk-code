@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getItemDirectShares, revokeShare, type DirectShare } from '../../services/supabase/shares';
 import { toast } from '../../stores/toast';
 import { Avatar, Button, Icon, Sheet, colors, spacing } from '../mobile';
+import { MystokkLoader } from '../shared/MystokkLoader';
 
 interface ManageSharesSheetProps {
   open: boolean;
@@ -64,7 +65,9 @@ export function ManageSharesSheet({ open, onClose, inventoryId, onShareMore }: M
       fitContent
     >
       {isLoading ? (
-        <ActivityIndicator color={colors.blue} style={styles.loading} />
+        <View style={styles.loading}>
+          <MystokkLoader size={48} />
+        </View>
       ) : shares.length === 0 ? (
         <View style={styles.empty}>
           <Text style={styles.emptyTitle}>Not shared yet</Text>

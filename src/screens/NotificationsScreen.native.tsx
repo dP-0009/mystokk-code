@@ -1,5 +1,7 @@
 import React from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import { MystokkLoader } from '../components/shared/MystokkLoader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useFocusEffect } from '@react-navigation/native';
@@ -150,7 +152,7 @@ export function NotificationsScreen({ navigation }: Props): React.JSX.Element {
 
         {isLoading ? (
           <View style={styles.center}>
-            <ActivityIndicator color={colors.blue} size="large" />
+            <MystokkLoader showText />
           </View>
         ) : isError ? (
           <View style={styles.center}>

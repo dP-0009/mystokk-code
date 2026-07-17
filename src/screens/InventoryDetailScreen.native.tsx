@@ -1,5 +1,7 @@
 import React from 'react';
-import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import { MystokkLoader } from '../components/shared/MystokkLoader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -74,7 +76,7 @@ export function InventoryDetailScreen({ navigation, route }: Props): React.JSX.E
 
       {isLoading ? (
         <View style={styles.center}>
-          <ActivityIndicator color={colors.blue} size="large" />
+          <MystokkLoader showText />
         </View>
       ) : isError || !data ? (
         <View style={styles.center}>

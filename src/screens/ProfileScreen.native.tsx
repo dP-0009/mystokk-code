@@ -1,5 +1,7 @@
 import React from 'react';
-import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import { MystokkLoader } from '../components/shared/MystokkLoader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
@@ -52,7 +54,7 @@ export function ProfileScreen({ navigation }: Props): React.JSX.Element {
       <NavBar title="Business profile" onBack={() => navigation.goBack()} />
       {isLoading || !vendor ? (
         <View style={styles.center}>
-          <ActivityIndicator color={colors.blue} size="large" />
+          <MystokkLoader showText />
         </View>
       ) : (
         <ProfileForm vendor={vendor} insetsTop={insets.top} insetsBottom={insets.bottom} />

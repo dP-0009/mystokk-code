@@ -19,6 +19,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import type { RootStackParamList } from '../navigation';
+import { MystokkLoader } from '../components/shared/MystokkLoader';
 import { MainLayout, PageBody, PageHeader } from '../components/layout';
 import { FormTextField } from '../components/shared/FormTextField';
 import { PhoneField } from '../components/shared/PhoneField';
@@ -176,7 +177,7 @@ export function SettingsScreen({ navigation: _navigation }: Props): React.JSX.El
         <Text style={styles.sectionTitle}>Company Profile</Text>
         {isLoading || !vendor ? (
           <View style={[styles.card, styles.cardPadded, styles.center]}>
-            <ActivityIndicator color={colors.accent} size="large" />
+            <MystokkLoader size={48} />
           </View>
         ) : (
           // key → remount (reset to DB values) on every focus and when the

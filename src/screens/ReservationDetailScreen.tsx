@@ -26,6 +26,7 @@ import { ScreenHeader } from '../components/shared/ScreenHeader';
 import { StatusChip } from '../components/shared/StatusChip';
 import { AppButton } from '../components/shared/AppButton';
 import { colors } from '../theme/tokens';
+import { MystokkLoader } from '../components/shared/MystokkLoader';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ReservationDetail'>;
 
@@ -169,7 +170,9 @@ export function ReservationDetailScreen({ navigation, route }: Props): React.JSX
         {/* Negotiation timeline */}
         <Text style={styles.sectionTitle}>Negotiation history</Text>
         {roundsQuery.isLoading ? (
-          <ActivityIndicator color={colors.emerald} style={styles.loading} />
+          <View style={styles.loading}>
+            <MystokkLoader size={48} />
+          </View>
         ) : rounds.length === 0 ? (
           <Text style={styles.empty}>No counter-offers yet — this is the original request.</Text>
         ) : (

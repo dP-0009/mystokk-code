@@ -26,6 +26,7 @@ import { copyToClipboard, shareText } from '../../utils/clipboard';
 import { webOnly } from '../layout/web';
 import { VendorAvatar } from '../shared/VendorAvatar';
 import { colors, radius, shadows } from '../../theme/tokens';
+import { MystokkLoader } from '../shared/MystokkLoader';
 import { toast } from '../../stores/toast';
 
 /** Item facts used to compose the WhatsApp/Email share message. */
@@ -388,7 +389,7 @@ function NetworkTab({
 
       {loading ? (
         <View style={styles.center}>
-          <ActivityIndicator color={colors.accent} />
+          <MystokkLoader size={48} />
         </View>
       ) : (
         <ScrollView style={styles.list} nestedScrollEnabled showsVerticalScrollIndicator>
@@ -514,7 +515,7 @@ function NewContactTab({
 
       {loading ? (
         <View style={styles.center}>
-          <ActivityIndicator color={colors.accent} />
+          <MystokkLoader size={48} />
           <Text style={styles.preparing}>Preparing share link…</Text>
         </View>
       ) : null}

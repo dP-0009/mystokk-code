@@ -1,5 +1,7 @@
 import React from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import { MystokkLoader } from '../components/shared/MystokkLoader';
 import { useQuery } from '@tanstack/react-query';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
@@ -81,7 +83,7 @@ export function DashboardScreen({ navigation }: Props): React.JSX.Element {
       >
         {isLoading ? (
           <View style={styles.center}>
-            <ActivityIndicator color={colors.blue} size="large" />
+            <MystokkLoader showText />
           </View>
         ) : isError || !data ? (
           <View style={styles.center}>

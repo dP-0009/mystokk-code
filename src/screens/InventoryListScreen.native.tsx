@@ -1,5 +1,7 @@
 import React from 'react';
-import { ActivityIndicator, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+
+import { MystokkLoader } from '../components/shared/MystokkLoader';
 import { FlashList } from '@shopify/flash-list';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useFocusEffect } from '@react-navigation/native';
@@ -145,7 +147,7 @@ export function InventoryListScreen({ navigation }: Props): React.JSX.Element {
 
       {isLoading ? (
         <View style={styles.center}>
-          <ActivityIndicator color={colors.blue} size="large" />
+          <MystokkLoader showText />
         </View>
       ) : isError ? (
         <View style={styles.center}>

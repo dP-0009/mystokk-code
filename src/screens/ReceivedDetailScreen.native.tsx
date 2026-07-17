@@ -1,5 +1,7 @@
 import React from 'react';
-import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import { MystokkLoader } from '../components/shared/MystokkLoader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -88,7 +90,7 @@ export function ReceivedDetailScreen({ navigation, route }: Props): React.JSX.El
 
       {isLoading ? (
         <View style={styles.center}>
-          <ActivityIndicator color={colors.blue} size="large" />
+          <MystokkLoader showText />
         </View>
       ) : isError || !data ? (
         <View style={styles.center}>

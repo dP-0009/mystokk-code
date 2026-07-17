@@ -11,6 +11,7 @@ import { AppButton } from '../components/shared/AppButton';
 import { bulkImportVendors } from '../services/supabase/network';
 import { buildTemplateXlsx, CSV_COLUMNS, parseVendorFile, TEMPLATE_FILENAME, TEMPLATE_MIME } from '../utils/csv';
 import { colors } from '../theme/tokens';
+import { MystokkLoader } from '../components/shared/MystokkLoader';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'BulkUpload'>;
 
@@ -138,7 +139,7 @@ export function BulkUploadScreen({ navigation }: Props): React.JSX.Element {
 
         {importing ? (
           <View style={styles.importing}>
-            <ActivityIndicator color={colors.emerald} />
+            <MystokkLoader size={48} />
           </View>
         ) : (
           <AppButton

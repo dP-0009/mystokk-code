@@ -1,5 +1,7 @@
 import React from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import { MystokkLoader } from '../components/shared/MystokkLoader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useQuery } from '@tanstack/react-query';
@@ -142,7 +144,7 @@ export function ReceivedEditScreen({ navigation, route }: Props): React.JSX.Elem
       <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {isLoading ? (
           <View style={styles.center}>
-            <ActivityIndicator color={colors.blue} size="large" />
+            <MystokkLoader showText />
           </View>
         ) : isError || !data || !initial ? (
           <View style={styles.center}>

@@ -1,5 +1,7 @@
 import React from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+
+import { MystokkLoader } from '../components/shared/MystokkLoader';
 import * as Haptics from 'expo-haptics';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -99,7 +101,7 @@ export function EditVendorScreen({ navigation, route }: Props): React.JSX.Elemen
           </View>
         ) : (
           <View style={styles.center}>
-            <ActivityIndicator color={colors.blue} size="large" />
+            <MystokkLoader showText />
           </View>
         )
       ) : (
