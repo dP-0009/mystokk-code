@@ -76,7 +76,7 @@ export function InventoryEditScreen({ navigation, route }: Props): React.JSX.Ele
       <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {isLoading ? (
           <View style={styles.center}>
-            <MystokkLoader showText />
+            <MystokkLoader />
           </View>
         ) : isError || !data ? (
           <View style={styles.center}>

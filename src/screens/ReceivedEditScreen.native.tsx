@@ -144,7 +144,7 @@ export function ReceivedEditScreen({ navigation, route }: Props): React.JSX.Elem
       <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {isLoading ? (
           <View style={styles.center}>
-            <MystokkLoader showText />
+            <MystokkLoader />
           </View>
         ) : isError || !data || !initial ? (
           <View style={styles.center}>

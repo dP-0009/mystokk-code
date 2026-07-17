@@ -83,7 +83,7 @@ export function DashboardScreen({ navigation }: Props): React.JSX.Element {
       >
         {isLoading ? (
           <View style={styles.center}>
-            <MystokkLoader showText />
+            <MystokkLoader />
           </View>
         ) : isError || !data ? (
           <View style={styles.center}>

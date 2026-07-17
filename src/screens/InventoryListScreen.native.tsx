@@ -147,7 +147,7 @@ export function InventoryListScreen({ navigation }: Props): React.JSX.Element {
 
       {isLoading ? (
         <View style={styles.center}>
-          <MystokkLoader showText />
+          <MystokkLoader />
         </View>
       ) : isError ? (
         <View style={styles.center}>

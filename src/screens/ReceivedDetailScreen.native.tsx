@@ -90,7 +90,7 @@ export function ReceivedDetailScreen({ navigation, route }: Props): React.JSX.El
 
       {isLoading ? (
         <View style={styles.center}>
-          <MystokkLoader showText />
+          <MystokkLoader />
         </View>
       ) : isError || !data ? (
         <View style={styles.center}>

@@ -1,8 +1,9 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Image, StyleSheet, Text, View } from 'react-native';
 
-import { colors, radius } from '../../theme/tokens';
+import { colors } from '../../theme/tokens';
+
+const LOGO = require('../../../assets/mystokk-logo.png');
 
 interface BrandMarkProps {
   /** Diameter of the rounded icon tile. */
@@ -14,7 +15,7 @@ interface BrandMarkProps {
 }
 
 /**
- * The MyStokk brand lockup — a blue rounded tile with a cube glyph plus the
+ * The MyStokk brand lockup — the logo mark (assets/mystokk-logo.png) plus the
  * wordmark. Mirrors the sidebar logo so auth + landing surfaces read as the
  * same product.
  */
@@ -25,9 +26,7 @@ export function BrandMark({
 }: BrandMarkProps): React.JSX.Element {
   return (
     <View style={styles.row}>
-      <View style={[styles.tile, { width: size, height: size, borderRadius: radius.md }]}>
-        <Ionicons name="cube" size={size * 0.5} color={colors.bgWhite} />
-      </View>
+      <Image source={LOGO} style={{ width: size, height: size }} resizeMode="contain" />
       {labelSize ? (
         <Text style={[styles.word, { fontSize: labelSize, color: light ? '#FFFFFF' : colors.textPrimary }]}>
           MyStokk
@@ -39,6 +38,5 @@ export function BrandMark({
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  tile: { backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
   word: { fontWeight: '800', letterSpacing: -0.3 },
 });

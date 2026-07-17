@@ -15,7 +15,7 @@ import { MystokkLoader } from './MystokkLoader';
 export function LoadingState({ label }: { label?: string }): React.JSX.Element {
   return (
     <View style={styles.center} accessibilityRole="progressbar">
-      <MystokkLoader showText />
+      <MystokkLoader />
       {label ? <Text style={styles.sub}>{label}</Text> : null}
     </View>
   );

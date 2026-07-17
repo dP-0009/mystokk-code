@@ -69,7 +69,7 @@ export function NetworkScreen({ navigation }: Props): React.JSX.Element {
       >
         {isLoading ? (
           <View style={styles.center}>
-            <MystokkLoader showText />
+            <MystokkLoader />
           </View>
         ) : (
           vendors.map((v: NetworkVendor) => (

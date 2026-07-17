@@ -1,11 +1,12 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import type { RootStackParamList } from '../navigation';
-import { Button, Icon, ScreenBackground, colors, gradients, spacing, type IconName } from '../components/mobile';
+import { Button, Icon, ScreenBackground, colors, spacing, type IconName } from '../components/mobile';
+
+const LOGO = require('../../assets/mystokk-logo.png');
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Landing'>;
 
@@ -40,15 +41,8 @@ export function LandingScreen({ navigation }: Props): React.JSX.Element {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.hero}>
-          {/* Logo tile */}
-          <LinearGradient
-            colors={[...gradients.blue]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.logo}
-          >
-            <Icon name="box" size={52} color="#FFFFFF" />
-          </LinearGradient>
+          {/* Brand mark — the logo stands alone (no tile). */}
+          <Image source={LOGO} style={styles.logo} resizeMode="contain" />
 
           <Text style={styles.wordmark}>MyStokk</Text>
           <Text style={styles.tagline}>
@@ -85,16 +79,8 @@ const styles = StyleSheet.create({
   scroll: { flexGrow: 1, paddingHorizontal: 26 },
   hero: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   logo: {
-    width: 98,
-    height: 98,
-    borderRadius: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: colors.blue,
-    shadowOpacity: 0.4,
-    shadowRadius: 48,
-    shadowOffset: { width: 0, height: 22 },
-    elevation: 12,
+    width: 104,
+    height: 104,
   },
   wordmark: { fontSize: 36, fontWeight: '800', letterSpacing: -1.2, color: colors.navy, marginTop: 24 },
   tagline: {

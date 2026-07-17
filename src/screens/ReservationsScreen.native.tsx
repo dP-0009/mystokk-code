@@ -171,7 +171,7 @@ export function ReservationsScreen({ navigation }: Props): React.JSX.Element {
 
       {loading ? (
         <View style={styles.center}>
-          <MystokkLoader showText />
+          <MystokkLoader />
         </View>
       ) : (
         <FlashList

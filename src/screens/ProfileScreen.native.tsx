@@ -54,7 +54,7 @@ export function ProfileScreen({ navigation }: Props): React.JSX.Element {
       <NavBar title="Business profile" onBack={() => navigation.goBack()} />
       {isLoading || !vendor ? (
         <View style={styles.center}>
-          <MystokkLoader showText />
+          <MystokkLoader />
         </View>
       ) : (
         <ProfileForm vendor={vendor} insetsTop={insets.top} insetsBottom={insets.bottom} />

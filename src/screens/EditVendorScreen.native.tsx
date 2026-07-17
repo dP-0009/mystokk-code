@@ -101,7 +101,7 @@ export function EditVendorScreen({ navigation, route }: Props): React.JSX.Elemen
           </View>
         ) : (
           <View style={styles.center}>
-            <MystokkLoader showText />
+            <MystokkLoader />
           </View>
         )
       ) : (

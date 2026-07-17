@@ -190,7 +190,7 @@ function activeLeafRoute(state: NavState): { name: string; params?: Record<strin
 function LoadingView(): React.JSX.Element {
   return (
     <View style={styles.loading}>
-      <MystokkLoader showText />
+      <MystokkLoader />
     </View>
   );
 }

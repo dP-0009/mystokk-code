@@ -146,7 +146,7 @@ export function ShareLandingScreen({ navigation, route }: Props): React.JSX.Elem
 
       {resolvingCode || isLoading || checkingOwner ? (
         <View style={styles.center}>
-          <MystokkLoader showText />
+          <MystokkLoader />
         </View>
       ) : isError || !token || !data ? (
         <View style={styles.center}>

@@ -152,7 +152,7 @@ export function NotificationsScreen({ navigation }: Props): React.JSX.Element {
 
         {isLoading ? (
           <View style={styles.center}>
-            <MystokkLoader showText />
+            <MystokkLoader />
           </View>
         ) : isError ? (
           <View style={styles.center}>

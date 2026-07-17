@@ -76,7 +76,7 @@ export function InventoryDetailScreen({ navigation, route }: Props): React.JSX.E
 
       {isLoading ? (
         <View style={styles.center}>
-          <MystokkLoader showText />
+          <MystokkLoader />
         </View>
       ) : isError || !data ? (
         <View style={styles.center}>
