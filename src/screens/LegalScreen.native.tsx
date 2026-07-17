@@ -1,10 +1,11 @@
 import React from 'react';
-import { Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import type { RootStackParamList } from '../navigation';
-import { Button, Card, Icon, NavBar, ScreenBackground, colors, layout, spacing } from '../components/mobile';
+import { ContactForm } from '../components/support/ContactForm.native';
+import { NavBar, ScreenBackground, colors, layout, spacing } from '../components/mobile';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Legal'>;
 
@@ -46,54 +47,37 @@ export function LegalScreen({ navigation, route }: Props): React.JSX.Element {
   return (
     <ScreenBackground>
       <NavBar title={TITLES[page]} onBack={() => navigation.goBack()} />
-      <ScrollView
-        contentContainerStyle={[
-          styles.scroll,
-          { paddingTop: insets.top + layout.navHeight - 56, paddingBottom: insets.bottom + 40 },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        {page === 'contact' ? (
-          <>
-            <Text style={styles.h1}>We&apos;re here to help</Text>
-            <Text style={styles.sub}>Questions, feedback, or need a hand getting set up?</Text>
-            <Card style={styles.card}>
-              <Text style={styles.h4}>Support</Text>
-              <Text style={styles.p}>For account help, bugs, or general questions, email us using the button below.</Text>
-              <Text style={styles.h4}>Business hours</Text>
-              <Text style={styles.pLast}>We typically respond within one business day, Sunday–Thursday.</Text>
-            </Card>
-            <Button
-              label="Email support@mystokk.app"
-              variant="dark"
-              icon={<Icon name="mail" size={19} color="#FFFFFF" />}
-              onPress={() => Linking.openURL('mailto:support@mystokk.app')}
-              style={styles.contactBtn}
-            />
-          </>
-        ) : (
-          <View style={styles.prose}>
-            {CONTENT[page].map((b, i) => (
-              <View key={i}>
-                {b.h ? <Text style={styles.h4}>{b.h}</Text> : null}
-                <Text style={styles.p}>{b.p}</Text>
-              </View>
-            ))}
-          </View>
-        )}
-      </ScrollView>
+      <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView
+          contentContainerStyle={[
+            styles.scroll,
+            { paddingTop: insets.top + layout.navHeight - 56, paddingBottom: insets.bottom + 40 },
+          ]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {page === 'contact' ? (
+            <ContactForm />
+          ) : (
+            <View style={styles.prose}>
+              {CONTENT[page].map((b, i) => (
+                <View key={i}>
+                  {b.h ? <Text style={styles.h4}>{b.h}</Text> : null}
+                  <Text style={styles.p}>{b.p}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
     </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
+  fill: { flex: 1 },
   scroll: { paddingHorizontal: spacing.gutter },
   prose: { paddingTop: 4 },
-  h1: { fontSize: 24, fontWeight: '800', letterSpacing: -0.5, color: colors.navy, marginTop: 2 },
-  sub: { fontSize: 14.5, color: colors.muted, marginTop: 3, marginBottom: 18 },
-  card: { padding: 16 },
   h4: { fontSize: 15.5, fontWeight: '800', color: colors.navy, marginTop: 16, marginBottom: 6 },
   p: { fontSize: 14.5, lineHeight: 23, color: colors.text, marginBottom: 10 },
-  pLast: { fontSize: 14.5, lineHeight: 23, color: colors.text },
-  contactBtn: { marginTop: 16 },
 });
