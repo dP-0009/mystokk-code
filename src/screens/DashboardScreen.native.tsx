@@ -8,6 +8,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainTabParamList, RootStackParamList } from '../navigation';
 import { getDashboardData, type PendingReservation, type ReceivedItem } from '../services/supabase/dashboard';
 import { getNotifications } from '../services/supabase/notifications';
+import { usePullRefresh } from '../hooks/usePullRefresh';
 import { notificationTargetTab } from '../components/notifications/NotificationPopup';
 import { relativeTime } from '../components/notifications/NotificationRow';
 import {
@@ -62,6 +63,8 @@ export function DashboardScreen({ navigation }: Props): React.JSX.Element {
     staleTime: 15_000,
   });
 
+  const { control: refreshControl } = usePullRefresh(refetch);
+
   const pending: PendingReservation | undefined = data?.pending[0];
   const newestShare: ReceivedItem | undefined = data?.received[0];
   const activity = (notifications ?? []).slice(0, 3);
@@ -74,6 +77,7 @@ export function DashboardScreen({ navigation }: Props): React.JSX.Element {
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={refreshControl}
       >
         {isLoading ? (
           <View style={styles.center}>

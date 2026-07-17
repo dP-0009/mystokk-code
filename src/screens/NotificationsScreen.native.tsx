@@ -13,6 +13,7 @@ import {
   type AppNotification,
 } from '../services/supabase/notifications';
 import { UNREAD_COUNT_KEY } from '../hooks/useUnreadCount';
+import { usePullRefresh } from '../hooks/usePullRefresh';
 import { notificationTargetTab } from '../components/notifications/NotificationPopup';
 import { relativeTime } from '../components/notifications/NotificationRow';
 import { toast } from '../stores/toast';
@@ -65,6 +66,8 @@ export function NotificationsScreen({ navigation }: Props): React.JSX.Element {
     queryFn: getNotifications,
     staleTime: 15_000,
   });
+
+  const { control: refreshControl } = usePullRefresh(refetch, insets.top + layout.navHeight - 56);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -134,6 +137,7 @@ export function NotificationsScreen({ navigation }: Props): React.JSX.Element {
           { paddingTop: insets.top + layout.navHeight - 56, paddingBottom: layout.bottomPadPlain },
         ]}
         showsVerticalScrollIndicator={false}
+        refreshControl={refreshControl}
       >
         <SegmentedControl
           segments={[

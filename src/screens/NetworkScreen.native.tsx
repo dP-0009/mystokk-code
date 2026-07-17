@@ -10,6 +10,7 @@ import type { MainTabParamList, RootStackParamList } from '../navigation';
 import { getNetwork, type NetworkVendor } from '../services/supabase/network';
 import { VendorSheet } from '../components/network/VendorSheet';
 import { ImportSheet } from '../components/network/ImportSheet';
+import { usePullRefresh } from '../hooks/usePullRefresh';
 import {
   Avatar,
   Card,
@@ -42,11 +43,13 @@ export function NetworkScreen({ navigation }: Props): React.JSX.Element {
   const [selected, setSelected] = React.useState<NetworkVendor | null>(null);
   const [importOpen, setImportOpen] = React.useState(false);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ['network', 'list'],
     queryFn: getNetwork,
     staleTime: 60_000,
   });
+
+  const { control: refreshControl } = usePullRefresh(refetch, insets.top + layout.navHeight - 56);
 
   const vendors = data ?? [];
 
@@ -60,6 +63,7 @@ export function NetworkScreen({ navigation }: Props): React.JSX.Element {
           { paddingTop: insets.top + layout.navHeight - 56, paddingBottom: insets.bottom + 120 },
         ]}
         showsVerticalScrollIndicator={false}
+        refreshControl={refreshControl}
       >
         {isLoading ? (
           <View style={styles.center}>

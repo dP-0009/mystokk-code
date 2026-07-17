@@ -14,6 +14,7 @@ import { INVENTORY_FILTERS, type InventoryStatus } from '../constants/inventory'
 /** Status filter options minus "Archived" (not offered in the mobile UI). */
 const STATUS_OPTIONS = INVENTORY_FILTERS.filter((f) => f.status !== 'archived');
 import { ShareModal } from '../components/share/ShareModal';
+import { usePullRefresh } from '../hooks/usePullRefresh';
 import { confirmAction } from '../utils/confirm';
 import { toast } from '../stores/toast';
 import {
@@ -68,11 +69,13 @@ export function InventoryListScreen({ navigation }: Props): React.JSX.Element {
     return () => clearTimeout(id);
   }, [searchInput]);
 
-  const { data, isLoading, isError, error, refetch, isRefetching } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['inventory', filter, search],
     queryFn: () => listInventory(filter, search),
     staleTime: 30_000,
   });
+
+  const { refreshing, onRefresh } = usePullRefresh(refetch);
 
   const deleteMutation = useMutation({
     mutationFn: deleteInventory,
@@ -156,8 +159,8 @@ export function InventoryListScreen({ navigation }: Props): React.JSX.Element {
           ListHeaderComponent={header}
           contentContainerStyle={{ paddingHorizontal: spacing.gutter, paddingBottom: bottomPad }}
           showsVerticalScrollIndicator={false}
-          refreshing={isRefetching}
-          onRefresh={() => void refetch()}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
           ListEmptyComponent={
             <View style={styles.empty}>
               <Text style={styles.emptyTitle}>{search ? 'No matches' : 'No items yet'}</Text>

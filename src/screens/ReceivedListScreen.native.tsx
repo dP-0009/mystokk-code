@@ -9,6 +9,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import type { MainTabParamList, RootStackParamList } from '../navigation';
 import { getReceivedShares, type ReceivedListItem } from '../services/supabase/received';
+import { usePullRefresh } from '../hooks/usePullRefresh';
 import {
   Card,
   EmptyState,
@@ -50,11 +51,13 @@ export function ReceivedListScreen({ navigation }: Props): React.JSX.Element {
     return () => clearTimeout(id);
   }, [searchInput]);
 
-  const { data, isLoading, isError, error, refetch, isRefetching } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['received'],
     queryFn: getReceivedShares,
     staleTime: 30_000,
   });
+
+  const { refreshing, onRefresh } = usePullRefresh(refetch);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -107,8 +110,8 @@ export function ReceivedListScreen({ navigation }: Props): React.JSX.Element {
           }
           contentContainerStyle={{ paddingHorizontal: spacing.gutter, paddingBottom: bottomPad }}
           showsVerticalScrollIndicator={false}
-          refreshing={isRefetching}
-          onRefresh={() => void refetch()}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
           ListEmptyComponent={
             <EmptyState
               icon="inbox"

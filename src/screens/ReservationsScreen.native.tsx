@@ -14,6 +14,7 @@ import {
   type IncomingReservation,
   type OutgoingReservation,
 } from '../services/supabase/reservations';
+import { usePullRefresh } from '../hooks/usePullRefresh';
 import {
   Badge,
   EmptyState,
@@ -110,7 +111,11 @@ export function ReservationsScreen({ navigation }: Props): React.JSX.Element {
   const incoming = filterList(incomingQuery.data ?? []);
   const outgoing = filterList(outgoingQuery.data ?? []);
   const loading = incomingQuery.isLoading || outgoingQuery.isLoading;
-  const refetching = incomingQuery.isRefetching || outgoingQuery.isRefetching;
+  const refetchAll = React.useCallback(
+    () => Promise.all([incomingQuery.refetch(), outgoingQuery.refetch()]),
+    [incomingQuery.refetch, outgoingQuery.refetch],
+  );
+  const { refreshing, onRefresh } = usePullRefresh(refetchAll);
   const list = tab === 'received' ? incoming : outgoing;
 
   const openDetail = (item: IncomingReservation | OutgoingReservation): void => {
@@ -173,11 +178,8 @@ export function ReservationsScreen({ navigation }: Props): React.JSX.Element {
           ListHeaderComponent={header}
           contentContainerStyle={{ paddingHorizontal: spacing.gutter, paddingBottom: bottomPad }}
           showsVerticalScrollIndicator={false}
-          refreshing={refetching}
-          onRefresh={() => {
-            void incomingQuery.refetch();
-            void outgoingQuery.refetch();
-          }}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
           ListEmptyComponent={
             <EmptyState
               icon="hand"
