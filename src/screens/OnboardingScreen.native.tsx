@@ -21,7 +21,7 @@ import { uploadCompanyLogo, type UploadFile } from '../services/supabase/storage
 import { requestPushPermissionAndRegister } from '../services/push';
 import { useAuthStore } from '../stores/authStore';
 import { COUNTRIES, SETTINGS_INDUSTRIES, SETTINGS_INDUSTRY_CATEGORIES } from '../constants/industries';
-import { DIAL_OPTIONS, dialForCountry, dialFromOption, splitPhone } from '../constants/countries';
+import { DIAL_OPTIONS, combinePhone, dialForCountry, dialFromOption, splitPhone } from '../constants/countries';
 import {
   Button,
   CategoryChip,
@@ -66,11 +66,6 @@ const STEP_COPY: Record<number, { title: string; sub: string }> = {
 };
 
 const DEFAULT_DIAL = '+971';
-
-/** Phone value is stored exactly as the web PhoneField stores it: `${dial}${number}`. */
-function combinePhone(dial: string, number: string): string {
-  return number ? `${dial}${number}` : '';
-}
 
 type PickerId = 'industry' | 'country' | 'mobileDial' | 'telDial' | null;
 
@@ -358,7 +353,7 @@ export function OnboardingScreen(_props: Props): React.JSX.Element {
                         required
                         placeholder="5X XXX XXXX"
                         value={parts.number}
-                        onChangeText={(n) => onChange(combinePhone(dial, n.replace(/[^0-9]/g, '')))}
+                        onChangeText={(n) => onChange(combinePhone(dial, n))}
                         error={error?.message}
                         keyboardType="phone-pad"
                         style={styles.phoneNumber}
@@ -386,7 +381,7 @@ export function OnboardingScreen(_props: Props): React.JSX.Element {
                         label="Telephone (optional)"
                         placeholder="Telephone"
                         value={parts.number}
-                        onChangeText={(n) => onChange(combinePhone(dial, n.replace(/[^0-9]/g, '')))}
+                        onChangeText={(n) => onChange(combinePhone(dial, n))}
                         keyboardType="phone-pad"
                         style={styles.phoneNumber}
                       />

@@ -3,8 +3,10 @@ import { createBottomTabNavigator, type BottomTabBarProps } from '@react-navigat
 import { useQuery } from '@tanstack/react-query';
 
 import type { MainTabParamList } from './index';
-import { getNotifications } from '../services/supabase/notifications';
+import { getReceivedShares } from '../services/supabase/received';
 import { useReservationAttention } from '../hooks/useReservationAttention';
+import { useReceivedSeen } from '../stores/receivedSeen';
+import { useAuthStore } from '../stores/authStore';
 import { TabBar, type TabItem } from '../components/mobile';
 
 import { DashboardScreen } from '../screens/DashboardScreen';
@@ -38,20 +40,28 @@ const TABS: ReadonlyArray<Omit<TabItem, 'badge'> & { route: keyof MainTabParamLi
  */
 function GlassTabBar({ state, navigation }: BottomTabBarProps): React.JSX.Element {
   const attention = useReservationAttention();
-  const { data: notifications } = useQuery({
-    queryKey: ['notifications'],
-    queryFn: getNotifications,
-    staleTime: 15_000,
-  });
 
-  const newShares = (notifications ?? []).filter((n) => !n.read && n.type === 'share_received').length;
+  // Received badge: items received (created) since the tab was last opened.
+  const userId = useAuthStore((s) => s.session?.user.id);
+  const lastSeen = useReceivedSeen((s) => s.lastSeen);
+  const hydrate = useReceivedSeen((s) => s.hydrate);
+  React.useEffect(() => {
+    if (userId) void hydrate(userId);
+  }, [userId, hydrate]);
+
+  const { data: received } = useQuery({
+    queryKey: ['received'],
+    queryFn: getReceivedShares,
+    staleTime: 30_000,
+  });
+  const newReceived = (received ?? []).filter((r) => new Date(r.created_at).getTime() > lastSeen).length;
 
   const active = state.routes[state.index]?.name ?? 'Dashboard';
 
   const tabs: TabItem[] = TABS.map((t) => ({
     ...t,
     badge:
-      t.route === 'Received' ? newShares : t.route === 'Reservations' ? attention : undefined,
+      t.route === 'Received' ? newReceived : t.route === 'Reservations' ? attention : undefined,
   }));
 
   return (

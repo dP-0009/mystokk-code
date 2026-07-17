@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors } from './theme';
 
@@ -9,6 +9,8 @@ export interface Stat {
   /** Value color — prototype uses navy / green / amber / violet across the 4 cells. */
   color?: string;
   unit?: string;
+  /** Makes the cell tappable (e.g. "SHARED WITH" → Manage Shares sheet). */
+  onPress?: () => void;
 }
 
 /**
@@ -19,13 +21,28 @@ export interface Stat {
 export function StatsStrip({ stats }: { stats: Stat[] }): React.JSX.Element {
   return (
     <View style={styles.strip}>
-      {stats.map((s, i) => (
-        <View key={s.label} style={[styles.cell, i > 0 && styles.cellBorderLeft]}>
-          <Text style={styles.caption}>{s.label}</Text>
-          <Text style={[styles.value, s.color ? { color: s.color } : null]}>{s.value}</Text>
-          {s.unit ? <Text style={styles.unit}>{s.unit}</Text> : null}
-        </View>
-      ))}
+      {stats.map((s, i) => {
+        const inner = (
+          <>
+            <Text style={styles.caption}>{s.label}</Text>
+            <Text style={[styles.value, s.color ? { color: s.color } : null]}>{s.value}</Text>
+            {s.unit ? <Text style={styles.unit}>{s.unit}</Text> : null}
+          </>
+        );
+        return s.onPress ? (
+          <Pressable
+            key={s.label}
+            onPress={s.onPress}
+            style={({ pressed }) => [styles.cell, i > 0 && styles.cellBorderLeft, pressed && styles.pressed]}
+          >
+            {inner}
+          </Pressable>
+        ) : (
+          <View key={s.label} style={[styles.cell, i > 0 && styles.cellBorderLeft]}>
+            {inner}
+          </View>
+        );
+      })}
     </View>
   );
 }
@@ -40,6 +57,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   cell: { flex: 1, paddingVertical: 11, paddingHorizontal: 6 },
+  pressed: { opacity: 0.55 },
   cellBorderLeft: { borderLeftWidth: 1, borderLeftColor: colors.line },
   caption: { fontSize: 9.5, fontWeight: '800', letterSpacing: 0.4, color: colors.muted },
   value: { fontSize: 18, fontWeight: '800', color: colors.navy, marginTop: 3 },

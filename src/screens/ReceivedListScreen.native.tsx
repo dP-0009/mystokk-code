@@ -10,6 +10,8 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainTabParamList, RootStackParamList } from '../navigation';
 import { getReceivedShares, type ReceivedListItem } from '../services/supabase/received';
 import { usePullRefresh } from '../hooks/usePullRefresh';
+import { useReceivedSeen } from '../stores/receivedSeen';
+import { useAuthStore } from '../stores/authStore';
 import {
   Card,
   EmptyState,
@@ -59,10 +61,15 @@ export function ReceivedListScreen({ navigation }: Props): React.JSX.Element {
 
   const { refreshing, onRefresh } = usePullRefresh(refetch);
 
+  const userId = useAuthStore((s) => s.session?.user.id);
+  const markSeen = useReceivedSeen((s) => s.markSeen);
+
   useFocusEffect(
     React.useCallback(() => {
       void refetch();
-    }, [refetch]),
+      // Opening the tab clears its "new items" badge.
+      if (userId) void markSeen(userId);
+    }, [refetch, userId, markSeen]),
   );
 
   const all = data ?? [];

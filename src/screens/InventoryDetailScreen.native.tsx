@@ -12,6 +12,7 @@ import {
 } from '../services/supabase/inventory';
 import { toFullUrl } from '../services/supabase/storage';
 import { ShareModal } from '../components/share/ShareModal';
+import { ManageSharesSheet } from '../components/share/ManageSharesSheet.native';
 import { confirmAction } from '../utils/confirm';
 import { toast } from '../stores/toast';
 import {
@@ -38,6 +39,7 @@ export function InventoryDetailScreen({ navigation, route }: Props): React.JSX.E
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const [shareOpen, setShareOpen] = React.useState(false);
+  const [manageOpen, setManageOpen] = React.useState(false);
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['inventoryDetail', inventoryId],
@@ -90,6 +92,7 @@ export function InventoryDetailScreen({ navigation, route }: Props): React.JSX.E
           <Body
             data={data}
             onShare={() => setShareOpen(true)}
+            onManageShares={() => setManageOpen(true)}
             onEdit={() => navigation.navigate('InventoryEdit', { inventoryId })}
             onDelete={confirmDelete}
             onViewOriginal={
@@ -120,6 +123,18 @@ export function InventoryDetailScreen({ navigation, route }: Props): React.JSX.E
           void queryClient.invalidateQueries({ queryKey: ['inventory'] });
         }}
       />
+
+      <ManageSharesSheet
+        open={manageOpen}
+        onClose={() => setManageOpen(false)}
+        inventoryId={inventoryId}
+        onShareMore={() => {
+          // Close this sheet, then open the share flow once its dismiss finishes
+          // (two RN Modals can't cleanly present over each other mid-animation).
+          setManageOpen(false);
+          setTimeout(() => setShareOpen(true), 260);
+        }}
+      />
     </ScreenBackground>
   );
 }
@@ -127,12 +142,14 @@ export function InventoryDetailScreen({ navigation, route }: Props): React.JSX.E
 function Body({
   data,
   onShare,
+  onManageShares,
   onEdit,
   onDelete,
   onViewOriginal,
 }: {
   data: InventoryDetail;
   onShare: () => void;
+  onManageShares: () => void;
   onEdit: () => void;
   onDelete: () => void;
   /** Set only when this item was created by editing a received share. */
@@ -175,7 +192,7 @@ function Body({
             { label: 'TOTAL QTY', value: item.quantity.toLocaleString(), unit: item.unit, color: colors.navy },
             { label: 'AVAILABLE', value: item.quantity_available.toLocaleString(), unit: item.unit, color: colors.green },
             { label: 'RESERVED', value: reserved.toLocaleString(), unit: item.unit, color: '#E08A00' },
-            { label: 'SHARED WITH', value: String(item.shared_count), unit: 'contacts', color: colors.violet },
+            { label: 'SHARED WITH', value: String(item.shared_count), unit: 'contacts', color: colors.violet, onPress: onManageShares },
           ]}
         />
       </Card>

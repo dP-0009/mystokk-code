@@ -3,7 +3,7 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } fr
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { SETTINGS_INDUSTRIES, SETTINGS_INDUSTRY_CATEGORIES, COUNTRIES } from '../../constants/industries';
-import { DIAL_OPTIONS, dialFromOption, splitPhone } from '../../constants/countries';
+import { DIAL_OPTIONS, combinePhone, dialFromOption, splitPhone } from '../../constants/countries';
 import {
   Button,
   CategoryChip,
@@ -18,7 +18,6 @@ import {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const DEFAULT_DIAL = '+971';
-const combine = (dial: string, number: string): string => (number ? `${dial}${number}` : '');
 
 type PickerId = 'mobileDial' | 'telDial' | 'industry' | 'country' | null;
 
@@ -185,7 +184,7 @@ export function VendorForm({
           <TextField
             label="Mobile / WhatsApp"
             value={mobileParts.number}
-            onChangeText={(n) => setMobile(combine(mobileParts.dial || DEFAULT_DIAL, n.replace(/[^0-9]/g, '')))}
+            onChangeText={(n) => setMobile(combinePhone(mobileParts.dial || DEFAULT_DIAL, n))}
             placeholder="9876543210"
             keyboardType="phone-pad"
             editable={!locked}
@@ -204,7 +203,7 @@ export function VendorForm({
           <TextField
             label="Telephone"
             value={telParts.number}
-            onChangeText={(n) => setTel(combine(telParts.dial || DEFAULT_DIAL, n.replace(/[^0-9]/g, '')))}
+            onChangeText={(n) => setTel(combinePhone(telParts.dial || DEFAULT_DIAL, n))}
             placeholder="Telephone (optional)"
             keyboardType="phone-pad"
             editable={!locked}
@@ -276,14 +275,14 @@ export function VendorForm({
         onClose={() => setPicker(null)}
         title="Country code"
         options={DIAL_OPTIONS}
-        onSelect={(opt) => setMobile(combine(dialFromOption(opt), mobileParts.number))}
+        onSelect={(opt) => setMobile(combinePhone(dialFromOption(opt), mobileParts.number))}
       />
       <PickerSheet
         open={picker === 'telDial'}
         onClose={() => setPicker(null)}
         title="Country code"
         options={DIAL_OPTIONS}
-        onSelect={(opt) => setTel(combine(dialFromOption(opt), telParts.number))}
+        onSelect={(opt) => setTel(combinePhone(dialFromOption(opt), telParts.number))}
       />
       <PickerSheet open={picker === 'industry'} onClose={() => setPicker(null)} title="Industry" options={SETTINGS_INDUSTRIES} value={industry} onSelect={onIndustry} />
       <PickerSheet

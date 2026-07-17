@@ -12,7 +12,7 @@ import { uploadCompanyLogo, type UploadFile } from '../services/supabase/storage
 import { changePassword } from '../services/supabase/auth';
 import { useAuthStore } from '../stores/authStore';
 import { SETTINGS_INDUSTRIES, SETTINGS_INDUSTRY_CATEGORIES, COUNTRIES } from '../constants/industries';
-import { DIAL_OPTIONS, dialFromOption, splitPhone } from '../constants/countries';
+import { DIAL_OPTIONS, combinePhone, dialFromOption, splitPhone } from '../constants/countries';
 import { toast } from '../stores/toast';
 import {
   Avatar,
@@ -40,7 +40,6 @@ import {
 type Props = NativeStackScreenProps<RootStackParamList, 'Profile'>;
 
 const DEFAULT_DIAL = '+971';
-const combine = (dial: string, n: string): string => (n ? `${dial}${n}` : '');
 type PickerId = 'industry' | 'country' | 'mobileDial' | null;
 
 /** Business profile (prototype SCREENS.profile). Editable form + change password / delete. */
@@ -199,7 +198,7 @@ function ProfileForm({ vendor, insetsTop, insetsBottom }: { vendor: VendorProfil
               label="Mobile / WhatsApp"
               required
               value={mobileParts.number}
-              onChangeText={(n) => setMobile(combine(mobileParts.dial || DEFAULT_DIAL, n.replace(/[^0-9]/g, '')))}
+              onChangeText={(n) => setMobile(combinePhone(mobileParts.dial || DEFAULT_DIAL, n))}
               keyboardType="phone-pad"
               style={styles.phoneNum}
             />
@@ -252,7 +251,7 @@ function PickerSheetsHost({
     <>
       <PickerSheet open={picker === 'industry'} onClose={() => setPicker(null)} title="Industry" options={SETTINGS_INDUSTRIES} value={industry} onSelect={onIndustry} />
       <PickerSheet open={picker === 'country'} onClose={() => setPicker(null)} title="Country" options={COUNTRIES} value={country} onSelect={setCountry} />
-      <PickerSheet open={picker === 'mobileDial'} onClose={() => setPicker(null)} title="Country code" options={DIAL_OPTIONS} onSelect={(opt) => setMobile(combine(dialFromOption(opt), mobileParts.number))} />
+      <PickerSheet open={picker === 'mobileDial'} onClose={() => setPicker(null)} title="Country code" options={DIAL_OPTIONS} onSelect={(opt) => setMobile(combinePhone(dialFromOption(opt), mobileParts.number))} />
     </>
   );
 }

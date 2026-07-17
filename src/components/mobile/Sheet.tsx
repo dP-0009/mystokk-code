@@ -2,7 +2,9 @@ import React from 'react';
 import {
   Animated,
   Dimensions,
+  Keyboard,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -71,6 +73,36 @@ export function Sheet({
   const [mounted, setMounted] = React.useState(open);
   const translateY = React.useRef(new Animated.Value(slide)).current;
   const backdrop = React.useRef(new Animated.Value(0)).current;
+  // Keyboard lift: raise the whole panel by the keyboard height so its last row
+  // (inputs on the Change-password / Delete-account / Import sheets) sits above
+  // the keyboard, then drop back when it closes. Combined with the slide so both
+  // animate on the same (native-driven) transform.
+  const keyboardOffset = React.useRef(new Animated.Value(0)).current;
+  const panelTranslate = React.useMemo(
+    () => Animated.subtract(translateY, keyboardOffset),
+    [translateY, keyboardOffset],
+  );
+
+  React.useEffect(() => {
+    const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvt = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const onShow = (e: { endCoordinates?: { height?: number } }): void => {
+      Animated.timing(keyboardOffset, {
+        toValue: e.endCoordinates?.height ?? 0,
+        duration: 220,
+        useNativeDriver: true,
+      }).start();
+    };
+    const onHide = (): void => {
+      Animated.timing(keyboardOffset, { toValue: 0, duration: 200, useNativeDriver: true }).start();
+    };
+    const showSub = Keyboard.addListener(showEvt, onShow);
+    const hideSub = Keyboard.addListener(hideEvt, onHide);
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [keyboardOffset]);
 
   // Latest `open` for the close-animation callback, so a fast re-open isn't
   // hidden by a stale "hide me" that lands after it.
@@ -119,7 +151,7 @@ export function Sheet({
         </Animated.View>
 
         <Animated.View
-          style={[styles.panel, fitContent ? { maxHeight: maxH } : { height: panelH }, { transform: [{ translateY }] }]}
+          style={[styles.panel, fitContent ? { maxHeight: maxH } : { height: panelH }, { transform: [{ translateY: panelTranslate }] }]}
         >
           <FrostedFill />
 

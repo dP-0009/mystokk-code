@@ -254,3 +254,18 @@ export function splitPhone(full: string | null | undefined): { dial: string; num
   }
   return { dial: '', number: digits };
 }
+
+/**
+ * Normalize a locally-typed phone number: digits only, and NEVER a leading zero
+ * (a trunk 0 is invalid after an international dial code — "052355" → "52355").
+ * Applied on every keystroke and on save so stored numbers never start with 0.
+ */
+export function normalizeLocalNumber(raw: string): string {
+  return raw.replace(/\D/g, '').replace(/^0+/, '');
+}
+
+/** Join a dial code with a locally-typed number, normalized (no leading zero). */
+export function combinePhone(dial: string, number: string): string {
+  const n = normalizeLocalNumber(number);
+  return n ? `${dial}${n}` : '';
+}
