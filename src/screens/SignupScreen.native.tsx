@@ -6,6 +6,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import type { RootStackParamList } from '../navigation';
 import { requestSignupOtp } from '../services/supabase/auth';
+import { SocialAuthButtons } from '../components/auth/SocialAuthButtons';
 import { setSignupDraft } from '../stores/signupDraft';
 import { EMAIL_PATTERN, MIN_PASSWORD_LENGTH } from '../utils/validation';
 import { Button, NavBar, ScreenBackground, TextField, colors, layout, spacing } from '../components/mobile';
@@ -136,6 +137,9 @@ export function SignupScreen({ navigation }: Props): React.JSX.Element {
             disabled={submitting}
             style={styles.cta}
           />
+
+          {/* Form first, then OR + social sign-in (same OAuth as Login). */}
+          <SocialAuthButtons onError={setFormError} />
 
           <Text style={styles.legal}>
             By continuing you agree to the{' '}

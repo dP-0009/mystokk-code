@@ -8,8 +8,6 @@ import {
   Text,
   TextInput,
   View,
-  type NativeSyntheticEvent,
-  type TextInputKeyPressEventData,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
@@ -45,43 +43,31 @@ function formatClock(total: number): string {
  * OTP (prototype SCREENS.otp). Verification logic is lifted verbatim from the
  * web screen — same services, same signup-draft handoff, same reset branch that
  * defers code consumption to the reset-password Edge Function.
+ *
+ * The six boxes are DISPLAY-ONLY; a single hidden oneTimeCode TextInput holds
+ * the value, so iOS SMS/email autofill, paste, and manual typing all fill every
+ * box at once (the old per-box inputs only accepted one autofilled digit).
  */
 export function OtpScreen({ navigation, route }: Props): React.JSX.Element {
   const { email, purpose } = route.params;
   const insets = useSafeAreaInsets();
 
-  const [digits, setDigits] = React.useState<string[]>(() => Array<string>(OTP_LENGTH).fill(''));
+  const [code, setCode] = React.useState('');
   const [secondsLeft, setSecondsLeft] = React.useState(EXPIRY_SECONDS);
   const [submitting, setSubmitting] = React.useState(false);
   const [notice, setNotice] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
-  const inputs = React.useRef<Array<TextInput | null>>([]);
-  const code = digits.join('');
+  const hiddenRef = React.useRef<TextInput | null>(null);
+  const submittedFor = React.useRef<string | null>(null);
   const expired = secondsLeft <= 0;
+  const complete = code.length === OTP_LENGTH;
 
   React.useEffect(() => {
     if (secondsLeft <= 0) return;
     const id = setInterval(() => setSecondsLeft((s) => (s > 0 ? s - 1 : 0)), 1000);
     return () => clearInterval(id);
   }, [secondsLeft]);
-
-  const setDigit = (index: number, char: string): void => {
-    const clean = char.replace(/\D/g, '').slice(-1);
-    setDigits((prev) => {
-      const next = [...prev];
-      next[index] = clean;
-      return next;
-    });
-    if (clean && index < OTP_LENGTH - 1) inputs.current[index + 1]?.focus();
-  };
-
-  const onKeyPress = (index: number, e: NativeSyntheticEvent<TextInputKeyPressEventData>): void => {
-    if (e.nativeEvent.key === 'Backspace' && digits[index] === '' && index > 0) {
-      inputs.current[index - 1]?.focus();
-      setDigit(index - 1, '');
-    }
-  };
 
   const onResend = async (): Promise<void> => {
     setError(null);
@@ -129,6 +115,17 @@ export function OtpScreen({ navigation, route }: Props): React.JSX.Element {
     }
   };
 
+  // Auto-submit once all six digits are present (from autofill, paste, or typing).
+  React.useEffect(() => {
+    if (complete && !expired && !submitting && submittedFor.current !== code) {
+      submittedFor.current = code;
+      void onVerify();
+    }
+    if (!complete) submittedFor.current = null;
+    // onVerify closes over the current `code`; re-running only on code/expiry/submit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code, complete, expired, submitting]);
+
   return (
     <ScreenBackground>
       <NavBar onBack={() => navigation.goBack()} />
@@ -148,33 +145,35 @@ export function OtpScreen({ navigation, route }: Props): React.JSX.Element {
             We sent a 6-digit code to <Text style={styles.email}>{email}</Text>
           </Text>
 
-          <View style={styles.boxes}>
-            {digits.map((digit, i) => (
+          {/* Display boxes + one hidden input overlaid on top for real entry. */}
+          <Pressable style={styles.boxes} onPress={() => hiddenRef.current?.focus()}>
+            {Array.from({ length: OTP_LENGTH }).map((_, i) => (
               <GlassPanel
                 // eslint-disable-next-line react/no-array-index-key
                 key={i}
                 effect="clear"
                 radius={13}
                 fill={glass.fillInput}
-                style={[styles.box, digit ? styles.boxFilled : null]}
+                style={[styles.box, code[i] ? styles.boxFilled : null]}
               >
-                <TextInput
-                  ref={(el) => {
-                    inputs.current[i] = el;
-                  }}
-                  style={styles.boxInput}
-                  keyboardType="number-pad"
-                  maxLength={1}
-                  value={digit}
-                  onChangeText={(t) => setDigit(i, t)}
-                  onKeyPress={(e) => onKeyPress(i, e)}
-                  returnKeyType="done"
-                  autoFocus={i === 0}
-                  textContentType="oneTimeCode"
-                />
+                <Text style={styles.boxText}>{code[i] ?? ''}</Text>
               </GlassPanel>
             ))}
-          </View>
+
+            <TextInput
+              ref={hiddenRef}
+              style={styles.hiddenInput}
+              value={code}
+              onChangeText={(t) => setCode(t.replace(/\D/g, '').slice(0, OTP_LENGTH))}
+              keyboardType="number-pad"
+              maxLength={OTP_LENGTH}
+              textContentType="oneTimeCode"
+              autoComplete="one-time-code"
+              autoFocus
+              caretHidden
+              returnKeyType="done"
+            />
+          </Pressable>
 
           <Text style={styles.timer}>
             {expired ? (
@@ -193,7 +192,7 @@ export function OtpScreen({ navigation, route }: Props): React.JSX.Element {
             label={purpose === 'signup' ? 'Verify & Continue' : 'Verify Code'}
             variant="primary"
             onPress={() => void onVerify()}
-            disabled={code.length < OTP_LENGTH || expired || submitting}
+            disabled={!complete || expired || submitting}
           />
 
           <Text style={styles.footer}>
@@ -225,15 +224,11 @@ const styles = StyleSheet.create({
   sub: { fontSize: 14.5, color: colors.muted, marginTop: 8, textAlign: 'center' },
   email: { fontWeight: '800', color: colors.navy },
   boxes: { flexDirection: 'row', gap: 9, marginTop: 20, marginBottom: 12 },
-  box: { width: 46, height: 56 },
+  box: { width: 46, height: 56, alignItems: 'center', justifyContent: 'center' },
   boxFilled: { borderColor: colors.blue },
-  boxInput: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: 22,
-    fontWeight: '800',
-    color: colors.navy,
-  },
+  boxText: { fontSize: 22, fontWeight: '800', color: colors.navy },
+  // Transparent, on top of the boxes: taps focus it, and it holds the real value.
+  hiddenInput: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0 },
   timer: { fontSize: 13.5, color: colors.muted, marginBottom: 22 },
   timerStrong: { fontWeight: '800', color: colors.navy },
   notice: { fontSize: 13, color: colors.green, fontWeight: '700', marginBottom: 10 },
