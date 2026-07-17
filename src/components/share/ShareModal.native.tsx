@@ -227,10 +227,13 @@ export function ShareModal({ visible, inventoryId, onClose, onShared, forward, c
 
   const title = card?.title ?? 'item';
 
+  // Closed-control label: the clean word when nothing is filtered (avoids the
+  // truncated "All indust…"), or the chosen value once a filter is selected. The
+  // ALL_* sentinels still drive the picker options + filtering, unchanged.
   const facetLabel = (id: Exclude<FacetId, null>): string => {
-    if (id === 'industry') return facet.industry ?? ALL_INDUSTRIES;
-    if (id === 'country') return facet.country ?? ALL_COUNTRIES;
-    return facet.group ?? ALL_GROUPS;
+    if (id === 'industry') return facet.industry ?? 'Industry';
+    if (id === 'country') return facet.country ?? 'Country';
+    return facet.group ?? 'Groups';
   };
 
   return (
