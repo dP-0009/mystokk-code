@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -178,28 +178,41 @@ export function AddItemForm({
     ]);
   };
 
-  /** Camera — take a photo and upload it immediately. */
+  // Present the native picker BEFORE closing the sheet, then close it once the
+  // picker returns. Closing first (the old order) launched the picker while the
+  // sheet Modal was still mid-dismiss, so iOS refused to present it and the rows
+  // looked dead. Presenting over the static sheet, then closing, avoids the race.
+
+  /** Camera — take a photo and add it to the form's photo list. */
   const pickCamera = async (): Promise<void> => {
-    setPhotoMenu(false);
     const perm = await ImagePicker.requestCameraPermissionsAsync();
-    if (!perm.granted) return;
+    if (!perm.granted) {
+      setPhotoMenu(false);
+      Alert.alert('Camera access needed', 'Enable camera access for MyStokk in Settings to take a photo.');
+      return;
+    }
     const res = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.8 });
+    setPhotoMenu(false);
     if (!res.canceled) addAssets(res.assets);
   };
 
   /** Photos — pick from the photo library. */
   const pickLibrary = async (): Promise<void> => {
-    setPhotoMenu(false);
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) return;
+    if (!perm.granted) {
+      setPhotoMenu(false);
+      Alert.alert('Photos access needed', 'Enable photo-library access for MyStokk in Settings to choose photos.');
+      return;
+    }
     const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: true, quality: 0.8 });
+    setPhotoMenu(false);
     if (!res.canceled) addAssets(res.assets);
   };
 
-  /** Files — pick image files from the file system. */
+  /** Files — pick image files from the file system (no permission prompt needed). */
   const pickImageFiles = async (): Promise<void> => {
-    setPhotoMenu(false);
     const res = await DocumentPicker.getDocumentAsync({ type: 'image/*', multiple: true, copyToCacheDirectory: true });
+    setPhotoMenu(false);
     if (res.canceled) return;
     setPhotos((prev) => [
       ...prev,
@@ -325,7 +338,7 @@ export function AddItemForm({
               setPrice(v);
               if (errors.price) setErrors((e) => ({ ...e, price: undefined }));
             }}
-            placeholder="Leave blank — on request"
+            placeholder="Amount"
             error={errors.price}
             keyboardType="decimal-pad"
           />

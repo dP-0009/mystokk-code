@@ -1,9 +1,8 @@
 import React from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { removeNetworkVendor, type NetworkVendor } from '../../services/supabase/network';
-import { confirmAction } from '../../utils/confirm';
 import { toast } from '../../stores/toast';
 import {
   Avatar,
@@ -55,13 +54,13 @@ export function VendorSheet({ vendor, onClose, onEdit }: VendorSheetProps): Reac
 
   const confirmDelete = (): void => {
     if (!vendor) return;
-    confirmAction({
-      title: 'Remove vendor?',
-      message: `${vendor.company_name} will be removed from your network.`,
-      confirmLabel: 'Remove',
-      destructive: true,
-      onConfirm: () => remove.mutate(),
-    });
+    // Native Alert (not the in-app ConfirmHost modal): this sheet is itself a
+    // Modal, and a second RN Modal can't reliably present over it — the confirm
+    // would never show, so Delete appeared to do nothing. Alert renders above it.
+    Alert.alert('Remove vendor?', `${vendor.company_name} will be removed from your network.`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Remove', style: 'destructive', onPress: () => remove.mutate() },
+    ]);
   };
 
   const phone = vendor?.mobile_number ?? null;
