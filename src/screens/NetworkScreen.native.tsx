@@ -18,7 +18,6 @@ import {
   NavBar,
   ScreenBackground,
   StatusBadge,
-  UnderlineTabs,
   colors,
   layout,
   spacing,
@@ -62,13 +61,6 @@ export function NetworkScreen({ navigation }: Props): React.JSX.Element {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Single underline tab, no Pending pane (rule 8). */}
-        <UnderlineTabs
-          tabs={[{ key: 'network', label: 'Network', count: vendors.length }]}
-          value="network"
-          onChange={() => undefined}
-        />
-
         {isLoading ? (
           <View style={styles.center}>
             <ActivityIndicator color={colors.blue} size="large" />

@@ -68,7 +68,7 @@ export function VendorSheet({ vendor, onClose, onEdit }: VendorSheetProps): Reac
   const email = vendor?.email ?? null;
 
   return (
-    <Sheet open={vendor !== null} onClose={onClose}>
+    <Sheet open={vendor !== null} onClose={onClose} fitContent>
       {vendor ? (
         <>
           <View style={styles.head}>

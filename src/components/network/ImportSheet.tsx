@@ -8,7 +8,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { bulkImportVendors } from '../../services/supabase/network';
 import { buildTemplateXlsx, parseVendorFile, TEMPLATE_FILENAME, TEMPLATE_MIME } from '../../utils/csv';
 import { toast } from '../../stores/toast';
-import { Button, Icon, Sheet, colors } from '../mobile';
+import { Button, Icon, Sheet, colors, radii } from '../mobile';
 
 /**
  * Import contacts sheet (prototype SHEETS.bulk) — download the template, then a
@@ -95,6 +95,7 @@ export function ImportSheet({ visible, onClose }: { visible: boolean; onClose: (
         variant="ghost"
         icon={<Icon name="doc" size={19} color={colors.navy} />}
         onPress={() => void downloadTemplate()}
+        style={styles.templateBtn}
       />
 
       <Text style={styles.then}>THEN</Text>
@@ -121,6 +122,8 @@ export function ImportSheet({ visible, onClose }: { visible: boolean; onClose: (
 }
 
 const styles = StyleSheet.create({
+  // Light 1px border on the ghost button, at its own (md) corner radius.
+  templateBtn: { borderWidth: 1, borderColor: colors.line, borderRadius: radii.button },
   desc: { fontSize: 13.5, color: colors.muted, lineHeight: 20, marginBottom: 14 },
   then: { textAlign: 'center', fontSize: 12, fontWeight: '800', color: colors.blue, letterSpacing: 1, marginVertical: 12 },
   dropzone: {

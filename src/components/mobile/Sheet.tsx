@@ -37,6 +37,7 @@ export function Sheet({
   description,
   children,
   stickyHeader,
+  fitContent = false,
 }: {
   open: boolean;
   onClose: () => void;
@@ -45,18 +46,30 @@ export function Sheet({
   children?: React.ReactNode;
   /** Pinned above the scrolling content (e.g. a picker's search bar). */
   stickyHeader?: React.ReactNode;
-  /** Legacy flag — all sheets now open to half the screen, so this is ignored. */
+  /** Legacy flag — the default sheet opens to half the screen, so this is ignored. */
   half?: boolean;
+  /**
+   * Size the panel to its CONTENT instead of a fixed half screen, capped at 88%
+   * of the screen (beyond which the body scrolls). Use for sheets whose content
+   * varies and must show every row (e.g. the vendor detail sheet).
+   */
+  fitContent?: boolean;
 }): React.JSX.Element {
   const insets = useSafeAreaInsets();
 
-  // Hard-coded half-screen panel height. A number from Dimensions is exact and
-  // impossible to collapse — no measured container is involved.
-  const panelH = Math.round(Dimensions.get('window').height * 0.5);
+  const screenH = Dimensions.get('window').height;
+  // Fixed-half height for the default sheets; content-sized sheets instead cap at
+  // 88% and let the body scroll. Both are numbers from Dimensions — exact and
+  // impossible to collapse (no measured container involved).
+  const panelH = Math.round(screenH * 0.5);
+  const maxH = Math.round(screenH * 0.88);
+  // Off-screen slide distance: for a bottom-anchored panel, translating by the
+  // max possible height always moves it fully below the screen.
+  const slide = fitContent ? maxH : panelH;
 
   // Local mount flag so the slide-DOWN finishes before the Modal unmounts.
   const [mounted, setMounted] = React.useState(open);
-  const translateY = React.useRef(new Animated.Value(panelH)).current;
+  const translateY = React.useRef(new Animated.Value(slide)).current;
   const backdrop = React.useRef(new Animated.Value(0)).current;
 
   // Latest `open` for the close-animation callback, so a fast re-open isn't
@@ -73,13 +86,13 @@ export function Sheet({
       ]).start();
     } else {
       Animated.parallel([
-        Animated.timing(translateY, { toValue: panelH, duration: SLIDE_MS, useNativeDriver: true }),
+        Animated.timing(translateY, { toValue: slide, duration: SLIDE_MS, useNativeDriver: true }),
         Animated.timing(backdrop, { toValue: 0, duration: SLIDE_MS, useNativeDriver: true }),
       ]).start(({ finished }) => {
         if (finished && !openRef.current) setMounted(false);
       });
     }
-  }, [open, panelH, translateY, backdrop]);
+  }, [open, slide, translateY, backdrop]);
 
   // Keep the last row clear of the home indicator at the screen bottom.
   const bottomClear = insets.bottom + 20;
@@ -105,7 +118,9 @@ export function Sheet({
           <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         </Animated.View>
 
-        <Animated.View style={[styles.panel, { height: panelH, transform: [{ translateY }] }]}>
+        <Animated.View
+          style={[styles.panel, fitContent ? { maxHeight: maxH } : { height: panelH }, { transform: [{ translateY }] }]}
+        >
           <FrostedFill />
 
           <View style={styles.grabWrap}>
@@ -120,6 +135,7 @@ export function Sheet({
           ) : null}
 
           <ScrollView
+            style={fitContent ? styles.scrollFit : undefined}
             contentContainerStyle={[styles.body, { paddingBottom: bottomClear }]}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
@@ -182,6 +198,9 @@ const styles = StyleSheet.create({
   grab: { backgroundColor: 'rgba(15,43,84,0.25)', width: 40, height: 5, borderRadius: 3 },
 
   body: { paddingHorizontal: spacing.xl },
+  // Content-sized panel: the body takes only the space its content needs, but
+  // shrinks (and scrolls) once the panel hits its 88% cap.
+  scrollFit: { flexGrow: 0, flexShrink: 1 },
   // Pinned region — transparent so it blends into the one continuous frosted
   // surface; only the search input keeps its own pill background.
   pinned: { paddingHorizontal: spacing.xl, backgroundColor: 'transparent', paddingBottom: 8 },
