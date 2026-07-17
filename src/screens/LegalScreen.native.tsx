@@ -5,41 +5,51 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import type { RootStackParamList } from '../navigation';
 import { ContactForm } from '../components/support/ContactForm.native';
+import { faq, privacy, terms, type LegalBlock, type LegalMeta } from '../content/legal';
 import { NavBar, ScreenBackground, colors, layout, spacing } from '../components/mobile';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Legal'>;
+type Page = Props['route']['params']['page'];
 
-type Block = { h?: string; p: string };
-
-const TITLES: Record<Props['route']['params']['page'], string> = {
-  faq: 'FAQ',
-  privacy: 'Privacy Policy',
-  terms: 'Terms of Service',
+const TITLES: Record<Page, string> = {
+  faq: faq.title,
+  privacy: privacy.title,
+  terms: terms.title,
   contact: 'Contact',
 };
 
-/** Prose content, verbatim from the prototype (SCREENS.faq/privacy/terms). */
-const CONTENT: Record<'faq' | 'privacy' | 'terms', Block[]> = {
-  faq: [
-    { h: 'What is MyStokk?', p: 'MyStokk is a private B2B platform for trading and distribution businesses to share live stock, reserve and negotiate inventory, and pass offers along to trusted contacts — never to the open market.' },
-    { h: 'Who can see my inventory?', p: 'Only the vendors you explicitly share an item with, or anyone you send a public share link to. Your catalog is never publicly listed or searchable.' },
-    { h: 'How do reservations and negotiation work?', p: 'A buyer reserves a quantity at your listed or an offered price. From there each side can counter, accept, or reject. Negotiation is capped at 3 rounds per side, and the full history is kept on the reservation.' },
-    { h: 'What happens when I share a received item?', p: "Your contact sees the item with your price and remark. The original supplier's identity and price are never revealed — that's the MyStokk privacy chain." },
-  ],
-  privacy: [
-    { p: 'Your privacy matters. This policy explains what we collect and how we use it. By using MyStokk you agree to the practices described here.' },
-    { h: 'Information we collect', p: 'Account details (company name, contact person, email), the inventory and documents you upload, your network connections, and reservation/negotiation activity. We also collect basic usage and device information to operate the service.' },
-    { h: 'How we use it', p: 'To provide the platform: showing your inventory to the contacts you choose, delivering share and reservation notifications, and keeping your account secure. We do not sell your data, and we never list your inventory on a public marketplace.' },
-  ],
-  terms: [
-    { p: 'These terms govern your use of MyStokk. By creating an account you agree to them.' },
-    { h: 'Using the service', p: 'You must provide accurate company information and are responsible for activity under your account. Use MyStokk only for legitimate B2B trading and distribution purposes.' },
-    { h: 'Your content', p: 'You retain ownership of the inventory, photos, and documents you upload. You grant MyStokk the rights needed to display that content to the contacts you share it with and to operate the service.' },
-    { h: 'Reservations & negotiations', p: 'Reservations and counter-offers made on the platform reflect commercial intent between businesses; each party is responsible for fulfilment, payment, and disputes.' },
-  ],
-};
+function MetaLine({ meta }: { meta: LegalMeta }): React.JSX.Element {
+  return (
+    <Text style={styles.meta}>
+      Version {meta.version} · Effective {meta.effectiveDate} · Last updated {meta.lastUpdated}
+    </Text>
+  );
+}
 
-/** Legal + Contact (prototype SCREENS.faq/privacy/terms/contact). */
+function Blocks({ blocks }: { blocks: LegalBlock[] }): React.JSX.Element {
+  return (
+    <>
+      {blocks.map((b, i) =>
+        b.kind === 'p' ? (
+          <Text key={i} style={styles.p}>
+            {b.text}
+          </Text>
+        ) : (
+          <View key={i} style={styles.list}>
+            {b.items.map((item, j) => (
+              <View key={j} style={styles.bulletRow}>
+                <Text style={styles.bulletDot}>•</Text>
+                <Text style={styles.bulletText}>{item}</Text>
+              </View>
+            ))}
+          </View>
+        ),
+      )}
+    </>
+  );
+}
+
+/** Legal + Contact — renders Privacy / Terms / FAQ from src/content/legal. */
 export function LegalScreen({ navigation, route }: Props): React.JSX.Element {
   const { page } = route.params;
   const insets = useSafeAreaInsets();
@@ -58,12 +68,29 @@ export function LegalScreen({ navigation, route }: Props): React.JSX.Element {
         >
           {page === 'contact' ? (
             <ContactForm />
+          ) : page === 'faq' ? (
+            <View style={styles.prose}>
+              <MetaLine meta={faq.meta} />
+              {faq.categories.map((cat) => (
+                <View key={cat.id}>
+                  <Text style={styles.categoryName}>{cat.name}</Text>
+                  {cat.items.map((item, i) => (
+                    <View key={i} style={styles.qa}>
+                      <Text style={styles.question}>{item.question}</Text>
+                      <Text style={styles.answer}>{item.answer}</Text>
+                    </View>
+                  ))}
+                </View>
+              ))}
+            </View>
           ) : (
             <View style={styles.prose}>
-              {CONTENT[page].map((b, i) => (
-                <View key={i}>
-                  {b.h ? <Text style={styles.h4}>{b.h}</Text> : null}
-                  <Text style={styles.p}>{b.p}</Text>
+              <MetaLine meta={(page === 'privacy' ? privacy : terms).meta} />
+              <Blocks blocks={(page === 'privacy' ? privacy : terms).intro} />
+              {(page === 'privacy' ? privacy : terms).sections.map((section) => (
+                <View key={section.id}>
+                  <Text style={styles.h4}>{section.heading}</Text>
+                  <Blocks blocks={section.body} />
                 </View>
               ))}
             </View>
@@ -78,6 +105,23 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   scroll: { paddingHorizontal: spacing.gutter },
   prose: { paddingTop: 4 },
-  h4: { fontSize: 15.5, fontWeight: '800', color: colors.navy, marginTop: 16, marginBottom: 6 },
+  meta: { fontSize: 12.5, color: colors.muted, marginBottom: 14 },
+  h4: { fontSize: 15.5, fontWeight: '800', color: colors.navy, marginTop: 18, marginBottom: 6 },
   p: { fontSize: 14.5, lineHeight: 23, color: colors.text, marginBottom: 10 },
+  list: { marginBottom: 10, gap: 7 },
+  bulletRow: { flexDirection: 'row', gap: 8 },
+  bulletDot: { fontSize: 14.5, lineHeight: 23, color: colors.text },
+  bulletText: { flex: 1, fontSize: 14.5, lineHeight: 23, color: colors.text },
+  categoryName: {
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    color: colors.blue,
+    marginTop: 20,
+    marginBottom: 8,
+  },
+  qa: { marginBottom: 16 },
+  question: { fontSize: 15, fontWeight: '800', color: colors.navy, marginBottom: 5 },
+  answer: { fontSize: 14.5, lineHeight: 23, color: colors.text },
 });
