@@ -34,6 +34,10 @@ async function make(canvas, logoFraction, background, outName, opaque) {
   await make(1024, 0.68, WHITE, 'icon.png', true); // iOS/app icon — opaque white, no alpha
   await make(1024, 0.62, TRANSPARENT, 'adaptive-icon.png', false); // Android adaptive foreground
   await make(48, 0.68, WHITE, 'favicon.png', true); // web favicon — white
+  // Splash — the logo centered on an opaque WHITE canvas. expo-splash-screen
+  // (managed) composes this over its backgroundColor and generates every device
+  // resolution for both iOS and Android, so a single square source is correct.
+  await make(1242, 0.72, WHITE, 'splash.png', true);
   console.log('Done.');
 })().catch((err) => {
   console.error(err);

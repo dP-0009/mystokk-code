@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MyStokk — Sub-1s Loader + Welcome Screen v2</title>
+<style>
+  :root{
+    --navy:#0F172A;
+    --primary:#2563EB;
+    --chip:#DBE7F8;
+    --sub:#64748B;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#E8ECF1;font-family:-apple-system,"Segoe UI",system-ui,sans-serif;display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-start;gap:36px;padding:44px 4vw 90px;color:var(--navy)}
+  .col{display:flex;flex-direction:column;align-items:center;gap:14px}
+  .label{font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--sub)}
+
+  .phone{width:340px;height:700px;border-radius:44px;border:6px solid #0F172A;overflow:hidden;
+         background:linear-gradient(160deg,#EAF1FC 0%,#F7FAFE 45%,#DFE9F8 100%);
+         box-shadow:0 30px 60px rgba(15,23,42,.25);position:relative;display:flex;flex-direction:column}
+
+  /* ============ LOADER (sequence < 1s) ============ */
+  .loadwrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px}
+  .logo{position:relative;width:150px;height:150px}
+  .sq{position:absolute;width:40px;height:40px;border-radius:12px;background:var(--navy)}
+  /* grid slots (2x2): (30,44) (30,94) (80,94) (80,44) */
+  .s1{left:30px;top:44px;animation:fly1 1.4s cubic-bezier(.25,1,.4,1) infinite}
+  .s2{left:30px;top:94px;animation:fly2 1.4s cubic-bezier(.25,1,.4,1) infinite}
+  .s3{left:80px;top:94px;animation:fly3 1.4s cubic-bezier(.25,1,.4,1) infinite}
+  .s4{left:80px;top:44px;z-index:3;animation:hero 1.4s cubic-bezier(.25,1,.4,1) infinite}
+
+  /* fly-in finishes at 20% (0.44s) */
+  @keyframes fly1{0%{transform:translate(-260px,0);opacity:0}5%{opacity:1}16%,94%{transform:translate(0,0);opacity:1}100%{transform:translate(0,0);opacity:0}}
+  @keyframes fly2{0%{transform:translate(-200px,220px);opacity:0}5%{opacity:1}16%,94%{transform:translate(0,0);opacity:1}100%{transform:translate(0,0);opacity:0}}
+  @keyframes fly3{0%{transform:translate(200px,220px);opacity:0}5%{opacity:1}16%,94%{transform:translate(0,0);opacity:1}100%{transform:translate(0,0);opacity:0}}
+  /* hero: arrives navy with the pack -> turns primary (23-29% = .5-.64s) -> moves out (29-43% = .64-.95s) */
+  @keyframes hero{
+    0%{transform:translate(240px,-200px);opacity:0;background:#0F172A}
+    5%{opacity:1}
+    16%{transform:translate(0,0);background:#0F172A}
+    18%{background:#0F172A}
+    23%{background:#2563EB;transform:translate(0,0)}
+    34%,94%{background:#2563EB;transform:translate(9px,-10px);opacity:1}
+    100%{background:#2563EB;transform:translate(9px,-10px);opacity:0}
+  }
+  .brand{font-weight:800;font-size:22px;letter-spacing:-0.01em;color:var(--navy)}
+  .brand span{color:var(--primary)}
+
+  /* ============ WELCOME SCREEN v2 ============ */
+  .welcome{padding:0 22px}
+  .top{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0}
+  .wlogo{width:112px;height:112px;position:relative;margin-bottom:26px}
+  .wlogo .q{position:absolute;width:30px;height:30px;border-radius:9px;background:var(--navy)}
+  .q1{left:22px;top:33px}.q2{left:22px;top:71px}.q3{left:60px;top:71px}
+  .q4{left:66px;top:26px;background:var(--primary)!important}
+  h1.title{font-size:38px;font-weight:800;letter-spacing:-0.02em;color:#0B1220}
+  h1.title span{color:var(--primary)}
+  .tag{margin-top:14px;font-size:16.5px;color:#5B6B85;text-align:center;line-height:1.5}
+  .chips{display:flex;gap:18px;margin-top:36px;justify-content:center}
+  .chip{display:flex;flex-direction:column;align-items:center;gap:10px;width:86px}
+  .icon{width:66px;height:66px;border-radius:20px;background:var(--chip);display:flex;align-items:center;justify-content:center}
+  .icon svg{width:30px;height:30px;stroke:var(--primary);fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+  .chip b{font-size:14px;color:#16233F;text-align:center;line-height:1.25}
+  .cta{padding:0 0 26px}
+  .btn{display:flex;align-items:center;justify-content:center;height:56px;border-radius:18px;font-size:17px;font-weight:700;margin-top:12px}
+  .btn.login{background:var(--primary);color:#fff;box-shadow:0 10px 24px rgba(37,99,235,.3)}
+  .btn.create{background:#fff;color:#16233F}
+  .nocc{text-align:center;font-size:13px;color:#8A98AD;margin-top:12px}
+
+  /* spec card */
+  .spec{max-width:720px;background:#fff;border:1px solid #DDE3EC;border-radius:16px;padding:20px 24px;font-size:13.5px;line-height:1.6;color:#334155}
+  .spec h3{font-size:14px;letter-spacing:.1em;text-transform:uppercase;color:#64748B;margin-bottom:8px}
+  .spec code{background:#F1F5F9;padding:1px 6px;border-radius:5px;font-size:12.5px}
+</style>
+</head>
+<body>
+
+<div class="col">
+  <div class="label">Loader — full sequence 0.48s</div>
+  <div class="phone">
+    <div class="loadwrap">
+      <div class="logo">
+        <div class="sq s1"></div>
+        <div class="sq s2"></div>
+        <div class="sq s3"></div>
+        <div class="sq s4"></div>
+      </div>
+      <div class="brand">MySt<span>o</span>kk</div>
+    </div>
+  </div>
+</div>
+
+<div class="col">
+  <div class="label">Welcome screen — v2 edits</div>
+  <div class="phone welcome">
+    <div class="top">
+      <div class="wlogo">
+        <div class="q q1"></div><div class="q q2"></div><div class="q q3"></div><div class="q q4"></div>
+      </div>
+      <h1 class="title">MySt<span>o</span>kk</h1>
+      <div class="tag">Private B2B inventory sharing</div>
+
+      <div class="chips">
+        <div class="chip">
+          <div class="icon">
+            <!-- Private Network: shield with linked nodes -->
+            <svg viewBox="0 0 24 24">
+              <path d="M12 3 L19 6 V11 C19 16 15.5 19.5 12 21 C8.5 19.5 5 16 5 11 V6 Z"/>
+              <circle cx="12" cy="10" r="1.4" fill="#2563EB" stroke="none"/>
+              <circle cx="9.2" cy="13.5" r="1.4" fill="#2563EB" stroke="none"/>
+              <circle cx="14.8" cy="13.5" r="1.4" fill="#2563EB" stroke="none"/>
+              <path d="M12 10 L9.2 13.5 M12 10 L14.8 13.5"/>
+            </svg>
+          </div>
+          <b>Private<br>Network</b>
+        </div>
+        <div class="chip">
+          <div class="icon">
+            <!-- Live Inventory: crate with live pulse dot -->
+            <svg viewBox="0 0 24 24">
+              <path d="M4.5 8.5 L12 5 L19.5 8.5 V16 L12 19.5 L4.5 16 Z"/>
+              <path d="M4.5 8.5 L12 12 L19.5 8.5 M12 12 V19.5"/>
+              <circle cx="19" cy="5.4" r="2.6" fill="#2563EB" stroke="#EAF1FC" stroke-width="1.6"/>
+            </svg>
+          </div>
+          <b>Live<br>Inventory</b>
+        </div>
+        <div class="chip">
+          <div class="icon">
+            <!-- Instant Sharing: share-nodes + bolt energy -->
+            <svg viewBox="0 0 24 24">
+              <circle cx="6" cy="12" r="2.4"/>
+              <circle cx="17" cy="5.5" r="2.4"/>
+              <circle cx="17" cy="18.5" r="2.4"/>
+              <path d="M8.2 10.8 L14.8 6.7 M8.2 13.2 L14.8 17.3"/>
+            </svg>
+          </div>
+          <b>Instant<br>Sharing</b>
+        </div>
+      </div>
+    </div>
+
+    <div class="cta">
+      <div class="btn login">Log in</div>
+      <div class="btn create">Create free account</div>
+      <div class="nocc">No Credit Card Required</div>
+    </div>
+  </div>
+</div>
+
+<div class="spec">
+  <h3>Loader spec — for Claude Code / Reanimated</h3>
+  Total sequence <b>0.48s</b>, easing <code>cubic-bezier(0.25, 1, 0.4, 1)</code> throughout:
+  <br>• <b>0 → 0.22s</b> — all four squares fly in together from off-screen (left, bottom-left, bottom-right, top-right), all in navy <code>#0F172A</code>, land in the complete 2×2 grid
+  <br>• <b>0.25 → 0.32s</b> — top-right square color-morphs <code>#0F172A → #2563EB</code> in place
+  <br>• <b>0.32 → 0.48s</b> — the blue square translates out by <code>(+9, −10)</code> to its final offset; done
+  <br>• Hold the final lockup while the app finishes loading; wordmark = <b>MySt<span style="color:#2563EB">o</span>kk</b> — the "o" always in <code>#2563EB</code>, everywhere the logo + name appear together.
+</div>
+
+</body>
+</html>

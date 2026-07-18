@@ -1,5 +1,6 @@
 import React from 'react';
-import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { BrandLoader } from '../shared/BrandLoader';
 import * as DocumentPicker from 'expo-document-picker';
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
@@ -9,7 +10,6 @@ import { bulkImportVendors } from '../../services/supabase/network';
 import { buildTemplateXlsx, parseVendorFile, TEMPLATE_FILENAME, TEMPLATE_MIME } from '../../utils/csv';
 import { toast } from '../../stores/toast';
 import { Button, Icon, Sheet, colors, radii } from '../mobile';
-import { MystokkLoader } from '../shared/MystokkLoader';
 
 /**
  * Import contacts sheet (prototype SHEETS.bulk) — download the template, then a
@@ -104,7 +104,7 @@ export function ImportSheet({ visible, onClose }: { visible: boolean; onClose: (
       <Pressable onPress={() => void pickAndImport()} disabled={importing}>
         <View style={styles.dropzone}>
           {importing ? (
-            <MystokkLoader size={36} />
+            <BrandLoader mode="loop" size={56} />
           ) : (
             <>
               <Icon name="bulk" size={26} color={colors.blue} />

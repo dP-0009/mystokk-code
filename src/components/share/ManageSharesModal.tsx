@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { BrandLoader } from '../shared/BrandLoader';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -8,7 +9,6 @@ import { VendorAvatar } from '../shared/VendorAvatar';
 import { webOnly } from '../layout/web';
 import { toast } from '../../stores/toast';
 import { colors } from '../../theme/tokens';
-import { MystokkLoader } from '../shared/MystokkLoader';
 
 interface ManageSharesModalProps {
   visible: boolean;
@@ -110,7 +110,7 @@ export function ManageSharesModal({
           {/* List */}
           {isLoading ? (
             <View style={styles.loading}>
-              <MystokkLoader size={48} />
+              <BrandLoader mode="loop" size={90} />
             </View>
           ) : shares.length === 0 ? (
             <View style={styles.empty}>
@@ -149,10 +149,7 @@ export function ManageSharesModal({
                       onPress={() => onRevoke(s)}
                       disabled={busy}
                     >
-                      {busy ? (
-                        <ActivityIndicator color={colors.red} size="small" />
-                      ) : (
-                        <>
+                      <>
                           <Ionicons
                             name={confirming ? 'alert-circle-outline' : 'shield-outline'}
                             size={14}
@@ -162,7 +159,6 @@ export function ManageSharesModal({
                             {confirming ? 'Confirm' : 'Revoke'}
                           </Text>
                         </>
-                      )}
                     </Pressable>
                   </View>
                 );

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  ActivityIndicator,
   Modal,
   Pressable,
   ScrollView,
@@ -9,6 +8,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { BrandLoader } from '../shared/BrandLoader';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
@@ -23,7 +23,6 @@ import {
 } from '../../services/supabase/reservations';
 import { StatusChip } from '../shared/StatusChip';
 import { colors } from '../../theme/tokens';
-import { MystokkLoader } from '../shared/MystokkLoader';
 import { webOnly } from '../layout/web';
 import { toast } from '../../stores/toast';
 
@@ -248,7 +247,7 @@ export function NegotiationModal({ visible, side, data, onClose }: NegotiationMo
               <Text style={styles.sectionTitle}>Notes & messages</Text>
               {roundsQuery.isLoading ? (
                 <View style={styles.loading}>
-                  <MystokkLoader size={48} />
+                  <BrandLoader mode="loop" size={90} />
                 </View>
               ) : (
                 <View style={styles.thread}>
@@ -321,11 +320,7 @@ export function NegotiationModal({ visible, side, data, onClose }: NegotiationMo
                     onPress={() => counter.mutate()}
                     testID="counter-submit"
                   >
-                    {counter.isPending ? (
-                      <ActivityIndicator color="#FFFFFF" size="small" />
-                    ) : (
-                      <Text style={styles.btnSendText}>Send Counter Offer</Text>
-                    )}
+                    <Text style={styles.btnSendText}>Send Counter Offer</Text>
                   </Pressable>
                 </View>
               </View>

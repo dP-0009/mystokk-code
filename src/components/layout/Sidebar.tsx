@@ -1,11 +1,10 @@
 import React, { type ReactNode } from 'react';
-import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { colors, radius, spacing } from '../../theme/tokens';
 import { webOnly } from './web';
+import { BrandLogo } from '../shared/BrandLogo';
 import { BrandWordmark } from '../shared/BrandWordmark';
-
-const LOGO = require('../../../assets/branding/mystokk-logo.png');
 
 type SidebarProps = {
   /** Nav items, rendered in the scrollable middle region. */
@@ -26,7 +25,7 @@ export function Sidebar({ children, footer }: SidebarProps): React.JSX.Element {
   return (
     <View style={styles.sidebar}>
       <View style={styles.logo}>
-        <Image source={LOGO} style={styles.logoIcon} resizeMode="contain" />
+        <BrandLogo size={36} />
         <BrandWordmark size={15} />
       </View>
 
@@ -59,10 +58,6 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-  },
-  logoIcon: {
-    width: 36,
-    height: 36,
   },
   logoText: { fontSize: 15, fontWeight: '700', color: colors.textPrimary },
   // `.sb-nav`

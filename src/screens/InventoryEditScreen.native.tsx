@@ -1,7 +1,7 @@
 import React from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { BrandLoader } from '../components/shared/BrandLoader';
 
-import { MystokkLoader } from '../components/shared/MystokkLoader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -76,7 +76,7 @@ export function InventoryEditScreen({ navigation, route }: Props): React.JSX.Ele
       <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {isLoading ? (
           <View style={styles.center}>
-            <MystokkLoader />
+            <BrandLoader mode="loop" size={150} />
           </View>
         ) : isError || !data ? (
           <View style={styles.center}>

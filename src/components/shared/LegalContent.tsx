@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { BrandLoader } from './BrandLoader';
 import { Ionicons } from '@expo/vector-icons';
 import { useForm } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
@@ -8,7 +9,6 @@ import { webOnly } from '../layout/web';
 import { FormTextField } from './FormTextField';
 import { DropdownSelectField } from './DropdownSelectField';
 import { AppButton } from './AppButton';
-import { MystokkLoader } from './MystokkLoader';
 import { getMyVendor } from '../../services/supabase/vendor';
 import { useAuthStore } from '../../stores/authStore';
 import {
@@ -122,7 +122,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  * Web Contact / support form — same fields + same edge function as the app.
  * Prefills name/email from the vendor profile when signed in (the page is also
  * reachable by signed-out visitors, who get an empty form). Inline validation;
- * MystokkLoader while submitting; success state on completion.
+ * BrandLoader while submitting; success state on completion.
  */
 function ContactForm(): React.JSX.Element {
   const signedIn = useAuthStore((s) => s.status === 'signedIn');
@@ -229,7 +229,7 @@ function ContactForm(): React.JSX.Element {
 
       {submitting ? (
         <View style={styles.formLoading}>
-          <MystokkLoader showText={false} size={44} />
+          <BrandLoader mode="loop" size={56} />
         </View>
       ) : (
         <AppButton title="Send message" onPress={() => void onSubmit()} style={styles.formSubmit} />

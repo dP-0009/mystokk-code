@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Modal,
   Pressable,
@@ -10,6 +9,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { BrandLoader } from '../components/shared/BrandLoader';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation';
@@ -26,7 +26,6 @@ import { ScreenHeader } from '../components/shared/ScreenHeader';
 import { StatusChip } from '../components/shared/StatusChip';
 import { AppButton } from '../components/shared/AppButton';
 import { colors } from '../theme/tokens';
-import { MystokkLoader } from '../components/shared/MystokkLoader';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ReservationDetail'>;
 
@@ -171,7 +170,7 @@ export function ReservationDetailScreen({ navigation, route }: Props): React.JSX
         <Text style={styles.sectionTitle}>Negotiation history</Text>
         {roundsQuery.isLoading ? (
           <View style={styles.loading}>
-            <MystokkLoader size={48} />
+            <BrandLoader mode="loop" size={90} />
           </View>
         ) : rounds.length === 0 ? (
           <Text style={styles.empty}>No counter-offers yet — this is the original request.</Text>

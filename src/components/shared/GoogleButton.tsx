@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, radius } from '../../theme/tokens';
 import { webOnly } from '../layout/web';
 
@@ -20,14 +20,10 @@ export function GoogleButton({ title, onPress, loading = false }: GoogleButtonPr
       disabled={loading}
       style={({ pressed }) => [styles.button, pressed && !loading ? styles.pressed : null]}
     >
-      {loading ? (
-        <ActivityIndicator color={colors.textPrimary} />
-      ) : (
-        <View style={styles.row}>
-          <Image source={GOOGLE_LOGO} style={styles.icon} resizeMode="contain" />
-          <Text style={styles.label}>{title}</Text>
-        </View>
-      )}
+      <View style={styles.row}>
+        <Image source={GOOGLE_LOGO} style={styles.icon} resizeMode="contain" />
+        <Text style={styles.label}>{title}</Text>
+      </View>
     </Pressable>
   );
 }

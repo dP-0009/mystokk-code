@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   Linking,
   Modal,
   Pressable,
@@ -10,6 +9,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { BrandLoader } from '../shared/BrandLoader';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -26,7 +26,6 @@ import { copyToClipboard, shareText } from '../../utils/clipboard';
 import { webOnly } from '../layout/web';
 import { VendorAvatar } from '../shared/VendorAvatar';
 import { colors, radius, shadows } from '../../theme/tokens';
-import { MystokkLoader } from '../shared/MystokkLoader';
 import { toast } from '../../stores/toast';
 
 /** Item facts used to compose the WhatsApp/Email share message. */
@@ -288,11 +287,7 @@ export function ShareModal({ visible, inventoryId, onClose, onShared, forward, c
                 onPress={() => networkMutation.mutate()}
                 testID="share-network-submit"
               >
-                {networkMutation.isPending ? (
-                  <ActivityIndicator color="#FFFFFF" size="small" />
-                ) : (
-                  <Text style={styles.btnPrimaryText}>Share{selectedCount > 0 ? ` (${selectedCount})` : ''}</Text>
-                )}
+                <Text style={styles.btnPrimaryText}>Share{selectedCount > 0 ? ` (${selectedCount})` : ''}</Text>
               </Pressable>
             </View>
           ) : null}
@@ -389,7 +384,7 @@ function NetworkTab({
 
       {loading ? (
         <View style={styles.center}>
-          <MystokkLoader size={48} />
+          <BrandLoader mode="loop" size={90} />
         </View>
       ) : (
         <ScrollView style={styles.list} nestedScrollEnabled showsVerticalScrollIndicator>
@@ -515,8 +510,7 @@ function NewContactTab({
 
       {loading ? (
         <View style={styles.center}>
-          <MystokkLoader size={48} />
-          <Text style={styles.preparing}>Preparing share link…</Text>
+          <BrandLoader mode="loop" size={90} />
         </View>
       ) : null}
 

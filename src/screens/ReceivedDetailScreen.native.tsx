@@ -1,7 +1,7 @@
 import React from 'react';
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { BrandLoader } from '../components/shared/BrandLoader';
 
-import { MystokkLoader } from '../components/shared/MystokkLoader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -90,7 +90,7 @@ export function ReceivedDetailScreen({ navigation, route }: Props): React.JSX.El
 
       {isLoading ? (
         <View style={styles.center}>
-          <MystokkLoader />
+          <BrandLoader mode="loop" size={150} />
         </View>
       ) : isError || !data ? (
         <View style={styles.center}>

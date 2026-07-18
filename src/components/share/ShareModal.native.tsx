@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  ActivityIndicator,
   Linking,
   Modal,
   Pressable,
@@ -11,6 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { BrandLoader } from '../shared/BrandLoader';
 import * as Haptics from 'expo-haptics';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -41,7 +41,6 @@ import {
   radii,
   spacing,
 } from '../mobile';
-import { MystokkLoader } from '../shared/MystokkLoader';
 
 /** Item facts used to compose the WhatsApp/Email share message (mirrors web). */
 export interface ShareCard {
@@ -295,7 +294,7 @@ export function ShareModal({ visible, inventoryId, onClose, onShared, forward, c
 
                   {networkQuery.isLoading ? (
                     <View style={styles.loading}>
-                      <MystokkLoader size={48} />
+                      <BrandLoader mode="loop" size={90} />
                     </View>
                   ) : filtered.length === 0 ? (
                     <Text style={styles.empty}>No vendors match. Add vendors in My Network.</Text>

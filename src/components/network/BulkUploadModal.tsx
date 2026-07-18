@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  ActivityIndicator,
   Modal,
   Platform,
   Pressable,
@@ -8,6 +7,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { BrandLoader } from '../shared/BrandLoader';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { File, Paths } from 'expo-file-system';
@@ -18,7 +18,6 @@ import { bulkImportVendors } from '../../services/supabase/network';
 import { buildTemplateXlsx, parseVendorFile, TEMPLATE_FILENAME, TEMPLATE_MIME } from '../../utils/csv';
 import { webOnly } from '../layout/web';
 import { colors, radius, shadows } from '../../theme/tokens';
-import { MystokkLoader } from '../shared/MystokkLoader';
 import { toast } from '../../stores/toast';
 
 interface BulkUploadModalProps {
@@ -159,10 +158,7 @@ export function BulkUploadModal({ visible, onClose, onImported }: BulkUploadModa
               testID="bulk-dropzone"
             >
               {importing ? (
-                <>
-                  <MystokkLoader size={36} />
-                  <Text style={styles.dropText}>Importing…</Text>
-                </>
+                <BrandLoader mode="loop" size={56} />
               ) : (
                 <>
                   <Ionicons name="cloud-upload-outline" size={24} color={colors.textMuted} />

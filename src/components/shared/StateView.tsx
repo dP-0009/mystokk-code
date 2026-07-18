@@ -1,10 +1,10 @@
 import React from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { BrandLoader } from './BrandLoader';
 import { Ionicons } from '@expo/vector-icons';
 
 import { colors, radius } from '../../theme/tokens';
 import { webOnly } from '../layout/web';
-import { MystokkLoader } from './MystokkLoader';
 
 /**
  * Standardized loading + error states, so every screen presents these the same
@@ -12,11 +12,11 @@ import { MystokkLoader } from './MystokkLoader';
  * here.) Drop-in replacements for the bespoke spinners and error blocks.
  */
 
-export function LoadingState({ label }: { label?: string }): React.JSX.Element {
+/** Loading states are the animated block logo alone — never any text. */
+export function LoadingState(): React.JSX.Element {
   return (
     <View style={styles.center} accessibilityRole="progressbar">
-      <MystokkLoader />
-      {label ? <Text style={styles.sub}>{label}</Text> : null}
+      <BrandLoader mode="loop" size={150} />
     </View>
   );
 }

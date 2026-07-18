@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { BrandLoader } from '../shared/BrandLoader';
 import { useQuery } from '@tanstack/react-query';
 
 import { getMyVendor } from '../../services/supabase/vendor';
@@ -10,7 +11,6 @@ import {
   type SupportTopic,
 } from '../../services/supabase/support';
 import { Button, Icon, PickerSheet, Select, TextArea, TextField, colors } from '../mobile';
-import { MystokkLoader } from '../shared/MystokkLoader';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -146,7 +146,7 @@ export function ContactForm(): React.JSX.Element {
 
       {submitting ? (
         <View style={styles.loading}>
-          <MystokkLoader showText={false} size={44} />
+          <BrandLoader mode="loop" size={56} />
         </View>
       ) : (
         <Button label="Send message" variant="primary" onPress={() => void onSubmit()} style={styles.submit} />

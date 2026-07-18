@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Image,
   Modal,
@@ -11,6 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { BrandLoader } from '../components/shared/BrandLoader';
 import { Ionicons } from '@expo/vector-icons';
 import { useForm } from 'react-hook-form';
 import * as ImagePicker from 'expo-image-picker';
@@ -19,7 +19,6 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import type { RootStackParamList } from '../navigation';
-import { MystokkLoader } from '../components/shared/MystokkLoader';
 import { MainLayout, PageBody, PageHeader } from '../components/layout';
 import { FormTextField } from '../components/shared/FormTextField';
 import { PhoneField } from '../components/shared/PhoneField';
@@ -177,7 +176,7 @@ export function SettingsScreen({ navigation: _navigation }: Props): React.JSX.El
         <Text style={styles.sectionTitle}>Company Profile</Text>
         {isLoading || !vendor ? (
           <View style={[styles.card, styles.cardPadded, styles.center]}>
-            <MystokkLoader size={48} />
+            <BrandLoader mode="loop" size={90} />
           </View>
         ) : (
           // key → remount (reset to DB values) on every focus and when the
@@ -280,11 +279,7 @@ export function SettingsScreen({ navigation: _navigation }: Props): React.JSX.El
               disabled={!delValid || delMutation.isPending}
               onPress={() => delMutation.mutate()}
             >
-              {delMutation.isPending ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.deleteConfirmText}>Permanently Delete Account</Text>
-              )}
+              <Text style={styles.deleteConfirmText}>Permanently Delete Account</Text>
             </Pressable>
           </Pressable>
         </Pressable>

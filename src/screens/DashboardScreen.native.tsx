@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { BrandLoader } from '../components/shared/BrandLoader';
 
-import { MystokkLoader } from '../components/shared/MystokkLoader';
 import { useQuery } from '@tanstack/react-query';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
@@ -83,7 +83,7 @@ export function DashboardScreen({ navigation }: Props): React.JSX.Element {
       >
         {isLoading ? (
           <View style={styles.center}>
-            <MystokkLoader />
+            <BrandLoader mode="loop" size={150} />
           </View>
         ) : isError || !data ? (
           <View style={styles.center}>

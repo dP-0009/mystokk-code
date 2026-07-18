@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { BrandLoader } from '../components/shared/BrandLoader';
 
-import { MystokkLoader } from '../components/shared/MystokkLoader';
+import { BrandLogo } from '../components/shared/BrandLogo';
 import { BrandWordmark } from '../components/shared/BrandWordmark';
 
-const LOGO = require('../../assets/branding/mystokk-logo.png');
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -140,14 +140,14 @@ export function ShareLandingScreen({ navigation, route }: Props): React.JSX.Elem
       {/* Top header bar — logo only (no Login / Sign Up buttons by request). */}
       <View style={styles.topbar}>
         <View style={styles.logo}>
-          <Image source={LOGO} style={styles.logoMark} resizeMode="contain" />
+          <BrandLogo size={32} />
           <BrandWordmark size={16} />
         </View>
       </View>
 
       {resolvingCode || isLoading || checkingOwner ? (
         <View style={styles.center}>
-          <MystokkLoader />
+          <BrandLoader mode="loop" size={150} />
         </View>
       ) : isError || !token || !data ? (
         <View style={styles.center}>
@@ -277,11 +277,7 @@ function Preview({
           <Text style={styles.interested}>Interested in this inventory?</Text>
           {authed ? (
             <Pressable style={styles.primaryBtn} onPress={onClaim} disabled={claiming} testID="public-claim">
-              {claiming ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.primaryBtnText}>📦 View full details & reserve</Text>
-              )}
+              <Text style={styles.primaryBtnText}>📦 View full details & reserve</Text>
             </Pressable>
           ) : (
             <>
@@ -319,10 +315,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   logo: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  logoMark: {
-    width: 32,
-    height: 32,
-  },
 
   // Loading / error
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 30 },

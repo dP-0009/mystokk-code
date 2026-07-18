@@ -1,9 +1,8 @@
 import React from 'react';
-import { Image, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { BrandLogo } from './BrandLogo';
 import { BrandWordmark } from './BrandWordmark';
-
-const LOGO = require('../../../assets/branding/mystokk-logo.png');
 
 interface BrandMarkProps {
   /** Diameter of the rounded icon tile. */
@@ -15,7 +14,7 @@ interface BrandMarkProps {
 }
 
 /**
- * The MyStokk brand lockup — the logo mark (assets/mystokk-logo.png) plus the
+ * The MyStokk brand lockup — the drawn logo mark (BrandLogo) plus the
  * wordmark. Mirrors the sidebar logo so auth + landing surfaces read as the
  * same product.
  */
@@ -26,7 +25,7 @@ export function BrandMark({
 }: BrandMarkProps): React.JSX.Element {
   return (
     <View style={styles.row}>
-      <Image source={LOGO} style={{ width: size, height: size }} resizeMode="contain" />
+      <BrandLogo size={size} />
       {labelSize ? <BrandWordmark size={labelSize} style={light ? styles.light : undefined} /> : null}
     </View>
   );

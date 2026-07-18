@@ -33,7 +33,7 @@ export function ColdStartGate(): React.JSX.Element | null {
 
   return (
     <View style={styles.overlay}>
-      <BrandLoader onComplete={() => setAnimDone(true)} />
+      <BrandLoader mode="once" onComplete={() => setAnimDone(true)} />
     </View>
   );
 }

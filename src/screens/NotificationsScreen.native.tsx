@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { BrandLoader } from '../components/shared/BrandLoader';
 
-import { MystokkLoader } from '../components/shared/MystokkLoader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useFocusEffect } from '@react-navigation/native';
@@ -152,7 +152,7 @@ export function NotificationsScreen({ navigation }: Props): React.JSX.Element {
 
         {isLoading ? (
           <View style={styles.center}>
-            <MystokkLoader />
+            <BrandLoader mode="loop" size={150} />
           </View>
         ) : isError ? (
           <View style={styles.center}>

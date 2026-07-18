@@ -1,5 +1,6 @@
 import React from 'react';
-import { ActivityIndicator, Image, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, StyleSheet, Text, TextInput, View } from 'react-native';
+import { BrandLoader } from '../components/shared/BrandLoader';
 import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { useFocusEffect } from '@react-navigation/native';
@@ -90,7 +91,7 @@ export function ReceivedListScreen({ navigation }: Props): React.JSX.Element {
 
       {isLoading ? (
         <View style={styles.center}>
-          <ActivityIndicator color={colors.blue} size="large" />
+          <BrandLoader mode="loop" size={150} />
         </View>
       ) : isError ? (
         <View style={styles.center}>

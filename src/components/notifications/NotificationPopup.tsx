@@ -1,5 +1,6 @@
 import React from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { BrandLoader } from '../shared/BrandLoader';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigation, type CompositeNavigationProp } from '@react-navigation/native';
@@ -15,7 +16,6 @@ import {
 } from '../../services/supabase/notifications';
 import { UNREAD_COUNT_KEY } from '../../hooks/useUnreadCount';
 import { colors } from '../../theme/tokens';
-import { MystokkLoader } from '../shared/MystokkLoader';
 import { webOnly } from '../layout/web';
 import { toast } from '../../stores/toast';
 import { NotificationRow } from './NotificationRow';
@@ -112,7 +112,7 @@ export function NotificationPopup({ onClose, inline = false }: NotificationPopup
       {/* Body */}
       {isLoading ? (
         <View style={styles.center}>
-          <MystokkLoader size={48} />
+          <BrandLoader mode="loop" size={90} />
         </View>
       ) : items.length === 0 ? (
         <View style={styles.empty}>

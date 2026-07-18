@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { BrandLoader } from '../components/shared/BrandLoader';
 
-import { MystokkLoader } from '../components/shared/MystokkLoader';
 import {
   NavigationContainer,
   createNavigationContainerRef,
@@ -190,7 +190,7 @@ function activeLeafRoute(state: NavState): { name: string; params?: Record<strin
 function LoadingView(): React.JSX.Element {
   return (
     <View style={styles.loading}>
-      <MystokkLoader />
+      <BrandLoader mode="loop" size={150} />
     </View>
   );
 }

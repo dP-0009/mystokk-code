@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  ActivityIndicator,
   Modal,
   Pressable,
   ScrollView,
@@ -236,11 +235,7 @@ export function AddVendorModal({ visible, onClose, onAdded }: AddVendorModalProp
               onPress={() => mutation.mutate()}
               testID="add-vendor-submit"
             >
-              {mutation.isPending ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
-              ) : (
-                <Text style={styles.btnDarkText}>Add Vendor</Text>
-              )}
+              <Text style={styles.btnDarkText}>Add Vendor</Text>
             </Pressable>
           </View>
         </Pressable>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { BrandLoader } from '../components/shared/BrandLoader';
 
-import { MystokkLoader } from '../components/shared/MystokkLoader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
@@ -54,7 +54,7 @@ export function ProfileScreen({ navigation }: Props): React.JSX.Element {
       <NavBar title="Business profile" onBack={() => navigation.goBack()} />
       {isLoading || !vendor ? (
         <View style={styles.center}>
-          <MystokkLoader />
+          <BrandLoader mode="loop" size={150} />
         </View>
       ) : (
         <ProfileForm vendor={vendor} insetsTop={insets.top} insetsBottom={insets.bottom} />

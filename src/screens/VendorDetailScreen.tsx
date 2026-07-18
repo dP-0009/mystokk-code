@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -297,11 +297,7 @@ export function VendorDetailScreen({ navigation, route }: Props): React.JSX.Elem
               onPress={confirmRemove}
               disabled={removeMutation.isPending}
             >
-              {removeMutation.isPending ? (
-                <ActivityIndicator color={colors.red} />
-              ) : (
-                <Text style={styles.removeText}>{data.mode === 'manual' ? 'Remove Contact' : 'Remove Connection'}</Text>
-              )}
+              <Text style={styles.removeText}>{data.mode === 'manual' ? 'Remove Contact' : 'Remove Connection'}</Text>
             </Pressable>
           ) : null}
         </View>

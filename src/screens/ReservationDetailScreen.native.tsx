@@ -1,5 +1,6 @@
 import React from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { BrandLoader } from '../components/shared/BrandLoader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -35,7 +36,6 @@ import {
   spacing,
   type BadgeTone,
 } from '../components/mobile';
-import { MystokkLoader } from '../components/shared/MystokkLoader';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ReservationDetail'>;
 
@@ -211,7 +211,7 @@ export function ReservationDetailScreen({ navigation, route }: Props): React.JSX
 
         {roundsQuery.isLoading ? (
           <View style={styles.loading}>
-            <MystokkLoader size={48} />
+            <BrandLoader mode="loop" size={90} />
           </View>
         ) : (
           <>

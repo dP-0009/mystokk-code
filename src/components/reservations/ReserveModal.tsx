@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   Modal,
   Pressable,
   ScrollView,
@@ -182,11 +181,7 @@ export function ReserveModal({
               onPress={submit}
               testID="reserve-submit"
             >
-              {submitting ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
-              ) : (
-                <Text style={styles.btnGreenText}>Request Reservation</Text>
-              )}
+              <Text style={styles.btnGreenText}>Request Reservation</Text>
             </Pressable>
           </View>
         </Pressable>

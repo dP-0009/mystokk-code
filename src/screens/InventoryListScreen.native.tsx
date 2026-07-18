@@ -1,7 +1,7 @@
 import React from 'react';
 import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { BrandLoader } from '../components/shared/BrandLoader';
 
-import { MystokkLoader } from '../components/shared/MystokkLoader';
 import { FlashList } from '@shopify/flash-list';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useFocusEffect } from '@react-navigation/native';
@@ -147,7 +147,7 @@ export function InventoryListScreen({ navigation }: Props): React.JSX.Element {
 
       {isLoading ? (
         <View style={styles.center}>
-          <MystokkLoader />
+          <BrandLoader mode="loop" size={150} />
         </View>
       ) : isError ? (
         <View style={styles.center}>

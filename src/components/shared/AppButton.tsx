@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  ActivityIndicator,
   Pressable,
   StyleSheet,
   Text,
@@ -44,13 +43,9 @@ export function AppButton({
         style,
       ]}
     >
-      {loading ? (
-        <ActivityIndicator color={variant === 'outline' ? colors.navy : '#FFFFFF'} />
-      ) : (
-        <Text style={[styles.label, variant === 'outline' ? styles.labelDark : styles.labelLight]}>
-          {title}
-        </Text>
-      )}
+      <Text style={[styles.label, variant === 'outline' ? styles.labelDark : styles.labelLight]}>
+        {title}
+      </Text>
     </Pressable>
   );
 }

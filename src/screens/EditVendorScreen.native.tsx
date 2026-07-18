@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { BrandLoader } from '../components/shared/BrandLoader';
 
-import { MystokkLoader } from '../components/shared/MystokkLoader';
 import * as Haptics from 'expo-haptics';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -101,7 +101,7 @@ export function EditVendorScreen({ navigation, route }: Props): React.JSX.Elemen
           </View>
         ) : (
           <View style={styles.center}>
-            <MystokkLoader />
+            <BrandLoader mode="loop" size={150} />
           </View>
         )
       ) : (

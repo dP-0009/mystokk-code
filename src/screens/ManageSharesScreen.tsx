@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation';
@@ -68,11 +68,7 @@ export function ManageSharesScreen({ navigation, route }: Props): React.JSX.Elem
           </View>
         ) : (
           <Pressable style={styles.revokeBtn} onPress={() => confirmRevoke(item)} disabled={busy}>
-            {busy ? (
-              <ActivityIndicator color={colors.red} size="small" />
-            ) : (
-              <Text style={styles.revokeText}>Revoke</Text>
-            )}
+            <Text style={styles.revokeText}>Revoke</Text>
           </Pressable>
         )}
       </View>

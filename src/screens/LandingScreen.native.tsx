@@ -1,15 +1,14 @@
 import React from 'react';
-import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import type { RootStackParamList } from '../navigation';
 import { BRAND } from '../constants/brand';
+import { BrandLogo } from '../components/shared/BrandLogo';
 import { BrandWordmark } from '../components/shared/BrandWordmark';
 import { LiveInventoryIcon, PrivateNetworkIcon } from '../components/branding/WelcomeChipIcons';
 import { Button, Icon, ScreenBackground, colors, spacing } from '../components/mobile';
-
-const LOGO = require('../../assets/branding/mystokk-logo.png');
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Landing'>;
 
@@ -41,7 +40,7 @@ export function LandingScreen({ navigation }: Props): React.JSX.Element {
       >
         <View style={styles.hero}>
           {/* Brand mark — the logo stands alone (no tile). */}
-          <Image source={LOGO} style={styles.logo} resizeMode="contain" />
+          <BrandLogo size={112} />
 
           <BrandWordmark size={38} style={styles.wordmark} />
           <Text style={styles.subtitle}>Private B2B inventory sharing</Text>
@@ -74,10 +73,6 @@ export function LandingScreen({ navigation }: Props): React.JSX.Element {
 const styles = StyleSheet.create({
   scroll: { flexGrow: 1, paddingHorizontal: 26 },
   hero: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  logo: {
-    width: 104,
-    height: 104,
-  },
   wordmark: { marginTop: 24 },
   subtitle: {
     fontSize: 16,

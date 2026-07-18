@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { BrandLoader } from '../components/shared/BrandLoader';
 import * as DocumentPicker from 'expo-document-picker';
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
@@ -11,7 +12,6 @@ import { AppButton } from '../components/shared/AppButton';
 import { bulkImportVendors } from '../services/supabase/network';
 import { buildTemplateXlsx, CSV_COLUMNS, parseVendorFile, TEMPLATE_FILENAME, TEMPLATE_MIME } from '../utils/csv';
 import { colors } from '../theme/tokens';
-import { MystokkLoader } from '../components/shared/MystokkLoader';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'BulkUpload'>;
 
@@ -139,7 +139,7 @@ export function BulkUploadScreen({ navigation }: Props): React.JSX.Element {
 
         {importing ? (
           <View style={styles.importing}>
-            <MystokkLoader size={48} />
+            <BrandLoader mode="loop" size={90} />
           </View>
         ) : (
           <AppButton

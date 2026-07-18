@@ -1,11 +1,11 @@
 import React from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { BrandLoader } from '../shared/BrandLoader';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { getItemDirectShares, revokeShare, type DirectShare } from '../../services/supabase/shares';
 import { toast } from '../../stores/toast';
 import { Avatar, Button, Icon, Sheet, colors, spacing } from '../mobile';
-import { MystokkLoader } from '../shared/MystokkLoader';
 
 interface ManageSharesSheetProps {
   open: boolean;
@@ -66,7 +66,7 @@ export function ManageSharesSheet({ open, onClose, inventoryId, onShareMore }: M
     >
       {isLoading ? (
         <View style={styles.loading}>
-          <MystokkLoader size={48} />
+          <BrandLoader mode="loop" size={90} />
         </View>
       ) : shares.length === 0 ? (
         <View style={styles.empty}>
@@ -105,16 +105,12 @@ export function ManageSharesSheet({ open, onClose, inventoryId, onShareMore }: M
                   onPress={() => onRevoke(s)}
                   disabled={busy}
                 >
-                  {busy ? (
-                    <ActivityIndicator color={colors.red} size="small" />
-                  ) : (
-                    <>
-                      <Icon name="shield" size={14} color={confirming ? '#FFFFFF' : colors.red} />
-                      <Text style={[styles.revokeText, confirming && styles.revokeTextConfirm]}>
-                        {confirming ? 'Confirm' : 'Revoke'}
-                      </Text>
-                    </>
-                  )}
+                  <>
+                  <Icon name="shield" size={14} color={confirming ? '#FFFFFF' : colors.red} />
+                  <Text style={[styles.revokeText, confirming && styles.revokeTextConfirm]}>
+                    {confirming ? 'Confirm' : 'Revoke'}
+                  </Text>
+                  </>
                 </Pressable>
               </View>
             );
